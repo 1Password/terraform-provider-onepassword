@@ -8,7 +8,7 @@ import (
 
 const (
 	// Provider name for single configuration testing
-	ProviderName = "opconnect"
+	ProviderName = "onepassword"
 )
 
 var testAccProviders map[string]*schema.Provider
@@ -39,7 +39,7 @@ func TestProvider_impl(t *testing.T) {
 
 func TestProvider_HasResources(t *testing.T) {
 	expectedResources := []string{
-		"op_item",
+		"onepassword_item",
 	}
 
 	resources := Provider().ResourcesMap
@@ -59,7 +59,7 @@ func TestProvider_HasResources(t *testing.T) {
 
 func TestProvider_HasDataSources(t *testing.T) {
 	expectedDataSources := []string{
-		"op_item",
+		"onepassword_item",
 	}
 
 	dataSources := Provider().DataSourcesMap
