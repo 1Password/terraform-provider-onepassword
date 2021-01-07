@@ -63,6 +63,57 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Optional:  true,
 				Sensitive: true,
 			},
+			"section": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MinItems: 0,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Computed: true,
+						},
+						"label": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"field": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MinItems: 0,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"id": {
+										Type:     schema.TypeString,
+										Optional: true,
+										Computed: true,
+									},
+									"label": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+									"purpose": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
+									"type": {
+										Type:     schema.TypeString,
+										Default:  "STRING",
+										Optional: true,
+									},
+									"value": {
+										Type:      schema.TypeString,
+										Optional:  true,
+										Computed:  true,
+										Sensitive: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -95,6 +146,34 @@ func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) 
 	data.Set("tags", item.Tags)
 	data.Set("category", strings.ToLower(string(item.Category)))
 
+	dataSections := []interface{}{}
+	for _, s := range item.Sections {
+		section := map[string]interface{}{}
+
+		section["id"] = s.ID
+		section["label"] = s.Label
+
+		fields := []interface{}{}
+
+		for _, f := range item.Fields {
+			if f.Section != nil && f.Section.ID == s.ID {
+				dataField := map[string]interface{}{}
+				dataField["id"] = f.ID
+				dataField["label"] = strings.ToLower(f.Label)
+				dataField["purpose"] = f.Purpose
+				dataField["type"] = f.Type
+				dataField["value"] = f.Value
+
+				fields = append(fields, dataField)
+			}
+		}
+		section["field"] = fields
+
+		dataSections = append(dataSections, section)
+	}
+
+	data.Set("section", dataSections)
+
 	for _, f := range item.Fields {
 		switch f.Purpose {
 		case "USERNAME":
@@ -102,7 +181,9 @@ func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) 
 		case "PASSWORD":
 			data.Set("password", f.Value)
 		default:
-			data.Set(strings.ToLower(f.Label), f.Value)
+			if f.Section == nil {
+				data.Set(strings.ToLower(f.Label), f.Value)
+			}
 		}
 	}
 

@@ -24,11 +24,11 @@ $ go test -v ./... -cover
 
 To install the binary it must be copied to the appropriate terraform plugin directory. You may need to create the appropriate directories. For more information [see these Terraform 0.13 plugin docs](https://www.hashicorp.com/blog/automatic-installation-of-third-party-providers-with-terraform-0-13)
 
-The current version of the provider is considered to be 0.1 and `darwin_amd64` should match your machines operating system and architecture in the format `$OS_$ARCH`. For example macOS is `darwin_amd64` and linux is `linux_amd64`.
+The current version of the provider is considered to be 0.2 and `darwin_amd64` should match your machines operating system and architecture in the format `$OS_$ARCH`. For example macOS is `darwin_amd64` and linux is `linux_amd64`.
 
 ```sh
-$ mkdir -p ~/.terraform.d/plugins/github.com/1Password/onepassword/0.1/darwin_amd64/
-$ cp ./terraform-provider-onepassword ~/.terraform.d/plugins/github.com/1Password/onepassword/0.1/darwin_amd64/terraform-provider-onepassword
+$ mkdir -p ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/
+$ cp ./terraform-provider-onepassword ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/terraform-provider-onepassword
 ```
 
 ## Using plugin locally
@@ -39,7 +39,7 @@ In your Terraform configuration you will need to specify the op plugin with
 terraform {
   required_providers {
     onepassword = {
-      version = "0.1"
+      version = "0.2"
       source   = "github.com/1Password/onepassword"
     }
   }

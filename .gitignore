@@ -28,5 +28,8 @@ override.tf.json
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
 # example: *tfplan*
 
+# Exclude Terraform lock file from examples because the SHA won't match for local builds
+**/.terraform.lock.hcl
+
 **/terraform-provider-onepassword
 /dist
