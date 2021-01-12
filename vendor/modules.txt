@@ -1,4 +1,4 @@
-# github.com/1Password/connect-sdk-go v0.0.1
+# github.com/1Password/connect-sdk-go v0.0.2
 ## explicit
 github.com/1Password/connect-sdk-go/connect
 github.com/1Password/connect-sdk-go/onepassword
