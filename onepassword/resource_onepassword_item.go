@@ -278,9 +278,12 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 
 		// Check for existing section state
 		for i := 0; i < len(dataSections); i++ {
-			if (s.ID != "" && dataSections[i].(map[string]interface{})["id"].(string) == s.ID) ||
-				dataSections[i].(map[string]interface{})["label"].(string) == s.Label {
-				section = dataSections[i].(map[string]interface{})
+			existingSection := dataSections[i].(map[string]interface{})
+			existingID := existingSection["id"].(string)
+			existingLabel := existingSection["label"].(string)
+
+			if (s.ID != "" && s.ID == existingID) || s.Label == existingLabel {
+				section = existingSection
 				newSection = false
 			}
 		}
@@ -298,8 +301,11 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 				newField := true
 				// Check for existing field state
 				for i := 0; i < len(existingFields); i++ {
-					if (f.ID != "" && existingFields[i].(map[string]interface{})["id"].(string) == f.ID) ||
-						existingFields[i].(map[string]interface{})["label"].(string) == f.Label {
+					existingField := existingFields[i].(map[string]interface{})
+					existingID := existingField["id"].(string)
+					existingLabel := existingField["label"].(string)
+
+					if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
 						dataField = existingFields[i].(map[string]interface{})
 						newField = false
 					}
@@ -551,21 +557,11 @@ func addRecipe(f *onepassword.ItemField, r *onepassword.GeneratorRecipe) {
 	f.Recipe = r
 
 	// Check to see if the current value adheres to the recipe
-	var hasLetters, hasDigits, hasSymbols bool
+
 	var recipeLetters, recipeDigits, recipeSymbols bool
-
-	for _, r := range f.Value {
-		letter, _ := regexp.MatchString("[a-zA-Z]", string(r))
-		digit, _ := regexp.MatchString("[0-9]", string(r))
-
-		if letter {
-			hasLetters = true
-		} else if digit {
-			hasDigits = true
-		} else {
-			hasSymbols = true
-		}
-	}
+	hasLetters, _ := regexp.MatchString("[a-zA-Z]", f.Value)
+	hasDigits, _ := regexp.MatchString("[0-9]", f.Value)
+	hasSymbols, _ := regexp.MatchString("[^a-zA-Z0-9]", f.Value)
 
 	for _, s := range r.CharacterSets {
 		switch s {
