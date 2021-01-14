@@ -10,9 +10,9 @@
 
 ---
 
-[//]: # (START/v0.0.1)
+[//]: # (START/v0.1.0)
 
-# v0.0.1
+# v0.1.0
 
 Initial 1Password Connect Terraform Provider release
 
