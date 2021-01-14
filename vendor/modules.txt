@@ -1,4 +1,4 @@
-# github.com/1Password/connect-sdk-go v0.0.1
+# github.com/1Password/connect-sdk-go v0.0.2
 ## explicit
 github.com/1Password/connect-sdk-go/connect
 github.com/1Password/connect-sdk-go/onepassword
@@ -31,6 +31,7 @@ github.com/hashicorp/go-multierror
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-uuid v1.0.1
+## explicit
 github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.2.1
 github.com/hashicorp/go-version

@@ -38,6 +38,47 @@ func TestResourceOnepasswordPasswordItemCRUD(t *testing.T) {
 	testCRUDForItem(t, itemToCreate)
 }
 
+func TestAddSectionsToItem(t *testing.T) {
+	item := generateResourceLoginItem(t)
+
+	section1 := map[string]interface{}{
+		"label": "Section One",
+		"id":    "123",
+		"field": []interface{}{
+			map[string]interface{}{
+				"label": "token",
+				"type":  "CONCEALED",
+				"value": "123",
+			},
+			map[string]interface{}{
+				"label": "user",
+				"value": "root",
+			},
+		},
+	}
+
+	section2 := map[string]interface{}{
+		"label": "Section One",
+		"id":    "123",
+		"field": []interface{}{
+			map[string]interface{}{
+				"label": "secret value",
+				"type":  "CONCEALED",
+				"password_recipe": []interface{}{
+					map[string]interface{}{
+						"length": 42,
+						"digits": false,
+					},
+				},
+			},
+		},
+	}
+
+	item.Set("section", []interface{}{section1, section2})
+
+	testCRUDForItem(t, item)
+}
+
 func testCRUDForItem(t *testing.T, itemToCreate *schema.ResourceData) {
 	meta := &testClient{}
 	DoGetItemFunc = getItem
@@ -96,6 +137,16 @@ func getItem(uuid string, vaultUUID string) (*onepassword.Item, error) {
 }
 
 func createItem(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
+	for i := 0; i < len(item.Fields); i++ {
+		if item.Fields[i].Recipe != nil {
+			item.Fields[i].Recipe = nil
+			if item.Fields[i].Generate {
+				item.Fields[i].Generate = false
+				item.Fields[i].Value = "GENERATEDVALUE"
+			}
+		}
+	}
+
 	items[item.ID] = item
 	return item, nil
 }
@@ -106,6 +157,16 @@ func deleteItem(item *onepassword.Item, vaultUUID string) error {
 }
 
 func updateItem(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
+	for i := 0; i < len(item.Fields); i++ {
+		if item.Fields[i].Recipe != nil {
+			item.Fields[i].Recipe = nil
+			if item.Fields[i].Generate {
+				item.Fields[i].Generate = false
+				item.Fields[i].Value = "GENERATEDVALUE"
+			}
+		}
+	}
+
 	items[item.ID] = item
 	return item, nil
 }

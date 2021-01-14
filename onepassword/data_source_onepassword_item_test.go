@@ -26,6 +26,35 @@ func TestDataSourceOnePasswordItemRead(t *testing.T) {
 	compareItemToSource(t, dataSourceData, expectedItem)
 }
 
+func TestDataSourceOnePasswordItemReadWithSections(t *testing.T) {
+	meta := &testClient{}
+	expectedItem := generateItem()
+	testSection := &onepassword.ItemSection{
+		ID:    "1234",
+		Label: "Test Section",
+	}
+	expectedItem.Sections = append(expectedItem.Sections, testSection)
+	expectedItem.Fields = append(expectedItem.Fields, &onepassword.ItemField{
+		ID:      "23456",
+		Type:    "STRING",
+		Label:   "Secret Information",
+		Value:   "Password123",
+		Section: testSection,
+	})
+
+	DoGetItemFunc = func(uuid string, vaultUUID string) (*onepassword.Item, error) {
+		return expectedItem, nil
+	}
+
+	dataSourceData := generateDataSource(t, expectedItem)
+
+	err := dataSourceOnepasswordItemRead(dataSourceData, meta)
+	if err != nil {
+		t.Errorf("Unexpected error occured")
+	}
+	compareItemToSource(t, dataSourceData, expectedItem)
+}
+
 func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item *onepassword.Item) {
 	if dataSourceData.Get("uuid") != item.ID {
 		t.Errorf("Expected uuid to be %v got %v", item.ID, dataSourceData.Get("uuid"))
@@ -45,8 +74,34 @@ func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item
 	}
 
 	for _, f := range item.Fields {
-		if dataSourceData.Get(f.Label) != f.Value {
-			t.Errorf("Expected field %v to be %v got %v", f.Label, f.Value, dataSourceData.Get(f.Label))
+		path := f.Label
+		if f.Section != nil {
+			sectionIndex := 0
+			fieldIndex := 0
+			sections := dataSourceData.Get("section").([]interface{})
+
+			for i, section := range sections {
+				s := section.(map[string]interface{})
+				if s["label"] == f.Section.Label ||
+					(f.Section.ID != "" && s["id"] == f.Section.ID) {
+					sectionIndex = i
+					sectionFields := dataSourceData.Get(fmt.Sprintf("section.%d.field", i)).([]interface{})
+
+					for j, field := range sectionFields {
+						df := field.(map[string]interface{})
+						if df["label"] == f.Label {
+							fieldIndex = j
+						}
+					}
+				}
+			}
+
+			if len(sections) > 0 {
+				path = fmt.Sprintf("section.%d.field.%d.value", sectionIndex, fieldIndex)
+			}
+		}
+		if dataSourceData.Get(path) != f.Value {
+			t.Errorf("Expected field %v to be %v got %v", f.Label, f.Value, dataSourceData.Get(path))
 		}
 	}
 }
