@@ -29,7 +29,7 @@ help:	## Prints this help message
 
 ## Release functions =====================
 
-release/prepare: ##.check_git_clean	## Updates changelog and creates release branch (call with 'release/prepare version=<new_version_number>')
+release/prepare: .check_git_clean	## Updates changelog and creates release branch (call with 'release/prepare version=<new_version_number>')
 
 	@test $(version) || (echo "[ERROR] version argument not set."; exit 1)
 	@git fetch --quiet origin $(MAIN_BRANCH)
