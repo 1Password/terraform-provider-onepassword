@@ -1,12 +1,20 @@
 package onepassword
 
 import (
+	"fmt"
+
 	"github.com/1Password/connect-sdk-go/connect"
+	"github.com/1Password/terraform-provider-onepassword/version"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+)
+
+const (
+	terraformProviderUserAgent = "terraform-provider-connect/%s"
 )
 
 // Provider The 1Password Connect terraform provider
 func Provider() *schema.Provider {
+	providerUserAgent := fmt.Sprintf(terraformProviderUserAgent, version.ProviderVersion)
 	provider := &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"url": {
@@ -29,7 +37,7 @@ func Provider() *schema.Provider {
 		},
 	}
 	provider.ConfigureFunc = func(d *schema.ResourceData) (interface{}, error) {
-		return connect.NewClient(d.Get("url").(string), d.Get("token").(string)), nil
+		return connect.NewClientWithUserAgent(d.Get("url").(string), d.Get("token").(string), providerUserAgent), nil
 	}
 	return provider
 }
