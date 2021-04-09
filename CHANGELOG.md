@@ -16,6 +16,17 @@
 
 ---
 
+[//]: # "START/v1.0.0"
+
+# v1.0.0
+
+## Features
+
+- Update to the lastest Connect SDK
+- Includes a Terraform User Agent in all Connect API requests
+
+---
+
 [//]: # "START/v0.2.0"
 
 # v0.2.0
