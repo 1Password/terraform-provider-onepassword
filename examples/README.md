@@ -20,9 +20,13 @@ $ terraform init
 Initializing the backend...
 
 Initializing provider plugins...
-- Finding github.com/1password/onepassword versions matching "0.1.0"...
-- Installing github.com/1password/onepassword v0.1.0...
-- Installed github.com/1password/onepassword v0.1.0 (unauthenticated)
+- Finding 1password/onepassword versions matching "~> 1.0.0"...
+- Installing 1password/onepassword v1.0.0...
+- Installed 1password/onepassword v1.0.0 (signed by a HashiCorp partner, key ID 6681876AE08DC4BF)
+
+Partner and community providers are signed by their developers.
+If you'd like to know more about provider signing, you can read about it here:
+https://www.terraform.io/docs/cli/plugins/signing.html
 
 Terraform has created a lock file .terraform.lock.hcl to record the provider
 selections it made above. Include this file in your version control repository
@@ -38,6 +42,7 @@ should now work.
 If you ever set or change modules or backend configuration for Terraform,
 rerun this command to reinitialize your working directory. If you forget, other
 commands will detect it and remind you to do so if necessary.
+
 $ terraform apply
 
 

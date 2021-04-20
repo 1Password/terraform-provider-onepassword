@@ -2,6 +2,25 @@
 
 Use the 1Password Connect Terraform Provider to reference, create, or update items in your 1Password Vaults.
 
+## Usage
+
+```tf
+terraform {
+  required_providers {
+    onepassword = {
+      source = "1Password/onepassword"
+      version = "~> 1.0.0"
+    }
+  }
+}
+
+provider "onepassword" {
+  url     = "http://<1Password Connect API Hostname>"
+}
+```
+
+See the [examples](./examples/) directory for a full example. 
+
 ## Building
 
 To build the 1Password Connect Terraform provider run the following
@@ -39,8 +58,8 @@ In your Terraform configuration you will need to specify the op plugin with
 terraform {
   required_providers {
     onepassword = {
-      version = "0.2"
       source   = "github.com/1Password/onepassword"
+      version = "~> 1.0.0"
     }
   }
 }
