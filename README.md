@@ -15,7 +15,7 @@ terraform {
 }
 
 provider "onepassword" {
-  url     = "http://<1Password Connect API Hostname>"
+  url = "http://<1Password Connect API Hostname>"
 }
 ```
 
