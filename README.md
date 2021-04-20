@@ -18,9 +18,7 @@ provider "onepassword" {
   url = "http://localhost:8080"
 }
 
-variable "demo_vault" {
-  default = "fuacthv5i7gextkqv45g7algw8"
-}
+variable "vault_id" {}
 
 resource "onepassword_item" "demo_login" {
   vault = var.demo_vault
