@@ -15,7 +15,25 @@ terraform {
 }
 
 provider "onepassword" {
-  url = "http://<1Password Connect API Hostname>"
+  url = "http://localhost:8080"
+}
+
+variable "demo_vault" {
+  default = "fuacthv5i7gextkqv45g7algw8"
+}
+
+resource "onepassword_item" "demo_login" {
+  vault = var.demo_vault
+  
+  title    = "Demo Terraform Login"
+  category = "password"
+
+  username = "demo-username"
+
+  password_recipe {
+    length  = 40
+    symbols = false
+  }
 }
 ```
 
