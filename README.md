@@ -21,7 +21,7 @@ provider "onepassword" {
 variable "vault_id" {}
 
 resource "onepassword_item" "demo_login" {
-  vault = var.demo_vault
+  vault = var.vault_id
   
   title    = "Demo Terraform Login"
   category = "password"
