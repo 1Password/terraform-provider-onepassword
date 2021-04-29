@@ -72,11 +72,13 @@ func resourceOnepasswordItem() *schema.Resource {
 			"vault": {
 				Type:     schema.TypeString,
 				Required: true,
+				ForceNew: true,
 			},
 			"category": {
 				Type:     schema.TypeString,
 				Optional: true,
 				Default:  "login",
+				ForceNew: true,
 			},
 			"title": {
 				Type:     schema.TypeString,
