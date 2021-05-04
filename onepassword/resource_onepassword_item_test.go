@@ -24,6 +24,30 @@ var schemaKeys = []string{
 	"tags",
 }
 
+func TestResourceItemToDataDataToTitem(t *testing.T) {
+	resources := map[string]*schema.ResourceData{
+		"login":    generateResourceLoginItem(t),
+		"database": generateResourceDatabaseItem(t),
+		"password": generateResourcePasswordItem(t),
+	}
+	for name, resource := range resources {
+		t.Run(name, func(t *testing.T) {
+			item, err := dataToItem(resource)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			compareItemToSource(t, resource, item)
+
+			convertedResource := schema.TestResourceDataRaw(t, resourceOnepasswordItem().Schema, nil)
+
+			itemToData(item, convertedResource)
+
+			compareResources(t, resource, convertedResource)
+		})
+	}
+}
+
 func TestResourceOnepasswordLoginItemCRUD(t *testing.T) {
 	itemToCreate := generateResourceLoginItem(t)
 	testCRUDForItem(t, itemToCreate)
