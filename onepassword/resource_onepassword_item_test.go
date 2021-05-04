@@ -21,6 +21,7 @@ var schemaKeys = []string{
 	"port",
 	"username",
 	"password",
+	"tags",
 }
 
 func TestResourceOnepasswordLoginItemCRUD(t *testing.T) {
@@ -202,6 +203,7 @@ func generateBaseItem(t *testing.T) *schema.ResourceData {
 	resourceData.Set("vault", "df2e9643-45ad-4ff9-8b98-996f801afa75")
 	resourceData.Set("title", "test_login")
 	resourceData.Set("url", "some_url")
+	resourceData.Set("tags", []string{"tag-1", "tag-2"})
 	return resourceData
 }
 
@@ -214,9 +216,15 @@ func generateResource(t *testing.T, item *onepassword.Item) *schema.ResourceData
 }
 
 func compareResources(t *testing.T, expectedResource, actualResource *schema.ResourceData) {
+	t.Helper()
 	for _, key := range schemaKeys {
-		if expectedResource.Get(key) != actualResource.Get(key) {
-			t.Errorf("Expected %v to be %v but was %v", key, actualResource.Get(key), expectedResource.Get(key))
+		if key == "tags" {
+			compareStringSlice(t, getTags(actualResource), getTags(expectedResource))
+		} else {
+			if expectedResource.Get(key) != actualResource.Get(key) {
+				t.Errorf("Expected %v to be %v but was %v", key, actualResource.Get(key), expectedResource.Get(key))
+			}
 		}
+
 	}
 }

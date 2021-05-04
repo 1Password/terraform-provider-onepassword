@@ -72,6 +72,7 @@ func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item
 	if dataSourceData.Get("url") != item.URLs[0].URL {
 		t.Errorf("Expected url to be %v got %v", item.URLs[0].URL, dataSourceData.Get("url"))
 	}
+	compareStringSlice(t, getTags(dataSourceData), item.Tags)
 
 	for _, f := range item.Fields {
 		path := f.Label
@@ -158,4 +159,17 @@ func generateFields() []*onepassword.ItemField {
 		},
 	}
 	return fields
+}
+
+func compareStringSlice(t *testing.T, actual, expected []string) {
+	t.Helper()
+	if len(actual) != len(expected) {
+		t.Errorf("Expected slice to be length %d, but got %d", len(expected), len(actual))
+		return
+	}
+	for i, val := range expected {
+		if actual[i] != val {
+			t.Errorf("Expected %s at index %d, but got %s", val, i, actual[i])
+		}
+	}
 }
