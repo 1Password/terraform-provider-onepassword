@@ -375,6 +375,7 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 				URL:     data.Get("url").(string),
 			},
 		},
+		Tags: getTags(data),
 	}
 
 	password := data.Get("password").(string)
@@ -582,4 +583,13 @@ func addRecipe(f *onepassword.ItemField, r *onepassword.GeneratorRecipe) {
 		len(f.Value) != r.Length {
 		f.Generate = true
 	}
+}
+
+func getTags(data *schema.ResourceData) []string {
+	tagInterface := data.Get("tags").([]interface{})
+	tags := make([]string, len(tagInterface))
+	for i, tag := range tagInterface {
+		tags[i] = tag.(string)
+	}
+	return tags
 }
