@@ -1,18 +1,26 @@
-[//]: # "START/LATEST"
-
+[//]: # (START/LATEST)
 # Latest
 
 ## Features
+  * A user-friendly description of a new feature. {issue-number}
 
-- A user-friendly description of a new feature. {issue-number}
+## Fixes
+ * A user-friendly description of a fix. {issue-number}
+
+## Security
+ * A user-friendly description of a security fix. {issue-number}
+
+---
+
+[//]: # "START/v1.0.1"
+
+# v1.0.1
 
 ## Fixes
 
-- A user-friendly description of a fix. {issue-number}
-
-## Security
-
-- A user-friendly description of a security fix. {issue-number}
+- Tags set in the `tags` field now correctly get set on items in your vault. {#15}
+- Changing the category of an item no longer results in the contents of your item no longer being visible. {#13}
+- Changing the vault of an item no longer leads to an error that the item cannot be found.
 
 ---
 
