@@ -9,16 +9,60 @@ import (
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
+
+const (
+	itemUUIDDescription  = "The UUID of the item. Item identifiers are unique within a specific Vault."
+	vaultUUIDDescription = "The UUID of the vault the item is in."
+	categoryDescription  = "The category of the item."
+	itemTitleDescription = "The title of the item."
+	urlDescription       = "The primary URL where the resource is applicable."
+	tagsDescription      = "An array of strings of the tags assigned to the item."
+	usernameDescription  = "Username for this item."
+	passwordDescription  = "Password for this item."
+
+	dbHostnameDescription = "(Only applies to the database category) Where can the database be found."
+	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
+	dbPortDescription     = "(Only applies to the database category) The port is the database listening on."
+	dbTypeDescription     = "(Only applies to the database category) The type of database."
+
+	sectionsDescription      = "A list of custom sections on an item"
+	sectionDescription       = "A section on an item that contains custom fields"
+	sectionIDDescription     = "A unique identifier for the section."
+	sectionLabelDescription  = "The label for the section."
+	sectionFieldsDescription = "A list of custom fields in this section."
+
+	fieldDescription        = "A custom field."
+	fieldIDDescription      = "A unique identifier for the field."
+	fieldLabelDescription   = "The label for the field."
+	fieldPurposeDescription = "Purpose indicates this is the special username, password, or notes field"
+	fieldTypeDescription    = "The type of value stored in the field."
+	fieldValueDescription   = "The value of the field"
+
+	passwordRecipeDescription  = "The recipe used to generate a new value for a password"
+	passwordElementDescription = "What elements should be included in the password"
+	passwordLengthDescription  = "The length of the password to be generated"
+	passwordLettersDescription = "Should Letters [a-zA-Z] be used when generating passwords"
+	passwordDigitsDescription  = "Should Letters [0-9] be used when generating passwords"
+	passwordSymbolsDescription = "Should special characters be used when generating passwords"
+)
+
+var categories = []string{"login", "password", "database"}
+var dbTypes = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
+var fieldPurposes = []string{"USERNAME", "PASSWORD", "NOTES"}
+var fieldTypes = []string{"STRING", "EMAIL", "CONCEALED", "URL", "TOTP", "DATE", "MONTH_YEAR", "MENU"}
 
 func resourceOnepasswordItem() *schema.Resource {
 	passwordRecipe := &schema.Schema{
-		Type: schema.TypeList,
+		Description: passwordDescription,
+		Type:        schema.TypeList,
 		Elem: &schema.Resource{
+			Description: passwordElementDescription,
 			Schema: map[string]*schema.Schema{
 				"length": {
 					Type:        schema.TypeInt,
-					Description: "The length of the password to be generated",
+					Description: passwordLengthDescription,
 					Default:     32,
 					Optional:    true,
 					ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
@@ -32,19 +76,19 @@ func resourceOnepasswordItem() *schema.Resource {
 				"letters": {
 					Type:        schema.TypeBool,
 					Default:     true,
-					Description: "Should Letters [a-zA-Z] be used when generating passwords",
+					Description: passwordLettersDescription,
 					Optional:    true,
 				},
 				"digits": {
 					Type:        schema.TypeBool,
 					Default:     true,
-					Description: "Should Letters [0-9] be used when generating passwords",
+					Description: passwordDigitsDescription,
 					Optional:    true,
 				},
 				"symbols": {
 					Type:        schema.TypeBool,
 					Default:     true,
-					Description: "Should special characters be used when generating passwords",
+					Description: passwordSymbolsDescription,
 					Optional:    true,
 				},
 			},
@@ -54,10 +98,11 @@ func resourceOnepasswordItem() *schema.Resource {
 	}
 
 	return &schema.Resource{
-		Create: resourceOnepasswordItemCreate,
-		Read:   resourceOnepasswordItemRead,
-		Update: resourceOnepasswordItemUpdate,
-		Delete: resourceOnepasswordItemDelete,
+		Description: "A 1Password item.",
+		Create:      resourceOnepasswordItemCreate,
+		Read:        resourceOnepasswordItemRead,
+		Update:      resourceOnepasswordItemUpdate,
+		Delete:      resourceOnepasswordItemDelete,
 
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
@@ -65,104 +110,131 @@ func resourceOnepasswordItem() *schema.Resource {
 
 		Schema: map[string]*schema.Schema{
 			"uuid": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Computed: true,
+				Description: itemUUIDDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Computed:    true,
 			},
 			"vault": {
-				Type:     schema.TypeString,
-				Required: true,
-				ForceNew: true,
+				Description: vaultUUIDDescription,
+				Type:        schema.TypeString,
+				Required:    true,
+				ForceNew:    true,
 			},
 			"category": {
-				Type:     schema.TypeString,
-				Optional: true,
-				Default:  "login",
-				ForceNew: true,
+				Description:  categoryDescription,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Default:      "login",
+				ValidateFunc: validation.StringInSlice(categories, true),
+				ForceNew:     true,
 			},
 			"title": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Description: itemTitleDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
 			},
 			"url": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Description: urlDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
 			},
 			"hostname": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Description: dbHostnameDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
 			},
 			"database": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Description: dbDatabaseDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
 			},
 			"port": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Description: dbPortDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
 			},
 			"type": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Description:  dbTypeDescription,
+				Type:         schema.TypeString,
+				Optional:     true,
+				ValidateFunc: validation.StringInSlice(dbTypes, true),
 			},
 			"tags": {
-				Type:     schema.TypeList,
-				Elem:     &schema.Schema{Type: schema.TypeString},
-				Optional: true,
+				Description: tagsDescription,
+				Type:        schema.TypeList,
+				Elem:        &schema.Schema{Type: schema.TypeString},
+				Optional:    true,
 			},
 			"username": {
-				Type:     schema.TypeString,
-				Optional: true,
+				Description: usernameDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
 			},
 			"password": {
-				Type:      schema.TypeString,
-				Optional:  true,
-				Sensitive: true,
-				Computed:  true,
+				Description: passwordDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
+				Sensitive:   true,
+				Computed:    true,
 			},
 			"section": {
-				Type:     schema.TypeList,
-				Optional: true,
-				MinItems: 0,
+				Description: sectionsDescription,
+				Type:        schema.TypeList,
+				Optional:    true,
+				MinItems:    0,
 				Elem: &schema.Resource{
+					Description: sectionDescription,
 					Schema: map[string]*schema.Schema{
 						"id": {
-							Type:     schema.TypeString,
-							Optional: true,
-							Computed: true,
+							Description: sectionIDDescription,
+							Type:        schema.TypeString,
+							Optional:    true,
+							Computed:    true,
 						},
 						"label": {
-							Type:     schema.TypeString,
-							Required: true,
+							Description: sectionLabelDescription,
+							Type:        schema.TypeString,
+							Required:    true,
 						},
 						"field": {
-							Type:     schema.TypeList,
-							Optional: true,
-							MinItems: 0,
+							Description: sectionFieldsDescription,
+							Type:        schema.TypeList,
+							Optional:    true,
+							MinItems:    0,
 							Elem: &schema.Resource{
+								Description: fieldDescription,
 								Schema: map[string]*schema.Schema{
 									"id": {
-										Type:     schema.TypeString,
-										Optional: true,
-										Computed: true,
+										Description: fieldIDDescription,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Computed:    true,
 									},
 									"label": {
-										Type:     schema.TypeString,
-										Required: true,
+										Description: fieldLabelDescription,
+										Type:        schema.TypeString,
+										Required:    true,
 									},
 									"purpose": {
-										Type:     schema.TypeString,
-										Optional: true,
+										Description:  fieldPurposeDescription,
+										Type:         schema.TypeString,
+										Optional:     true,
+										ValidateFunc: validation.StringInSlice(fieldPurposes, true),
 									},
 									"type": {
-										Type:     schema.TypeString,
-										Default:  "STRING",
-										Optional: true,
+										Description:  fieldTypeDescription,
+										Type:         schema.TypeString,
+										Default:      "STRING",
+										Optional:     true,
+										ValidateFunc: validation.StringInSlice(fieldTypes, true),
 									},
 									"value": {
-										Type:      schema.TypeString,
-										Optional:  true,
-										Computed:  true,
-										Sensitive: true,
+										Description: fieldValueDescription,
+										Type:        schema.TypeString,
+										Optional:    true,
+										Computed:    true,
+										Sensitive:   true,
 									},
 									"password_recipe": passwordRecipe,
 								},

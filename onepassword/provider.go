@@ -12,6 +12,22 @@ const (
 	terraformProviderUserAgent = "terraform-provider-connect/%s"
 )
 
+func init() {
+	// Set descriptions to support markdown syntax, this will be used in document generation
+	// and the language server.
+	schema.DescriptionKind = schema.StringMarkdown
+
+	// Customize the content of descriptions when output. For example you can add defaults on
+	// to the exported descriptions if present.
+	// schema.SchemaDescriptionBuilder = func(s *schema.Schema) string {
+	// 	desc := s.Description
+	// 	if s.Default != nil {
+	// 		desc += fmt.Sprintf(" Defaults to `%v`.", s.Default)
+	// 	}
+	// 	return strings.TrimSpace(desc)
+	// }
+}
+
 // Provider The 1Password Connect terraform provider
 func Provider() *schema.Provider {
 	providerUserAgent := fmt.Sprintf(terraformProviderUserAgent, version.ProviderVersion)
