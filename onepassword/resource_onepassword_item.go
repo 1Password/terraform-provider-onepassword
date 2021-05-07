@@ -13,39 +13,39 @@ import (
 )
 
 const (
-	itemUUIDDescription  = "The UUID of the item. Item identifiers are unique within a specific Vault."
+	itemUUIDDescription  = "The UUID of the item. Item identifiers are unique within a specific vault."
 	vaultUUIDDescription = "The UUID of the vault the item is in."
 	categoryDescription  = "The category of the item."
 	itemTitleDescription = "The title of the item."
-	urlDescription       = "The primary URL where the resource is applicable."
+	urlDescription       = "The primary URL for the item."
 	tagsDescription      = "An array of strings of the tags assigned to the item."
 	usernameDescription  = "Username for this item."
 	passwordDescription  = "Password for this item."
 
-	dbHostnameDescription = "(Only applies to the database category) Where can the database be found."
+	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
-	dbPortDescription     = "(Only applies to the database category) The port is the database listening on."
+	dbPortDescription     = "(Only applies to the database category) The port the database is listening on."
 	dbTypeDescription     = "(Only applies to the database category) The type of database."
 
-	sectionsDescription      = "A list of custom sections on an item"
-	sectionDescription       = "A section on an item that contains custom fields"
+	sectionsDescription      = "A list of custom sections in an item"
+	sectionDescription       = "A custom section in an item that contains custom fields"
 	sectionIDDescription     = "A unique identifier for the section."
 	sectionLabelDescription  = "The label for the section."
-	sectionFieldsDescription = "A list of custom fields in this section."
+	sectionFieldsDescription = "A list of custom fields in the section."
 
 	fieldDescription        = "A custom field."
 	fieldIDDescription      = "A unique identifier for the field."
 	fieldLabelDescription   = "The label for the field."
-	fieldPurposeDescription = "Purpose indicates this is the special username, password, or notes field"
+	fieldPurposeDescription = "Purpose indicates this is a special field: a username, password, or notes field."
 	fieldTypeDescription    = "The type of value stored in the field."
-	fieldValueDescription   = "The value of the field"
+	fieldValueDescription   = "The value of the field."
 
-	passwordRecipeDescription  = "The recipe used to generate a new value for a password"
-	passwordElementDescription = "What elements should be included in the password"
-	passwordLengthDescription  = "The length of the password to be generated"
-	passwordLettersDescription = "Should Letters [a-zA-Z] be used when generating passwords"
-	passwordDigitsDescription  = "Should Letters [0-9] be used when generating passwords"
-	passwordSymbolsDescription = "Should special characters be used when generating passwords"
+	passwordRecipeDescription  = "The recipe used to generate a new value for a password."
+	passwordElementDescription = "The kinds of characters to include in the password."
+	passwordLengthDescription  = "The length of the password to be generated."
+	passwordLettersDescription = "Use letters [a-zA-Z] when generating the password."
+	passwordDigitsDescription  = "Use digits [0-9] when generating the password."
+	passwordSymbolsDescription = "Use symbols [!@.-_*] when generating the password."
 )
 
 var categories = []string{"login", "password", "database"}

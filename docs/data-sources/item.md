@@ -22,22 +22,22 @@ data "onepassword_item" "example" {
 
 ### Required
 
-- **uuid** (String, Required) The UUID of the item. Item identifiers are unique within a specific Vault.
+- **uuid** (String, Required) The UUID of the item. Item identifiers are unique within a specific vault.
 - **vault** (String, Required) The UUID of the vault the item is in.
 
 ### Optional
 
 - **category** (String, Optional) The category of the item.
 - **database** (String, Optional) (Only applies to the database category) The name of the database.
-- **hostname** (String, Optional) (Only applies to the database category) Where can the database be found.
+- **hostname** (String, Optional) (Only applies to the database category) The address where the database can be found
 - **id** (String, Optional) The ID of this resource.
 - **password** (String, Optional) Password for this item.
-- **port** (String, Optional) (Only applies to the database category) The port is the database listening on.
-- **section** (Block List) A list of custom sections on an item (see [below for nested schema](#nestedblock--section))
+- **port** (String, Optional) (Only applies to the database category) The port the database is listening on.
+- **section** (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - **tags** (List of String, Optional) An array of strings of the tags assigned to the item.
 - **title** (String, Optional) The title of the item.
 - **type** (String, Optional) (Only applies to the database category) The type of database.
-- **url** (String, Optional) The primary URL where the resource is applicable.
+- **url** (String, Optional) The primary URL for the item.
 - **username** (String, Optional) Username for this item.
 
 <a id="nestedblock--section"></a>
@@ -49,7 +49,7 @@ Required:
 
 Optional:
 
-- **field** (Block List) A list of custom fields in this section. (see [below for nested schema](#nestedblock--section--field))
+- **field** (Block List) A list of custom fields in the section. (see [below for nested schema](#nestedblock--section--field))
 - **id** (String, Optional) A unique identifier for the section.
 
 <a id="nestedblock--section--field"></a>
@@ -62,8 +62,8 @@ Required:
 Optional:
 
 - **id** (String, Optional) A unique identifier for the field.
-- **purpose** (String, Optional) Purpose indicates this is the special username, password, or notes field
+- **purpose** (String, Optional) Purpose indicates this is a special field: a username, password, or notes field.
 - **type** (String, Optional) The type of value stored in the field.
-- **value** (String, Optional) The value of the field
+- **value** (String, Optional) The value of the field.
 
 
