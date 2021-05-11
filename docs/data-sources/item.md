@@ -27,7 +27,7 @@ data "onepassword_item" "example" {
 
 ### Optional
 
-- **category** (String, Optional) The category of the item.
+- **category** (String, Optional) The category of the item. One of ["login" "password" "database"]
 - **database** (String, Optional) (Only applies to the database category) The name of the database.
 - **hostname** (String, Optional) (Only applies to the database category) The address where the database can be found
 - **id** (String, Optional) The ID of this resource.
@@ -36,7 +36,7 @@ data "onepassword_item" "example" {
 - **section** (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - **tags** (List of String, Optional) An array of strings of the tags assigned to the item.
 - **title** (String, Optional) The title of the item.
-- **type** (String, Optional) (Only applies to the database category) The type of database.
+- **type** (String, Optional) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - **url** (String, Optional) The primary URL for the item.
 - **username** (String, Optional) Username for this item.
 
@@ -62,8 +62,8 @@ Required:
 Optional:
 
 - **id** (String, Optional) A unique identifier for the field.
-- **purpose** (String, Optional) Purpose indicates this is a special field: a username, password, or notes field.
-- **type** (String, Optional) The type of value stored in the field.
+- **purpose** (String, Optional) Purpose indicates this is a special field: a username, password, or notes field. One of ["USERNAME" "PASSWORD" "NOTES"]
+- **type** (String, Optional) The type of value stored in the field. One of ["STRING" "EMAIL" "CONCEALED" "URL" "TOTP" "DATE" "MONTH_YEAR" "MENU"]
 - **value** (String, Optional) The value of the field.
 
 

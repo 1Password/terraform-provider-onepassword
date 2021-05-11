@@ -1,6 +1,7 @@
 package onepassword
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -25,7 +26,7 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Required:    true,
 			},
 			"category": {
-				Description:  categoryDescription,
+				Description:  fmt.Sprintf(enumDescription, categoryDescription, categories),
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "login",
@@ -57,7 +58,7 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Optional:    true,
 			},
 			"type": {
-				Description:  dbTypeDescription,
+				Description:  fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.StringInSlice(dbTypes, true),
@@ -118,13 +119,13 @@ func dataSourceOnepasswordItem() *schema.Resource {
 										Required:    true,
 									},
 									"purpose": {
-										Description:  fieldPurposeDescription,
+										Description:  fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
 										Type:         schema.TypeString,
 										Optional:     true,
 										ValidateFunc: validation.StringInSlice(fieldPurposes, true),
 									},
 									"type": {
-										Description:  fieldTypeDescription,
+										Description:  fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
 										Type:         schema.TypeString,
 										Default:      "STRING",
 										Optional:     true,

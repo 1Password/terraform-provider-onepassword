@@ -36,7 +36,7 @@ func Provider() *schema.Provider {
 			"url": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The HTTP(S) Url where your 1Password Connect API can be found",
+				Description: "The HTTP(S) URL where your 1Password Connect API can be found",
 			},
 			"token": {
 				Type:        schema.TypeString,

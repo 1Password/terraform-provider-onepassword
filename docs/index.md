@@ -22,6 +22,4 @@ provider "onepassword" {
 ### Required
 
 - **token** (String, Required) A valid token for your 1Password Connect API
-- **url** (String, Required) The HTTP(S) Url where your 1Password Connect API can be found
-
-See the [examples](./examples/) directory for a full example.
+- **url** (String, Required) The HTTP(S) URL where your 1Password Connect API can be found

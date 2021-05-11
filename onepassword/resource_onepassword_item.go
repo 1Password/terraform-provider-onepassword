@@ -46,6 +46,8 @@ const (
 	passwordLettersDescription = "Use letters [a-zA-Z] when generating the password."
 	passwordDigitsDescription  = "Use digits [0-9] when generating the password."
 	passwordSymbolsDescription = "Use symbols [!@.-_*] when generating the password."
+
+	enumDescription = "%s One of %q"
 )
 
 var categories = []string{"login", "password", "database"}
@@ -122,7 +124,7 @@ func resourceOnepasswordItem() *schema.Resource {
 				ForceNew:    true,
 			},
 			"category": {
-				Description:  categoryDescription,
+				Description:  fmt.Sprintf(enumDescription, categoryDescription, categories),
 				Type:         schema.TypeString,
 				Optional:     true,
 				Default:      "login",
@@ -155,7 +157,7 @@ func resourceOnepasswordItem() *schema.Resource {
 				Optional:    true,
 			},
 			"type": {
-				Description:  dbTypeDescription,
+				Description:  fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
 				Type:         schema.TypeString,
 				Optional:     true,
 				ValidateFunc: validation.StringInSlice(dbTypes, true),
@@ -217,13 +219,13 @@ func resourceOnepasswordItem() *schema.Resource {
 										Required:    true,
 									},
 									"purpose": {
-										Description:  fieldPurposeDescription,
+										Description:  fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
 										Type:         schema.TypeString,
 										Optional:     true,
 										ValidateFunc: validation.StringInSlice(fieldPurposes, true),
 									},
 									"type": {
-										Description:  fieldTypeDescription,
+										Description:  fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
 										Type:         schema.TypeString,
 										Default:      "STRING",
 										Optional:     true,
