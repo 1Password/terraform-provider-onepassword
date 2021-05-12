@@ -22,7 +22,7 @@ variable "vault_id" {}
 
 resource "onepassword_item" "demo_login" {
   vault = var.vault_id
-  
+
   title    = "Demo Terraform Login"
   category = "password"
 
@@ -35,7 +35,7 @@ resource "onepassword_item" "demo_login" {
 }
 ```
 
-See the [examples](./examples/) directory for a full example. 
+See the [examples](./examples/) directory for a full example.
 
 ## Building
 
@@ -53,6 +53,16 @@ To run the go tests and check test coverage run the following
 
 ```sh
 $ go test -v ./... -cover
+```
+
+## Generating Documentation
+
+Documentation is generated for the provider using the [terraform documentation plugin](https://github.com/hashicorp/terraform-plugin-docs). This plugin uses the schema `Description` field in conjunction with the contents of the `/templates` and `/examples` folders to generate the `/docs` content.
+
+To regenerate the `/docs` markdown run
+
+```sh
+$ go generate
 ```
 
 ## Installing Locally
