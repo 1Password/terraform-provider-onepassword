@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v1.0.2)
+# v1.0.2
+
+## Features
+ * Documentation for the provider is now published on the Terraform Registry. {#8}
+
+---
+
 [//]: # "START/v1.0.1"
 
 # v1.0.1
