@@ -42,7 +42,7 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Required:    true,
 				DefaultFunc: schema.EnvDefaultFunc("OP_CONNECT_TOKEN", nil),
-				Description: "A valid token for your 1Password Connect API",
+				Description: "A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN.",
 			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{
