@@ -1,0 +1,31 @@
+name: Test
+on: [push, pull_request]
+
+jobs:
+  verify-docs:
+    name: Verify docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.15
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v1
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Generate docs
+        run: go generate
+
+      - name: Check if git detects no changes
+        run: |
+          if output=$(git status --porcelain) && [ -z "$output" ]; then
+            echo "Docs are up to date";
+          else
+            echo "Not all docs are up-to-date";
+            echo $output;
+            exit 1;
+          fi
