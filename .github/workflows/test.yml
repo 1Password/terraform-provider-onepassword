@@ -25,7 +25,7 @@ jobs:
           if output=$(git status --porcelain) && [ -z "$output" ]; then
             echo "Docs are up to date";
           else
-            echo "Not all docs are up-to-date";
+            echo "Not all docs are up-to-date. Run 'go generate' and commit the changes.";
             echo $output;
             exit 1;
           fi
