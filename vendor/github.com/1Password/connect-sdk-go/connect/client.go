@@ -3,6 +3,7 @@ package connect
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,11 +11,12 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/1Password/connect-sdk-go/onepassword"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	jaegerClientConfig "github.com/uber/jaeger-client-go/config"
 	"github.com/uber/jaeger-client-go/zipkin"
+
+	"github.com/1Password/connect-sdk-go/onepassword"
 )
 
 const (
@@ -24,6 +26,7 @@ const (
 // Client Represents an available 1Password Connect API to connect to
 type Client interface {
 	GetVaults() ([]onepassword.Vault, error)
+	GetVault(uuid string) (*onepassword.Vault, error)
 	GetVaultsByTitle(uuid string) ([]onepassword.Vault, error)
 	GetItem(uuid string, vaultUUID string) (*onepassword.Item, error)
 	GetItems(vaultUUID string) ([]onepassword.Item, error)
@@ -127,6 +130,43 @@ func (rs *restClient) GetVaults() ([]onepassword.Vault, error) {
 	}
 
 	return vaults, nil
+}
+
+// GetVaults Get a list of all available vaults
+func (rs *restClient) GetVault(uuid string) (*onepassword.Vault, error) {
+	if uuid == "" {
+		return nil, errors.New("no uuid provided")
+	}
+
+	span := rs.tracer.StartSpan("GetVault")
+	defer span.Finish()
+
+	vaultURL := fmt.Sprintf("/v1/vaults/%s", uuid)
+	request, err := rs.buildRequest(http.MethodGet, vaultURL, http.NoBody, span)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := rs.client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("Unable to retrieve vault. Receieved %q for %q", response.Status, vaultURL)
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	vault := onepassword.Vault{}
+	if err := json.Unmarshal(body, &vault); err != nil {
+		return nil, err
+	}
+
+	return &vault, nil
 }
 
 func (rs *restClient) GetVaultsByTitle(title string) ([]onepassword.Vault, error) {
