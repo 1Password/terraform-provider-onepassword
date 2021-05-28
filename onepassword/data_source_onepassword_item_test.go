@@ -10,11 +10,11 @@ import (
 )
 
 func TestDataSourceOnePasswordItemRead(t *testing.T) {
-	meta := &testClient{}
 	expectedItem := generateItem()
-
-	DoGetItemFunc = func(uuid string, vaultUUID string) (*onepassword.Item, error) {
-		return expectedItem, nil
+	meta := &testClient{
+		GetItemFunc: func(uuid string, vaultUUID string) (*onepassword.Item, error) {
+			return expectedItem, nil
+		},
 	}
 
 	dataSourceData := generateDataSource(t, expectedItem)
@@ -27,8 +27,12 @@ func TestDataSourceOnePasswordItemRead(t *testing.T) {
 }
 
 func TestDataSourceOnePasswordItemReadWithSections(t *testing.T) {
-	meta := &testClient{}
 	expectedItem := generateItem()
+	meta := &testClient{
+		GetItemFunc: func(uuid string, vaultUUID string) (*onepassword.Item, error) {
+			return expectedItem, nil
+		},
+	}
 	testSection := &onepassword.ItemSection{
 		ID:    "1234",
 		Label: "Test Section",
@@ -41,10 +45,6 @@ func TestDataSourceOnePasswordItemReadWithSections(t *testing.T) {
 		Value:   "Password123",
 		Section: testSection,
 	})
-
-	DoGetItemFunc = func(uuid string, vaultUUID string) (*onepassword.Item, error) {
-		return expectedItem, nil
-	}
 
 	dataSourceData := generateDataSource(t, expectedItem)
 
