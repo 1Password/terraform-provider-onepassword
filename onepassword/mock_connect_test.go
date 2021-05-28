@@ -1,6 +1,9 @@
 package onepassword
 
-import "github.com/1Password/connect-sdk-go/onepassword"
+import (
+	"github.com/1Password/connect-sdk-go/connect"
+	"github.com/1Password/connect-sdk-go/onepassword"
+)
 
 type testClient struct {
 	GetVaultsFunc        func() ([]onepassword.Vault, error)
@@ -14,51 +17,41 @@ type testClient struct {
 	DeleteItemFunc       func(item *onepassword.Item, vaultUUID string) error
 }
 
-var (
-	DoGetVaultsFunc        func() ([]onepassword.Vault, error)
-	DoGetVaultsByTitleFunc func(title string) ([]onepassword.Vault, error)
-	DoGetItemFunc          func(uuid string, vaultUUID string) (*onepassword.Item, error)
-	DoGetItemsByTitleFunc  func(title string, vaultUUID string) ([]onepassword.Item, error)
-	DoGetItemByTitleFunc   func(title string, vaultUUID string) (*onepassword.Item, error)
-	DoCreateItemFunc       func(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error)
-	DoDeleteItemFunc       func(item *onepassword.Item, vaultUUID string) error
-	DoGetItemsFunc         func(vaultUUID string) ([]onepassword.Item, error)
-	DoUpdateItemFunc       func(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error)
-)
+var _ connect.Client = (*testClient)(nil)
 
 // Do is the mock client's `Do` func
 func (m *testClient) GetVaults() ([]onepassword.Vault, error) {
-	return DoGetVaultsFunc()
+	return m.GetVaultsFunc()
 }
 
 func (m *testClient) GetVaultsByTitle(title string) ([]onepassword.Vault, error) {
-	return DoGetVaultsByTitleFunc(title)
+	return m.GetVaultsByTitleFunc(title)
 }
 
 func (m *testClient) GetItem(uuid string, vaultUUID string) (*onepassword.Item, error) {
-	return DoGetItemFunc(uuid, vaultUUID)
+	return m.GetItemFunc(uuid, vaultUUID)
 }
 
 func (m *testClient) GetItems(vaultUUID string) ([]onepassword.Item, error) {
-	return DoGetItemsFunc(vaultUUID)
+	return m.GetItemsFunc(vaultUUID)
 }
 
 func (m *testClient) GetItemsByTitle(title string, vaultUUID string) ([]onepassword.Item, error) {
-	return DoGetItemsByTitleFunc(title, vaultUUID)
+	return m.GetItemsByTitleFunc(title, vaultUUID)
 }
 
 func (m *testClient) GetItemByTitle(title string, vaultUUID string) (*onepassword.Item, error) {
-	return DoGetItemByTitleFunc(title, vaultUUID)
+	return m.GetItemByTitleFunc(title, vaultUUID)
 }
 
 func (m *testClient) CreateItem(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
-	return DoCreateItemFunc(item, vaultUUID)
+	return m.CreateItemFunc(item, vaultUUID)
 }
 
 func (m *testClient) DeleteItem(item *onepassword.Item, vaultUUID string) error {
-	return DoDeleteItemFunc(item, vaultUUID)
+	return m.DeleteItemFunc(item, vaultUUID)
 }
 
 func (m *testClient) UpdateItem(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
-	return DoUpdateItemFunc(item, vaultUUID)
+	return m.UpdateItemFunc(item, vaultUUID)
 }
