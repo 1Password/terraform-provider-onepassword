@@ -2,12 +2,12 @@
 page_title: "onepassword_item Data Source - terraform-provider-onepassword"
 subcategory: ""
 description: |-
-  Get the contents of a 1Password item from its Item and Vault UUID.
+  Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.
 ---
 
 # Data Source `onepassword_item`
 
-Get the contents of a 1Password item from its Item and Vault UUID.
+Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.
 
 ## Example Usage
 

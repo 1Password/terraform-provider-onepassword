@@ -14,7 +14,7 @@ func dataSourceOnepasswordItem() *schema.Resource {
 	exactlyOneOfUUIDAndTitle := []string{"uuid", "title"}
 
 	return &schema.Resource{
-		Description: "Get the contents of a 1Password item from its Item and Vault UUID.",
+		Description: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
 		Read:        dataSourceOnepasswordItemRead,
 		Schema: map[string]*schema.Schema{
 			"vault": {
