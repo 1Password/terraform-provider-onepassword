@@ -1,14 +1,18 @@
 package onepassword
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/1Password/connect-sdk-go/connect"
+	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceOnepasswordItem() *schema.Resource {
+	exactlyOneOfUUIDAndTitle := []string{"uuid", "title"}
+
 	return &schema.Resource{
 		Description: "Get the contents of a 1Password item from its Item and Vault UUID.",
 		Read:        dataSourceOnepasswordItemRead,
@@ -19,16 +23,18 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Required:    true,
 			},
 			"uuid": {
-				Description: itemUUIDDescription,
-				Type:        schema.TypeString,
-				Optional:    true,
-				Computed:    true,
+				Description:  itemUUIDDescription,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: exactlyOneOfUUIDAndTitle,
 			},
 			"title": {
-				Description: itemTitleDescription,
-				Type:        schema.TypeString,
-				Optional:    true,
-				Computed:    true,
+				Description:  itemTitleDescription,
+				Type:         schema.TypeString,
+				Optional:     true,
+				Computed:     true,
+				ExactlyOneOf: exactlyOneOfUUIDAndTitle,
 			},
 			"category": {
 				Description: fmt.Sprintf(enumDescription, categoryDescription, categories),
@@ -142,13 +148,7 @@ func dataSourceOnepasswordItem() *schema.Resource {
 func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) error {
 	client := meta.(connect.Client)
 
-	vaultUUID := data.Get("vault").(string)
-	itemUUID := data.Get("uuid").(string)
-
-	data.SetId("")
-
-	item, err := client.GetItem(itemUUID, vaultUUID)
-
+	item, err := getItemForDataSource(client, data)
 	if err != nil {
 		return err
 	}
@@ -209,4 +209,18 @@ func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) 
 	}
 
 	return nil
+}
+
+func getItemForDataSource(client connect.Client, data *schema.ResourceData) (*onepassword.Item, error) {
+	vaultUUID := data.Get("vault").(string)
+	itemTitle := data.Get("title").(string)
+	itemUUID := data.Get("uuid").(string)
+
+	if itemTitle != "" {
+		return client.GetItemByTitle(itemTitle, vaultUUID)
+	}
+	if itemUUID != "" {
+		return client.GetItem(itemUUID, vaultUUID)
+	}
+	return nil, errors.New("uuid or title must be set")
 }
