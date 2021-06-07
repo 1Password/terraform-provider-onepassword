@@ -60,6 +60,7 @@ func TestProvider_HasResources(t *testing.T) {
 func TestProvider_HasDataSources(t *testing.T) {
 	expectedDataSources := []string{
 		"onepassword_item",
+		"onepassword_vault",
 	}
 
 	dataSources := Provider().DataSourcesMap

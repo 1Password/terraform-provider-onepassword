@@ -7,6 +7,7 @@ import (
 
 type testClient struct {
 	GetVaultsFunc        func() ([]onepassword.Vault, error)
+	GetVaultFunc         func(vaultUUID string) (*onepassword.Vault, error)
 	GetVaultsByTitleFunc func(title string) ([]onepassword.Vault, error)
 	GetItemFunc          func(uuid string, vaultUUID string) (*onepassword.Item, error)
 	GetItemsFunc         func(vaultUUID string) ([]onepassword.Item, error)
@@ -22,6 +23,10 @@ var _ connect.Client = (*testClient)(nil)
 // Do is the mock client's `Do` func
 func (m *testClient) GetVaults() ([]onepassword.Vault, error) {
 	return m.GetVaultsFunc()
+}
+
+func (m *testClient) GetVault(vaultUUID string) (*onepassword.Vault, error) {
+	return m.GetVaultFunc(vaultUUID)
 }
 
 func (m *testClient) GetVaultsByTitle(title string) ([]onepassword.Vault, error) {
