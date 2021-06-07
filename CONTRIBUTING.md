@@ -1,3 +1,7 @@
+# Contributing to 1Password
+
+Thank you so much for contributing to 1Password. We appreciate your time and help. Here are some guidelines to help you get started.
+
 ## Building
 
 To build the 1Password Connect Terraform provider run the following
