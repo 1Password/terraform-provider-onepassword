@@ -18,6 +18,25 @@ func TestDataSourceOnePasswordItemRead(t *testing.T) {
 	}
 
 	dataSourceData := generateDataSource(t, expectedItem)
+	dataSourceData.Set("uuid", expectedItem.ID)
+
+	err := dataSourceOnepasswordItemRead(dataSourceData, meta)
+	if err != nil {
+		t.Errorf("Unexpected error occured")
+	}
+	compareItemToSource(t, dataSourceData, expectedItem)
+}
+
+func TestDataSourceOnePasswordItemReadByTitle(t *testing.T) {
+	expectedItem := generateItem()
+	meta := &testClient{
+		GetItemByTitleFunc: func(title string, vaultUUID string) (*onepassword.Item, error) {
+			return expectedItem, nil
+		},
+	}
+
+	dataSourceData := generateDataSource(t, expectedItem)
+	dataSourceData.Set("title", expectedItem.Title)
 
 	err := dataSourceOnepasswordItemRead(dataSourceData, meta)
 	if err != nil {
@@ -47,6 +66,7 @@ func TestDataSourceOnePasswordItemReadWithSections(t *testing.T) {
 	})
 
 	dataSourceData := generateDataSource(t, expectedItem)
+	dataSourceData.Set("uuid", expectedItem.ID)
 
 	err := dataSourceOnepasswordItemRead(dataSourceData, meta)
 	if err != nil {
@@ -109,7 +129,6 @@ func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item
 
 func generateDataSource(t *testing.T, item *onepassword.Item) *schema.ResourceData {
 	dataSourceData := schema.TestResourceDataRaw(t, dataSourceOnepasswordItem().Schema, nil)
-	dataSourceData.Set("uuid", item.ID)
 	dataSourceData.Set("vault", item.Vault.ID)
 	dataSourceData.SetId(fmt.Sprintf("vaults/%s/items/%s", item.Vault.ID, item.ID))
 	return dataSourceData
