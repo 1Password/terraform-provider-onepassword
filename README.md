@@ -41,4 +41,4 @@ See the [examples](./examples/) directory for a full example.
 
 ## Contributing
 
-Detailed documentation for contributing to the 1Password Terraform provider can be found [here](https://github.com/1Password/terraform-provider-onepassword/blob/main/CONTRIBUTING.md).
+Detailed documentation for contributing to the 1Password Terraform provider can be found [here](./CONTRIBUTING.md).
