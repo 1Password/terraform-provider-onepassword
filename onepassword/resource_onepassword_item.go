@@ -56,48 +56,7 @@ var fieldPurposes = []string{"USERNAME", "PASSWORD", "NOTES"}
 var fieldTypes = []string{"STRING", "EMAIL", "CONCEALED", "URL", "TOTP", "DATE", "MONTH_YEAR", "MENU"}
 
 func resourceOnepasswordItem() *schema.Resource {
-	passwordRecipe := &schema.Schema{
-		Description: passwordDescription,
-		Type:        schema.TypeList,
-		Elem: &schema.Resource{
-			Description: passwordElementDescription,
-			Schema: map[string]*schema.Schema{
-				"length": {
-					Type:        schema.TypeInt,
-					Description: passwordLengthDescription,
-					Default:     32,
-					Optional:    true,
-					ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
-						v := val.(int)
-						if v < 1 || v > 64 {
-							errs = append(errs, fmt.Errorf("%q must be between 1 and 64 inclusive, got: %d", key, v))
-						}
-						return
-					},
-				},
-				"letters": {
-					Type:        schema.TypeBool,
-					Default:     true,
-					Description: passwordLettersDescription,
-					Optional:    true,
-				},
-				"digits": {
-					Type:        schema.TypeBool,
-					Default:     true,
-					Description: passwordDigitsDescription,
-					Optional:    true,
-				},
-				"symbols": {
-					Type:        schema.TypeBool,
-					Default:     true,
-					Description: passwordSymbolsDescription,
-					Optional:    true,
-				},
-			},
-		},
-		MaxItems: 1,
-		Optional: true,
-	}
+	exactlyOneOfValueAndPasswordRecipe := []string{"value", "password_recipe"}
 
 	return &schema.Resource{
 		Description: "A 1Password item.",
@@ -174,11 +133,12 @@ func resourceOnepasswordItem() *schema.Resource {
 				Optional:    true,
 			},
 			"password": {
-				Description: passwordDescription,
-				Type:        schema.TypeString,
-				Optional:    true,
-				Sensitive:   true,
-				Computed:    true,
+				Description:   passwordDescription,
+				Type:          schema.TypeString,
+				Optional:      true,
+				Sensitive:     true,
+				Computed:      true,
+				ConflictsWith: []string{"password_recipe"},
 			},
 			"section": {
 				Description: sectionsDescription,
@@ -232,22 +192,76 @@ func resourceOnepasswordItem() *schema.Resource {
 										ValidateFunc: validation.StringInSlice(fieldTypes, true),
 									},
 									"value": {
-										Description: fieldValueDescription,
-										Type:        schema.TypeString,
-										Optional:    true,
-										Computed:    true,
-										Sensitive:   true,
+										Description:  fieldValueDescription,
+										Type:         schema.TypeString,
+										Optional:     true,
+										Computed:     true,
+										Sensitive:    true,
+										ExactlyOneOf: exactlyOneOfValueAndPasswordRecipe,
 									},
-									"password_recipe": passwordRecipe,
+									"password_recipe": passwordRecipe(func(s *schema.Schema) {
+										s.ExactlyOneOf = exactlyOneOfValueAndPasswordRecipe
+									}),
 								},
 							},
 						},
 					},
 				},
 			},
-			"password_recipe": passwordRecipe,
+			"password_recipe": passwordRecipe(func(s *schema.Schema) {
+				s.ConflictsWith = []string{
+					"password",
+				}
+			}),
 		},
 	}
+}
+
+func passwordRecipe(modifier func(*schema.Schema)) *schema.Schema {
+	s := &schema.Schema{
+		Description: passwordDescription,
+		Type:        schema.TypeList,
+		Elem: &schema.Resource{
+			Description: passwordElementDescription,
+			Schema: map[string]*schema.Schema{
+				"length": {
+					Type:        schema.TypeInt,
+					Description: passwordLengthDescription,
+					Default:     32,
+					Optional:    true,
+					ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+						v := val.(int)
+						if v < 1 || v > 64 {
+							errs = append(errs, fmt.Errorf("%q must be between 1 and 64 inclusive, got: %d", key, v))
+						}
+						return
+					},
+				},
+				"letters": {
+					Type:        schema.TypeBool,
+					Default:     true,
+					Description: passwordLettersDescription,
+					Optional:    true,
+				},
+				"digits": {
+					Type:        schema.TypeBool,
+					Default:     true,
+					Description: passwordDigitsDescription,
+					Optional:    true,
+				},
+				"symbols": {
+					Type:        schema.TypeBool,
+					Default:     true,
+					Description: passwordSymbolsDescription,
+					Optional:    true,
+				},
+			},
+		},
+		MaxItems: 1,
+		Optional: true,
+	}
+	modifier(s)
+	return s
 }
 
 func resourceOnepasswordItemCreate(data *schema.ResourceData, meta interface{}) error {
