@@ -70,10 +70,14 @@ func resourceOnepasswordItem() *schema.Resource {
 		},
 
 		Schema: map[string]*schema.Schema{
+			"id": {
+				Description: "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.",
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
 			"uuid": {
 				Description: itemUUIDDescription,
 				Type:        schema.TypeString,
-				Optional:    true,
 				Computed:    true,
 			},
 			"vault": {
@@ -151,7 +155,6 @@ func resourceOnepasswordItem() *schema.Resource {
 						"id": {
 							Description: sectionIDDescription,
 							Type:        schema.TypeString,
-							Optional:    true,
 							Computed:    true,
 						},
 						"label": {
