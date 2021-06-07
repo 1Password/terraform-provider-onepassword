@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-
 	"github.com/1Password/connect-sdk-go/connect"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 func dataSourceOnepasswordItem() *schema.Resource {
@@ -18,7 +16,8 @@ func dataSourceOnepasswordItem() *schema.Resource {
 			"uuid": {
 				Description: itemUUIDDescription,
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
+				Computed:    true,
 			},
 			"vault": {
 				Description: vaultUUIDDescription,
@@ -26,42 +25,40 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Required:    true,
 			},
 			"category": {
-				Description:  fmt.Sprintf(enumDescription, categoryDescription, categories),
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "login",
-				ValidateFunc: validation.StringInSlice(categories, true),
+				Description: fmt.Sprintf(enumDescription, categoryDescription, categories),
+				Type:        schema.TypeString,
+				Computed:    true,
 			},
 			"title": {
 				Description: itemTitleDescription,
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
 			},
 			"url": {
 				Description: urlDescription,
 				Type:        schema.TypeString,
-				Optional:    true,
+				Computed:    true,
 			},
 			"hostname": {
 				Description: dbHostnameDescription,
 				Type:        schema.TypeString,
-				Optional:    true,
+				Computed:    true,
 			},
 			"database": {
 				Description: dbDatabaseDescription,
 				Type:        schema.TypeString,
-				Optional:    true,
+				Computed:    true,
 			},
 			"port": {
 				Description: dbPortDescription,
 				Type:        schema.TypeString,
-				Optional:    true,
+				Computed:    true,
 			},
 			"type": {
-				Description:  fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
-				Type:         schema.TypeString,
-				Optional:     true,
-				ValidateFunc: validation.StringInSlice(dbTypes, true),
+				Description: fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
+				Type:        schema.TypeString,
+				Computed:    true,
 			},
 			"tags": {
 				Description: tagsDescription,
@@ -72,18 +69,18 @@ func dataSourceOnepasswordItem() *schema.Resource {
 			"username": {
 				Description: usernameDescription,
 				Type:        schema.TypeString,
-				Optional:    true,
+				Computed:    true,
 			},
 			"password": {
 				Description: passwordDescription,
 				Type:        schema.TypeString,
-				Optional:    true,
+				Computed:    true,
 				Sensitive:   true,
 			},
 			"section": {
 				Description: sectionsDescription,
 				Type:        schema.TypeList,
-				Optional:    true,
+				Computed:    true,
 				MinItems:    0,
 				Elem: &schema.Resource{
 					Description: sectionDescription,
@@ -91,18 +88,17 @@ func dataSourceOnepasswordItem() *schema.Resource {
 						"id": {
 							Description: sectionIDDescription,
 							Type:        schema.TypeString,
-							Optional:    true,
 							Computed:    true,
 						},
 						"label": {
 							Description: sectionLabelDescription,
 							Type:        schema.TypeString,
-							Required:    true,
+							Computed:    true,
 						},
 						"field": {
 							Description: sectionFieldsDescription,
 							Type:        schema.TypeList,
-							Optional:    true,
+							Computed:    true,
 							MinItems:    0,
 							Elem: &schema.Resource{
 								Description: fieldDescription,
@@ -110,31 +106,26 @@ func dataSourceOnepasswordItem() *schema.Resource {
 									"id": {
 										Description: fieldIDDescription,
 										Type:        schema.TypeString,
-										Optional:    true,
 										Computed:    true,
 									},
 									"label": {
 										Description: fieldLabelDescription,
 										Type:        schema.TypeString,
-										Required:    true,
+										Computed:    true,
 									},
 									"purpose": {
-										Description:  fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
-										Type:         schema.TypeString,
-										Optional:     true,
-										ValidateFunc: validation.StringInSlice(fieldPurposes, true),
+										Description: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
+										Type:        schema.TypeString,
+										Computed:    true,
 									},
 									"type": {
-										Description:  fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
-										Type:         schema.TypeString,
-										Default:      "STRING",
-										Optional:     true,
-										ValidateFunc: validation.StringInSlice(fieldTypes, true),
+										Description: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+										Type:        schema.TypeString,
+										Computed:    true,
 									},
 									"value": {
 										Description: fieldValueDescription,
 										Type:        schema.TypeString,
-										Optional:    true,
 										Computed:    true,
 										Sensitive:   true,
 									},
