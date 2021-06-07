@@ -22,48 +22,41 @@ data "onepassword_item" "example" {
 
 ### Required
 
-- **uuid** (String, Required) The UUID of the item. Item identifiers are unique within a specific vault.
 - **vault** (String, Required) The UUID of the vault the item is in.
 
 ### Optional
 
-- **category** (String, Optional) The category of the item. One of ["login" "password" "database"]
-- **database** (String, Optional) (Only applies to the database category) The name of the database.
-- **hostname** (String, Optional) (Only applies to the database category) The address where the database can be found
 - **id** (String, Optional) The ID of this resource.
-- **password** (String, Optional) Password for this item.
-- **port** (String, Optional) (Only applies to the database category) The port the database is listening on.
-- **section** (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - **tags** (List of String, Optional) An array of strings of the tags assigned to the item.
 - **title** (String, Optional) The title of the item.
-- **type** (String, Optional) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
-- **url** (String, Optional) The primary URL for the item.
-- **username** (String, Optional) Username for this item.
+- **uuid** (String, Optional) The UUID of the item. Item identifiers are unique within a specific vault.
 
-<a id="nestedblock--section"></a>
+### Read-only
+
+- **category** (String, Read-only) The category of the item. One of ["login" "password" "database"]
+- **database** (String, Read-only) (Only applies to the database category) The name of the database.
+- **hostname** (String, Read-only) (Only applies to the database category) The address where the database can be found
+- **password** (String, Read-only) Password for this item.
+- **port** (String, Read-only) (Only applies to the database category) The port the database is listening on.
+- **section** (List of Object, Read-only) A list of custom sections in an item (see [below for nested schema](#nestedatt--section))
+- **type** (String, Read-only) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
+- **url** (String, Read-only) The primary URL for the item.
+- **username** (String, Read-only) Username for this item.
+
+<a id="nestedatt--section"></a>
 ### Nested Schema for `section`
 
-Required:
+- **field** (List of Object) (see [below for nested schema](#nestedobjatt--section--field))
+- **id** (String)
+- **label** (String)
 
-- **label** (String, Required) The label for the section.
-
-Optional:
-
-- **field** (Block List) A list of custom fields in the section. (see [below for nested schema](#nestedblock--section--field))
-- **id** (String, Optional) A unique identifier for the section.
-
-<a id="nestedblock--section--field"></a>
+<a id="nestedobjatt--section--field"></a>
 ### Nested Schema for `section.field`
 
-Required:
-
-- **label** (String, Required) The label for the field.
-
-Optional:
-
-- **id** (String, Optional) A unique identifier for the field.
-- **purpose** (String, Optional) Purpose indicates this is a special field: a username, password, or notes field. One of ["USERNAME" "PASSWORD" "NOTES"]
-- **type** (String, Optional) The type of value stored in the field. One of ["STRING" "EMAIL" "CONCEALED" "URL" "TOTP" "DATE" "MONTH_YEAR" "MENU"]
-- **value** (String, Optional) The value of the field.
+- **id** (String)
+- **label** (String)
+- **purpose** (String)
+- **type** (String)
+- **value** (String)
 
 
