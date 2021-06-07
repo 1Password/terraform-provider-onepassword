@@ -57,7 +57,6 @@ resource "onepassword_item" "demo_db" {
 - **category** (String, Optional) The category of the item. One of ["login" "password" "database"]
 - **database** (String, Optional) (Only applies to the database category) The name of the database.
 - **hostname** (String, Optional) (Only applies to the database category) The address where the database can be found
-- **id** (String, Optional) The ID of this resource.
 - **password** (String, Optional) Password for this item.
 - **password_recipe** (Block List, Max: 1) Password for this item. (see [below for nested schema](#nestedblock--password_recipe))
 - **port** (String, Optional) (Only applies to the database category) The port the database is listening on.
@@ -67,7 +66,11 @@ resource "onepassword_item" "demo_db" {
 - **type** (String, Optional) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - **url** (String, Optional) The primary URL for the item.
 - **username** (String, Optional) Username for this item.
-- **uuid** (String, Optional) The UUID of the item. Item identifiers are unique within a specific vault.
+
+### Read-only
+
+- **id** (String, Read-only) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
+- **uuid** (String, Read-only) The UUID of the item. Item identifiers are unique within a specific vault.
 
 <a id="nestedblock--password_recipe"></a>
 ### Nested Schema for `password_recipe`
@@ -90,7 +93,10 @@ Required:
 Optional:
 
 - **field** (Block List) A list of custom fields in the section. (see [below for nested schema](#nestedblock--section--field))
-- **id** (String, Optional) A unique identifier for the section.
+
+Read-only:
+
+- **id** (String, Read-only) A unique identifier for the section.
 
 <a id="nestedblock--section--field"></a>
 ### Nested Schema for `section.field`
