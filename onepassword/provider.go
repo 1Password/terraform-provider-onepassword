@@ -46,7 +46,8 @@ func Provider() *schema.Provider {
 			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{
-			"onepassword_item": dataSourceOnepasswordItem(),
+			"onepassword_vault": dataSourceOnepasswordVault(),
+			"onepassword_item":  dataSourceOnepasswordItem(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"onepassword_item": resourceOnepasswordItem(),

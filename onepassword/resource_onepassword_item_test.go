@@ -105,11 +105,12 @@ func TestAddSectionsToItem(t *testing.T) {
 }
 
 func testCRUDForItem(t *testing.T, itemToCreate *schema.ResourceData) {
-	meta := &testClient{}
-	DoGetItemFunc = getItem
-	DoCreateItemFunc = createItem
-	DoDeleteItemFunc = deleteItem
-	DoUpdateItemFunc = updateItem
+	meta := &testClient{
+		GetItemFunc:    getItem,
+		CreateItemFunc: createItem,
+		DeleteItemFunc: deleteItem,
+		UpdateItemFunc: updateItem,
+	}
 
 	// Creating an Item
 	err := resourceOnepasswordItemCreate(itemToCreate, meta)
