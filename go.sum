@@ -34,10 +34,8 @@ cloud.google.com/go/storage v1.8.0/go.mod h1:Wv1Oy7z6Yz3DshWRJFhqM/UCfaWIRTdp0RX
 cloud.google.com/go/storage v1.10.0 h1:STgFzyU5/8miMl0//zKh2aQeTyeaUH3WN9bSUiJ09bA=
 cloud.google.com/go/storage v1.10.0/go.mod h1:FLPqc6j+Ki4BU591ie1oL6qBQGu2Bl/tZ9ullr3+Kg0=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/1Password/connect-sdk-go v1.0.1 h1:BOeMIxVk6/ISmLNWUkSxEbVI7tNr5+aNXIobMM0/I0U=
-github.com/1Password/connect-sdk-go v1.0.1/go.mod h1:br2BWk2sqgJFnOFK5WSDfBBmwQ6E7hV9LoPqrtHGRNY=
-github.com/1Password/connect-sdk-go v1.0.2-0.20210528135252-bfc6d04506d6 h1:/Qc7AA99ikto85H/uLLMkKgD2qWxNYONMmp9te9sKyU=
-github.com/1Password/connect-sdk-go v1.0.2-0.20210528135252-bfc6d04506d6/go.mod h1:0yXJAQtWinciTioZsvrPYTYlhFdEla3WnyDo8xfaSlM=
+github.com/1Password/connect-sdk-go v1.1.0 h1:cIgAu2EiTXRVUCWWytu6bOuTSIMYmZAzO1ES1wMYKFg=
+github.com/1Password/connect-sdk-go v1.1.0/go.mod h1:i4WkvBAjspga39/fW/Aca6b8Shu6El02Wp34kp3ICXQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/HdrHistogram/hdrhistogram-go v1.0.1 h1:GX8GAYDuhlFQnI2fRDHQhTlkHMz8bEn0jTI6LJU0mpw=
