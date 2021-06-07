@@ -13,26 +13,26 @@ func dataSourceOnepasswordItem() *schema.Resource {
 		Description: "Get the contents of a 1Password item from its Item and Vault UUID.",
 		Read:        dataSourceOnepasswordItemRead,
 		Schema: map[string]*schema.Schema{
+			"vault": {
+				Description: vaultUUIDDescription,
+				Type:        schema.TypeString,
+				Required:    true,
+			},
 			"uuid": {
 				Description: itemUUIDDescription,
 				Type:        schema.TypeString,
 				Optional:    true,
 				Computed:    true,
 			},
-			"vault": {
-				Description: vaultUUIDDescription,
-				Type:        schema.TypeString,
-				Required:    true,
-			},
-			"category": {
-				Description: fmt.Sprintf(enumDescription, categoryDescription, categories),
-				Type:        schema.TypeString,
-				Computed:    true,
-			},
 			"title": {
 				Description: itemTitleDescription,
 				Type:        schema.TypeString,
 				Optional:    true,
+				Computed:    true,
+			},
+			"category": {
+				Description: fmt.Sprintf(enumDescription, categoryDescription, categories),
+				Type:        schema.TypeString,
 				Computed:    true,
 			},
 			"url": {
