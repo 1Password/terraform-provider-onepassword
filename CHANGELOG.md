@@ -12,6 +12,19 @@
 
 ---
 
+[//]: # (START/v1.1.0)
+# v1.1.0
+
+## Features
+ * Adds the `onepassword_vault` data source that can be used to look up a vault by its name or uuid. {#25}
+ * The `onepassword_item` data source can now be used by setting the `title` instead of the `uuid` field. {#25}
+ * The documentation now clearly mentions that the Connect Token can also be provided thorugh `$OP_CONNECT_TOKEN`.
+
+## Fixes
+ * The `id` and `uuid` fields of the `onepassword_item` resource are now correctly designated as outputs.
+
+---
+
 [//]: # (START/v1.0.2)
 # v1.0.2
 
