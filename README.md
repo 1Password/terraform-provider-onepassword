@@ -4,7 +4,7 @@ Use the 1Password Connect Terraform Provider to reference, create, or update ite
 
 ## Usage
 
-Detailed documentation for using this provider can be found [here](https://registry.terraform.io/providers/1Password/onepassword/latest/docs).
+Detailed documentation for using this provider can be found on the [Terraform Registry docs](https://registry.terraform.io/providers/1Password/onepassword/latest/docs).
 
 ```tf
 terraform {
