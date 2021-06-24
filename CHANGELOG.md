@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v1.1.1)
+# v1.1.1
+
+## Features
+ * This release includes a binary for `darwin/arm64`. {#35}
+
+---
+
 [//]: # (START/v1.1.0)
 # v1.1.0
 
