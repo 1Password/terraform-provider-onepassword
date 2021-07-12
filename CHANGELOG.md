@@ -12,6 +12,11 @@
 
 ---
 
+[//]: # (START/v1.1.2)
+# v1.1.2
+## Fixes
+ * Improve error messages.
+
 [//]: # (START/v1.1.1)
 # v1.1.1
 
