@@ -65,6 +65,7 @@ type Item struct {
 
 	Sections []*ItemSection `json:"sections,omitempty"`
 	Fields   []*ItemField   `json:"fields,omitempty"`
+	Files    []*File        `json:"files,omitempty"`
 
 	LastEditedBy string    `json:"lastEditedBy,omitempty"`
 	CreatedAt    time.Time `json:"createdAt,omitempty"`
