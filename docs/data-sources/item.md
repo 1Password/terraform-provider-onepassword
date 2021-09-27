@@ -26,7 +26,7 @@ data "onepassword_item" "example" {
 
 ### Optional
 
-- **id** (String, Optional) The ID of this resource.
+- **id** (String, Optional) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - **tags** (List of String, Optional) An array of strings of the tags assigned to the item.
 - **title** (String, Optional) The title of the item.
 - **uuid** (String, Optional) The UUID of the item. Item identifiers are unique within a specific vault.
