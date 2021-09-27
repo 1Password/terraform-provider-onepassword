@@ -21,6 +21,4 @@ Use this data source to get details of a vault by either its name or uuid.
 ### Read-only
 
 - **description** (String, Read-only) The description of the vault.
-- **id** (String, Read-only) The ID of this resource.
-
-
+- **uuid** (String, Read-only) The UUID of the vault. 
