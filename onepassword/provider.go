@@ -35,7 +35,7 @@ func Provider() *schema.Provider {
 		Schema: map[string]*schema.Schema{
 			"url": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("OP_CONNECT_HOST", nil),
 				Description: "The HTTP(S) URL where your 1Password Connect API can be found. Can also be sourced from OP_CONNECT_HOST.",
 			},
@@ -55,7 +55,19 @@ func Provider() *schema.Provider {
 		},
 	}
 	provider.ConfigureFunc = func(d *schema.ResourceData) (interface{}, error) {
-		return connect.NewClientWithUserAgent(d.Get("url").(string), d.Get("token").(string), providerUserAgent), nil
+		url := d.Get("url").(string)
+		token := d.Get("token").(string)
+
+		// This is not handled by setting Required to true because Terraform does not handle
+		// multiple required attributes well. If only one is set in the provider configuration,
+		// the other one is prompted for, but Terraform then forgets the value for the one that
+		// is defined in the code. This confusing user-experience can be avoided by handling the
+		// requirement of one of the attributes manually.
+		if url == "" {
+			return nil, fmt.Errorf("URL for Connect API is not set. Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable")
+		}
+
+		return connect.NewClientWithUserAgent(url, token, providerUserAgent), nil
 	}
 	return provider
 }
