@@ -25,4 +25,4 @@ provider "onepassword" {
 
 ### Optional
 
-- **url** (String, Optional) The HTTP(S) URL where your 1Password Connect API can be found. Can also be sourced from OP_CONNECT_HOST.
+- **url** (String, Optional) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the the OP_CONNECT_HOST environment variable if this attribute is not set.
