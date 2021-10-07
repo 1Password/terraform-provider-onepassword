@@ -26,7 +26,6 @@ data "onepassword_item" "example" {
 
 ### Optional
 
-- **tags** (List of String, Optional) An array of strings of the tags assigned to the item.
 - **title** (String, Optional) The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.
 - **uuid** (String, Optional) The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.
 
@@ -39,6 +38,7 @@ data "onepassword_item" "example" {
 - **password** (String, Read-only) Password for this item.
 - **port** (String, Read-only) (Only applies to the database category) The port the database is listening on.
 - **section** (List of Object, Read-only) A list of custom sections in an item (see [below for nested schema](#nestedatt--section))
+- **tags** (List of String, Read-only) An array of strings of the tags assigned to the item.
 - **type** (String, Read-only) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - **url** (String, Read-only) The primary URL for the item.
 - **username** (String, Read-only) Username for this item.

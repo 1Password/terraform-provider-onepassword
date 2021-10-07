@@ -75,7 +75,7 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Description: tagsDescription,
 				Type:        schema.TypeList,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-				Optional:    true,
+				Computed:    true,
 			},
 			"username": {
 				Description: usernameDescription,
