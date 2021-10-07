@@ -27,8 +27,8 @@ data "onepassword_item" "example" {
 ### Optional
 
 - **tags** (List of String, Optional) An array of strings of the tags assigned to the item.
-- **title** (String, Optional) The title of the item.
-- **uuid** (String, Optional) The UUID of the item. Item identifiers are unique within a specific vault.
+- **title** (String, Optional) The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.
+- **uuid** (String, Optional) The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.
 
 ### Read-only
 

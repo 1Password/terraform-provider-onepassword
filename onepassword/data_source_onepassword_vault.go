@@ -21,14 +21,14 @@ func dataSourceOnepasswordVault() *schema.Resource {
 				Computed:    true,
 			},
 			"uuid": {
-				Description:  "The UUID of the vault to retrieve.",
+				Description:  "The UUID of the vault to retrieve. This field will be populated with the UUID of the vault if the vault it looked up by its name.",
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,
 				ExactlyOneOf: oneOfUUIDName,
 			},
 			"name": {
-				Description:  "The name of the vault to retrieve.",
+				Description:  "The name of the vault to retrieve. This field will be populated with the name of the vault if the vault it looked up by its UUID.",
 				Type:         schema.TypeString,
 				Optional:     true,
 				Computed:     true,

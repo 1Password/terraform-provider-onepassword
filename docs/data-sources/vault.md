@@ -15,8 +15,8 @@ Use this data source to get details of a vault by either its name or uuid.
 
 ### Optional
 
-- **name** (String, Optional) The name of the vault to retrieve.
-- **uuid** (String, Optional) The UUID of the vault to retrieve.
+- **name** (String, Optional) The name of the vault to retrieve. This field will be populated with the name of the vault if the vault it looked up by its UUID.
+- **uuid** (String, Optional) The UUID of the vault to retrieve. This field will be populated with the UUID of the vault if the vault it looked up by its name.
 
 ### Read-only
 
