@@ -12,6 +12,16 @@
 
 ---
 
+[//]: # (START/v1.1.3)
+# v1.1.3
+
+## Fixes
+ * Setting the provider's `token` field through Terraform's built-in prompt no longer leads to an error about the `url` not beign set. {#46}
+ * The purpose of the `id` and `uuid` fields of the item and vault data-source is now correctly described in the docs. {#42}
+ * The `tags` field for the item data-source is now correctly identified as an output.
+
+---
+
 [//]: # (START/v1.1.2)
 # v1.1.2
 ## Fixes
