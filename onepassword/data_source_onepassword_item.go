@@ -17,6 +17,11 @@ func dataSourceOnepasswordItem() *schema.Resource {
 		Description: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
 		Read:        dataSourceOnepasswordItemRead,
 		Schema: map[string]*schema.Schema{
+			"id": {
+				Description: "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`",
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
 			"vault": {
 				Description: vaultUUIDDescription,
 				Type:        schema.TypeString,

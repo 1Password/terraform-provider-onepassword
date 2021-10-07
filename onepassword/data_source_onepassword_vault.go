@@ -16,7 +16,7 @@ func dataSourceOnepasswordVault() *schema.Resource {
 		Read:        dataSourceOnepasswordVaultRead,
 		Schema: map[string]*schema.Schema{
 			"id": {
-				Description: "The ID of this resource.",
+				Description: "The Terraform resource identifier for this item in the format `vaults/<vault_id>`",
 				Type:        schema.TypeString,
 				Computed:    true,
 			},

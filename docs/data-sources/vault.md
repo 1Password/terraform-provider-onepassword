@@ -22,4 +22,5 @@ Use this data source to get details of a vault by either its name or uuid.
 
 - **description** (String, Read-only) The description of the vault.
 - **id** (String, Read-only) The Terraform resource identifier for this item in the format `vaults/<vault_id>`
-- **uuid** (String, Read-only) The UUID of the vault. 
+
+

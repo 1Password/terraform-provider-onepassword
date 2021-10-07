@@ -26,7 +26,6 @@ data "onepassword_item" "example" {
 
 ### Optional
 
-- **id** (String, Optional) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - **tags** (List of String, Optional) An array of strings of the tags assigned to the item.
 - **title** (String, Optional) The title of the item.
 - **uuid** (String, Optional) The UUID of the item. Item identifiers are unique within a specific vault.
@@ -36,6 +35,7 @@ data "onepassword_item" "example" {
 - **category** (String, Read-only) The category of the item. One of ["login" "password" "database"]
 - **database** (String, Read-only) (Only applies to the database category) The name of the database.
 - **hostname** (String, Read-only) (Only applies to the database category) The address where the database can be found
+- **id** (String, Read-only) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`
 - **password** (String, Read-only) Password for this item.
 - **port** (String, Read-only) (Only applies to the database category) The port the database is listening on.
 - **section** (List of Object, Read-only) A list of custom sections in an item (see [below for nested schema](#nestedatt--section))
