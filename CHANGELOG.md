@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v1.1.4)
+# v1.1.4
+
+## Fixes
+ * Fix (T)OTP field type. {#54}
+
+---
+
 [//]: # (START/v1.1.3)
 # v1.1.3
 
