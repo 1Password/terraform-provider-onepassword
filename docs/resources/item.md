@@ -110,7 +110,7 @@ Optional:
 - **id** (String, Optional) A unique identifier for the field.
 - **password_recipe** (Block List, Max: 1) Password for this item. (see [below for nested schema](#nestedblock--section--field--password_recipe))
 - **purpose** (String, Optional) Purpose indicates this is a special field: a username, password, or notes field. One of ["USERNAME" "PASSWORD" "NOTES"]
-- **type** (String, Optional) The type of value stored in the field. One of ["STRING" "EMAIL" "CONCEALED" "URL" "TOTP" "DATE" "MONTH_YEAR" "MENU"]
+- **type** (String, Optional) The type of value stored in the field. One of ["STRING" "EMAIL" "CONCEALED" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
 - **value** (String, Optional) The value of the field.
 
 <a id="nestedblock--section--field--password_recipe"></a>

@@ -53,7 +53,7 @@ const (
 var categories = []string{"login", "password", "database"}
 var dbTypes = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
 var fieldPurposes = []string{"USERNAME", "PASSWORD", "NOTES"}
-var fieldTypes = []string{"STRING", "EMAIL", "CONCEALED", "URL", "TOTP", "DATE", "MONTH_YEAR", "MENU"}
+var fieldTypes = []string{"STRING", "EMAIL", "CONCEALED", "URL", "OTP", "DATE", "MONTH_YEAR", "MENU"}
 
 func resourceOnepasswordItem() *schema.Resource {
 	passwordRecipe := &schema.Schema{
