@@ -46,7 +46,7 @@ jobs:
 
       - name: Parse release version
         id: get_version
-        run: echo "::set-output name=version::$(echo $GITHUB_REF | sed 's|^refs/heads/release/v?*||g')"
+        run: echo "::set-output name=version::`echo "${GITHUB_REF}" | sed 's|^refs/heads/release/v?*||g'`"
 
       - name: Prepare Pull Request
         id: prep_pr
