@@ -60,19 +60,26 @@ func Provider() *schema.Provider {
 	provider.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 		var diags diag.Diagnostics
 		url := d.Get("url").(string)
-		token := d.Get("token").(string)
-
-		// This is not handled by setting Required to true because Terraform does not handle
-		// multiple required attributes well. If only one is set in the provider configuration,
-		// the other one is prompted for, but Terraform then forgets the value for the one that
-		// is defined in the code. This confusing user-experience can be avoided by handling the
-		// requirement of one of the attributes manually.
 		if url == "" {
 			diags = append(diags, diag.Diagnostic{
 				Severity: diag.Error,
 				Summary:  "URL for Connect API is not set",
 				Detail:   "Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable",
 			})
+			return nil, diags
+		}
+
+		token := d.Get("token").(string)
+		if token == "" {
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  "TOKEN for Connect API is not set",
+				Detail:   "Either provide the \"token\" field in the provider configuration or set the OP_CONNECT_TOKEN environment variable",
+			})
+			return nil, diags
+		}
+
+		if len(diags) > 0 {
 			return nil, diags
 		}
 
