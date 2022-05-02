@@ -1,11 +1,14 @@
 package onepassword
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/1Password/connect-sdk-go/connect"
-	"github.com/1Password/terraform-provider-onepassword/version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+
+	"github.com/1Password/terraform-provider-onepassword/version"
 )
 
 const (
@@ -54,7 +57,8 @@ func Provider() *schema.Provider {
 			"onepassword_item": resourceOnepasswordItem(),
 		},
 	}
-	provider.ConfigureFunc = func(d *schema.ResourceData) (interface{}, error) {
+	provider.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
+		var diags diag.Diagnostics
 		url := d.Get("url").(string)
 		token := d.Get("token").(string)
 
@@ -64,7 +68,12 @@ func Provider() *schema.Provider {
 		// is defined in the code. This confusing user-experience can be avoided by handling the
 		// requirement of one of the attributes manually.
 		if url == "" {
-			return nil, fmt.Errorf("URL for Connect API is not set. Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable")
+			diags = append(diags, diag.Diagnostic{
+				Severity: diag.Error,
+				Summary:  "URL for Connect API is not set",
+				Detail:   "Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable",
+			})
+			return nil, diags
 		}
 
 		return connect.NewClientWithUserAgent(url, token, providerUserAgent), nil
