@@ -3,6 +3,8 @@ package onepassword
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -36,6 +38,12 @@ func Provider() *schema.Provider {
 	providerUserAgent := fmt.Sprintf(terraformProviderUserAgent, version.ProviderVersion)
 	provider := &schema.Provider{
 		Schema: map[string]*schema.Schema{
+			"account": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("OP_ACCOUNT", nil),
+				Description: "The account to execute the command by account shorthand, sign-in address, account UUID, or user UUID.",
+			},
 			"url": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -58,32 +66,51 @@ func Provider() *schema.Provider {
 		},
 	}
 	provider.ConfigureContextFunc = func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-		var diags diag.Diagnostics
+		var op bool
 		url := d.Get("url").(string)
-		if url == "" {
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Error,
-				Summary:  "URL for Connect API is not set",
-				Detail:   "Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable",
-			})
-			return nil, diags
-		}
-
 		token := d.Get("token").(string)
-		if token == "" {
-			diags = append(diags, diag.Diagnostic{
+		account := d.Get("account").(string)
+		if _, err := exec.LookPath("op"); err == nil {
+			op = true
+		}
+
+		if url != "" || token != "" {
+			if url == "" {
+				return nil, diag.Diagnostics{{
+					Severity: diag.Error,
+					Summary:  "URL for Connect API is not set",
+					Detail:   "Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable",
+				}}
+			}
+			if token == "" {
+				return nil, diag.Diagnostics{{
+					Severity: diag.Error,
+					Summary:  "TOKEN for Connect API is not set",
+					Detail:   "Either provide the \"token\" field in the provider configuration or set the OP_CONNECT_TOKEN environment variable",
+				}}
+			}
+			return connect.NewClientWithUserAgent(url, token, providerUserAgent), nil
+		} else if account == "" {
+			return nil, diag.Diagnostics{{
 				Severity: diag.Error,
-				Summary:  "TOKEN for Connect API is not set",
-				Detail:   "Either provide the \"token\" field in the provider configuration or set the OP_CONNECT_TOKEN environment variable",
-			})
-			return nil, diags
+				Summary:  "ACCOUNT is not set",
+				Detail:   "Either provide the \"account\" field in the provider configuration or set the OP_ACCOUNT environment variable",
+			}}
+		} else if !op {
+			return nil, diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  "op executable not found",
+				Detail:   "Please ensure you have the 1password-cli >= 2.0.0 installed in your $PATH.",
+			}}
+		} else if session := os.Getenv("OP_SESSION_" + account); session == "" {
+			return nil, diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  "SESSION is not set",
+				Detail:   "Provide the OP_SESSION_" + account + " environment variable.",
+			}}
+		} else {
+			return NewClient(), nil
 		}
-
-		if len(diags) > 0 {
-			return nil, diags
-		}
-
-		return connect.NewClientWithUserAgent(url, token, providerUserAgent), nil
 	}
 	return provider
 }
