@@ -1,14 +1,18 @@
-package onepassword
+package opcli
 
 import (
-	"encoding/json"
-	"os/exec"
 	"time"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
 )
 
-type cliClient struct{}
+const (
+	defaultOnePasswordPath = "/usr/local/bin/op"
+)
+
+type cliProvider struct {
+	cli OnePasswordCLI
+}
 
 type (
 	// Item represents an item returned to the consumer
@@ -50,8 +54,14 @@ type (
 	}
 )
 
-func NewClient() *cliClient {
-	return &cliClient{}
+func NewCLIClient(account, password string) (*cliProvider, error) {
+	cli, err := NewOnePasswordCLI(account, password)
+	if err != nil {
+		return nil, err
+	}
+	return &cliProvider{
+		cli: cli,
+	}, nil
 }
 
 func NewItemFields(itemFields []*ItemField) []*onepassword.ItemField {
@@ -115,82 +125,70 @@ func NewItem(item *Item) *onepassword.Item {
 	}
 }
 
-func (c *cliClient) GetVaults() ([]onepassword.Vault, error) {
+func (c *cliProvider) GetVaults() ([]onepassword.Vault, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *cliClient) GetVault(uuid string) (*onepassword.Vault, error) {
+func (c *cliProvider) GetVault(uuid string) (*onepassword.Vault, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *cliClient) GetVaultsByTitle(uuid string) ([]onepassword.Vault, error) {
+func (c *cliProvider) GetVaultsByTitle(uuid string) ([]onepassword.Vault, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (c *cliClient) GetItem(uuid string, vaultUUID string) (*onepassword.Item, error) {
-	var temp *Item
-	if out, err := exec.Command(
-		"op", "item", "get", uuid,
-		"--vault", vaultUUID,
-		"--format", "json",
-	).Output(); err != nil {
-		return nil, err
-	} else if err := json.Unmarshal(out, &temp); err != nil {
-		return nil, err
-	} else {
-		return NewItem(temp), nil
+func (c *cliProvider) GetItem(uuid string, vaultUUID string) (*onepassword.Item, error) {
+	return c.cli.GetItem(uuid, vaultUUID)
+}
+
+func (c *cliProvider) GetItems(vaultUUID string) ([]onepassword.Item, error) {
+	return []onepassword.Item{}, nil
+}
+
+func (c *cliProvider) GetItemsByTitle(title string, vaultUUID string) ([]onepassword.Item, error) {
+	return []onepassword.Item{}, nil
+}
+
+func (c *cliProvider) GetItemByTitle(title string, vaultUUID string) (*onepassword.Item, error) {
+	return c.cli.GetItem(title, vaultUUID)
+}
+
+func (c *cliProvider) CreateItem(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *cliProvider) UpdateItem(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *cliProvider) DeleteItem(item *onepassword.Item, vaultUUID string) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *cliProvider) GetFile(fileUUID string, itemUUID string, vaultUUID string) (*onepassword.File, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *cliProvider) GetFileContent(file *onepassword.File) ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func NewOnePasswordCLI(account, password string) (OnePasswordCLI, error) {
+	token, err := getOnePasswordSessionToken(account, password)
+	if err != nil {
+		return OnePasswordCLI{}, err
 	}
-}
 
-func (c *cliClient) GetItems(vaultUUID string) ([]onepassword.Item, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *cliClient) GetItemsByTitle(title string, vaultUUID string) ([]onepassword.Item, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *cliClient) GetItemByTitle(title string, vaultUUID string) (*onepassword.Item, error) {
-	var temp *Item
-	if out, err := exec.Command(
-		"op", "item", "get", "\""+title+"\"",
-		"--vault", vaultUUID,
-		"--format", "json",
-	).Output(); err != nil {
-		return nil, err
-	} else if err := json.Unmarshal(out, &temp); err != nil {
-		return nil, err
-	} else {
-		return NewItem(temp), nil
-	}
-}
-
-func (c *cliClient) CreateItem(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *cliClient) UpdateItem(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *cliClient) DeleteItem(item *onepassword.Item, vaultUUID string) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *cliClient) GetFile(fileUUID string, itemUUID string, vaultUUID string) (*onepassword.File, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *cliClient) GetFileContent(file *onepassword.File) ([]byte, error) {
-	//TODO implement me
-	panic("implement me")
+	return OnePasswordCLI{
+		account: account,
+		token:   token,
+	}, nil
 }

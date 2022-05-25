@@ -11,18 +11,37 @@ Use the 1Password Connect Terraform Provider to reference, create, or update ite
 
 ## Example Usage
 
+Connecting to 1Password Connect
+
 ```terraform
 provider "onepassword" {
   url = "http://localhost:8080"
 }
 ```
 
+Connecting to 1Password local CLI
+
+```terraform
+provider "onepassword" {
+  account  = "username"
+  password = "password"
+}
+```
+
 ## Schema
-
-### Required
-
-- **token** (String, Required) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN.
 
 ### Optional
 
-- **url** (String, Optional) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the the OP_CONNECT_HOST environment variable if this attribute is not set.
+- **token** (String, Optional) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN.
+
+### Optional
+
+- **url** (String, Optional) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set.
+
+### Optional
+
+- **account** (String, Optional) Account to use for the 1Password CLI. Can also be sourced from OP_ACCOUNT
+
+### Optional
+
+- **password** (String, Optional) Password to use for the 1Password CLI. Can also be sourced from OP_PASSWORD

@@ -3,10 +3,10 @@ package onepassword
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 
 	"github.com/1Password/connect-sdk-go/connect"
+	"github.com/1Password/terraform-provider-onepassword/opcli"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
@@ -44,6 +44,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("OP_ACCOUNT", nil),
 				Description: "The account to execute the command by account shorthand, sign-in address, account UUID, or user UUID.",
 			},
+			"password": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("OP_PASSWORD", nil),
+				Description: "The password to interact with the CLI",
+			},
 			"url": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -52,7 +58,7 @@ func Provider() *schema.Provider {
 			},
 			"token": {
 				Type:        schema.TypeString,
-				Required:    true,
+				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("OP_CONNECT_TOKEN", nil),
 				Description: "A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN.",
 			},
@@ -70,6 +76,8 @@ func Provider() *schema.Provider {
 		url := d.Get("url").(string)
 		token := d.Get("token").(string)
 		account := d.Get("account").(string)
+		password := d.Get("password").(string)
+
 		if _, err := exec.LookPath("op"); err == nil {
 			op = true
 		}
@@ -102,14 +110,23 @@ func Provider() *schema.Provider {
 				Summary:  "op executable not found",
 				Detail:   "Please ensure you have the 1password-cli >= 2.0.0 installed in your $PATH.",
 			}}
-		} else if session := os.Getenv("OP_SESSION_" + account); session == "" {
+		} else if password == "" {
 			return nil, diag.Diagnostics{{
 				Severity: diag.Error,
-				Summary:  "SESSION is not set",
-				Detail:   "Provide the OP_SESSION_" + account + " environment variable.",
+				Summary:  "Password is not set",
+				Detail:   "Provide the OP_PASSWORD environment variable.",
 			}}
 		} else {
-			return NewClient(), nil
+			provider, err := opcli.NewCLIClient(account, password)
+			if err != nil {
+				return nil, diag.Diagnostics{{
+					Severity: diag.Error,
+					Summary:  "Could not initialize CLI provider",
+					Detail:   err.Error(),
+				}}
+			}
+
+			return provider, nil
 		}
 	}
 	return provider

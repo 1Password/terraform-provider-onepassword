@@ -54,3 +54,22 @@ endif
 ifneq ($(WORKTREE_CLEAN), 0)
 	@echo "[ERROR] Uncommitted changes found in worktree. Address them and try again."; exit 1;
 endif
+
+## Local Installation
+# Example Provider For Local Testing
+# terraform {
+#  required_providers {
+#    onepassword = {
+#      source  = "terraform.example.com/local/onepassword"
+#      version = "~> 1.0.2"
+#    }
+#  }
+#}
+local: VERSION = "1.0.2"
+local: PLUGIN_PATH = ~/.terraform.d/plugins/terraform.example.com/local/onepassword/${VERSION}/darwin_amd64
+local: build
+	mkdir -p $(PLUGIN_PATH)
+	cp ./dist/terraform-provider-onepassword $(PLUGIN_PATH)
+	rm ./examples/cli/.terraform.lock.hcl
+	rm -r ./examples/cli/.terraform
+	cd ./examples/cli/ && terraform init
