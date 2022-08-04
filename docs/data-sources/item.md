@@ -26,6 +26,7 @@ data "onepassword_item" "example" {
 
 ### Optional
 
+- **note_value** (String, Optional) Secure Note value.
 - **title** (String, Optional) The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.
 - **uuid** (String, Optional) The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.
 
@@ -42,7 +43,6 @@ data "onepassword_item" "example" {
 - **type** (String, Read-only) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - **url** (String, Read-only) The primary URL for the item.
 - **username** (String, Read-only) Username for this item.
-- **note_value** (String, Read-only) (Only applies to the secure_note category) Secure note value.
 
 <a id="nestedatt--section"></a>
 ### Nested Schema for `section`
