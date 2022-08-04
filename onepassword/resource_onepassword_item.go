@@ -185,13 +185,6 @@ func resourceOnepasswordItem() *schema.Resource {
 				Sensitive:   true,
 				Computed:    true,
 			},
-			"note_value": {
-				Description: noteValueDescription,
-				Type:        schema.TypeString,
-				Computed:    true,
-				Optional:    true,
-				Sensitive:   true,
-			},
 			"section": {
 				Description: sectionsDescription,
 				Type:        schema.TypeList,
