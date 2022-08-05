@@ -88,6 +88,13 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Computed:    true,
 				Sensitive:   true,
 			},
+			"note_value": {
+				Description: noteValueDescription,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Optional:    true,
+				Sensitive:   true,
+			},
 			"section": {
 				Description: sectionsDescription,
 				Type:        schema.TypeList,
@@ -206,6 +213,8 @@ func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) 
 			data.Set("username", f.Value)
 		case "PASSWORD":
 			data.Set("password", f.Value)
+		case "NOTES":
+			data.Set("note_value", f.Value)
 		default:
 			if f.Section == nil {
 				data.Set(strings.ToLower(f.Label), f.Value)

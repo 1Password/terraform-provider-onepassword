@@ -26,6 +26,7 @@ data "onepassword_item" "example" {
 
 ### Optional
 
+- **note_value** (String, Optional) Secure Note value.
 - **title** (String, Optional) The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.
 - **uuid** (String, Optional) The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.
 
