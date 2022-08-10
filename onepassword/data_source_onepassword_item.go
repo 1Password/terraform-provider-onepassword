@@ -192,7 +192,7 @@ func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) 
 			if f.Section != nil && f.Section.ID == s.ID {
 				dataField := map[string]interface{}{}
 				dataField["id"] = f.ID
-				dataField["label"] = strings.ToLower(f.Label)
+				dataField["label"] = f.Label
 				dataField["purpose"] = f.Purpose
 				dataField["type"] = f.Type
 				dataField["value"] = f.Value
