@@ -75,6 +75,30 @@ func TestDataSourceOnePasswordItemReadWithSections(t *testing.T) {
 	compareItemToSource(t, dataSourceData, expectedItem)
 }
 
+func TestDataSourceOnePasswordItemReadWithFields(t *testing.T) {
+	expectedItem := generateItem()
+	meta := &testClient{
+		GetItemFunc: func(uuid string, vaultUUID string) (*onepassword.Item, error) {
+			return expectedItem, nil
+		},
+	}
+	expectedItem.Fields = append(expectedItem.Fields, &onepassword.ItemField{
+		ID:    "98765",
+		Type:  "CONCEALED",
+		Label: "Secret Field",
+		Value: "Very secret",
+	})
+
+	dataSourceData := generateDataSource(t, expectedItem)
+	dataSourceData.Set("uuid", expectedItem.ID)
+
+	err := dataSourceOnepasswordItemRead(dataSourceData, meta)
+	if err != nil {
+		t.Errorf("Unexpected error occured")
+	}
+	compareItemToSource(t, dataSourceData, expectedItem)
+}
+
 func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item *onepassword.Item) {
 	if dataSourceData.Get("uuid") != item.ID {
 		t.Errorf("Expected uuid to be %v got %v", item.ID, dataSourceData.Get("uuid"))
@@ -94,32 +118,52 @@ func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item
 	}
 	compareStringSlice(t, getTags(dataSourceData), item.Tags)
 
+	predefinedFields := []string{"username", "password", "hostname", "database", "port", "type"}
 	for _, f := range item.Fields {
 		path := f.Label
-		if f.Section != nil {
-			sectionIndex := 0
-			fieldIndex := 0
-			sections := dataSourceData.Get("section").([]interface{})
+		if !contains(t, predefinedFields, f.Label) {
+			if f.Section != nil {
+				sectionIndex := 0
+				fieldIndex := 0
+				sections := dataSourceData.Get("section").([]interface{})
 
-			for i, section := range sections {
-				s := section.(map[string]interface{})
-				if s["label"] == f.Section.Label ||
-					(f.Section.ID != "" && s["id"] == f.Section.ID) {
-					sectionIndex = i
-					sectionFields := dataSourceData.Get(fmt.Sprintf("section.%d.field", i)).([]interface{})
+				for i, section := range sections {
+					s := section.(map[string]interface{})
+					if s["label"] == f.Section.Label ||
+						(f.Section.ID != "" && s["id"] == f.Section.ID) {
+						sectionIndex = i
+						sectionFields := dataSourceData.Get(fmt.Sprintf("section.%d.field", i)).([]interface{})
 
-					for j, field := range sectionFields {
-						df := field.(map[string]interface{})
-						if df["label"] == f.Label {
-							fieldIndex = j
+						for j, field := range sectionFields {
+							df := field.(map[string]interface{})
+							if df["label"] == f.Label {
+								fieldIndex = j
+							}
 						}
 					}
 				}
-			}
 
-			if len(sections) > 0 {
-				path = fmt.Sprintf("section.%d.field.%d.value", sectionIndex, fieldIndex)
+				if len(sections) > 0 {
+					path = fmt.Sprintf("section.%d.field.%d.value", sectionIndex, fieldIndex)
+				}
+			} else {
+				fieldIndex := 0
+				fields := dataSourceData.Get("field").([]interface{})
+
+				for i, field := range fields {
+					df := field.(map[string]interface{})
+					if df["label"] == f.Label {
+						fieldIndex = i
+					}
+				}
+
+				if len(fields) > 0 {
+					path = fmt.Sprintf("field.%d.value", fieldIndex)
+				}
 			}
+		}
+		if f.Label == "notesPlain" {
+			path = "note_value"
 		}
 		if dataSourceData.Get(path) != f.Value {
 			t.Errorf("Expected field %v to be %v got %v", f.Label, f.Value, dataSourceData.Get(path))
@@ -176,6 +220,10 @@ func generateFields() []*onepassword.ItemField {
 			Label: "type",
 			Value: "test_type",
 		},
+		{
+			Label: "notesPlain",
+			Value: "test_note",
+		},
 	}
 	return fields
 }
@@ -191,4 +239,15 @@ func compareStringSlice(t *testing.T, actual, expected []string) {
 			t.Errorf("Expected %s at index %d, but got %s", val, i, actual[i])
 		}
 	}
+}
+
+func contains(t *testing.T, s []string, e string) bool {
+	t.Helper()
+
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

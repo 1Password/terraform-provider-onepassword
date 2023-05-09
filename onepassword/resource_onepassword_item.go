@@ -34,6 +34,7 @@ const (
 	sectionLabelDescription  = "The label for the section."
 	sectionFieldsDescription = "A list of custom fields in the section."
 
+	fieldsDescription       = "A list of custom fields in an item"
 	fieldDescription        = "A custom field."
 	fieldIDDescription      = "A unique identifier for the field."
 	fieldLabelDescription   = "The label for the field."
@@ -51,7 +52,7 @@ const (
 	enumDescription = "%s One of %q"
 )
 
-var categories = []string{"login", "password", "database"}
+var categories = []string{"login", "password", "database", "secure_note"}
 var dbTypes = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
 var fieldPurposes = []string{"USERNAME", "PASSWORD", "NOTES"}
 var fieldTypes = []string{"STRING", "EMAIL", "CONCEALED", "URL", "OTP", "DATE", "MONTH_YEAR", "MENU"}
@@ -98,6 +99,34 @@ func resourceOnepasswordItem() *schema.Resource {
 		},
 		MaxItems: 1,
 		Optional: true,
+	}
+
+	fieldSchema := map[string]*schema.Schema{
+		"id": {
+			Description: fieldIDDescription,
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
+		"label": {
+			Description: fieldLabelDescription,
+			Type:        schema.TypeString,
+			Required:    true,
+		},
+		"type": {
+			Description:  fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+			Type:         schema.TypeString,
+			Default:      "STRING",
+			Optional:     true,
+			ValidateFunc: validation.StringInSlice(fieldTypes, true),
+		},
+		"value": {
+			Description: fieldValueDescription,
+			Type:        schema.TypeString,
+			Optional:    true,
+			Computed:    true,
+			Sensitive:   true,
+		},
+		"password_recipe": passwordRecipe,
 	}
 
 	return &schema.Resource{
@@ -185,6 +214,21 @@ func resourceOnepasswordItem() *schema.Resource {
 				Sensitive:   true,
 				Computed:    true,
 			},
+			"note_value": {
+				Description: noteValueDescription,
+				Type:        schema.TypeString,
+				Optional:    true,
+			},
+			"field": {
+				Description: fieldsDescription,
+				Type:        schema.TypeList,
+				Optional:    true,
+				MinItems:    0,
+				Elem: &schema.Resource{
+					Description: fieldDescription,
+					Schema:      fieldSchema,
+				},
+			},
 			"section": {
 				Description: sectionsDescription,
 				Type:        schema.TypeList,
@@ -210,40 +254,7 @@ func resourceOnepasswordItem() *schema.Resource {
 							MinItems:    0,
 							Elem: &schema.Resource{
 								Description: fieldDescription,
-								Schema: map[string]*schema.Schema{
-									"id": {
-										Description: fieldIDDescription,
-										Type:        schema.TypeString,
-										Optional:    true,
-										Computed:    true,
-									},
-									"label": {
-										Description: fieldLabelDescription,
-										Type:        schema.TypeString,
-										Required:    true,
-									},
-									"purpose": {
-										Description:  fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
-										Type:         schema.TypeString,
-										Optional:     true,
-										ValidateFunc: validation.StringInSlice(fieldPurposes, true),
-									},
-									"type": {
-										Description:  fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
-										Type:         schema.TypeString,
-										Default:      "STRING",
-										Optional:     true,
-										ValidateFunc: validation.StringInSlice(fieldTypes, true),
-									},
-									"value": {
-										Description: fieldValueDescription,
-										Type:        schema.TypeString,
-										Optional:    true,
-										Computed:    true,
-										Sensitive:   true,
-									},
-									"password_recipe": passwordRecipe,
-								},
+								Schema:      fieldSchema,
 							},
 						},
 					},
@@ -352,9 +363,9 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 	data.Set("category", strings.ToLower(string(item.Category)))
 
 	dataSections := data.Get("section").([]interface{})
+	sections := []interface{}{}
 	for _, s := range item.Sections {
 		section := map[string]interface{}{}
-		newSection := true
 
 		// Check for existing section state
 		for i := 0; i < len(dataSections); i++ {
@@ -364,38 +375,37 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 
 			if (s.ID != "" && s.ID == existingID) || s.Label == existingLabel {
 				section = existingSection
-				newSection = false
 			}
 		}
 
 		section["id"] = s.ID
 		section["label"] = s.Label
+		sections = append(sections, section)
 
-		existingFields := []interface{}{}
+		fields := []interface{}{}
+		var dataFields []interface{}
 		if section["field"] != nil {
-			existingFields = section["field"].([]interface{})
+			dataFields = section["field"].([]interface{})
 		}
 		for _, f := range item.Fields {
 			if f.Section != nil && f.Section.ID == s.ID {
-				dataField := map[string]interface{}{}
-				newField := true
+				field := make(map[string]interface{})
 				// Check for existing field state
-				for i := 0; i < len(existingFields); i++ {
-					existingField := existingFields[i].(map[string]interface{})
+				for i := 0; i < len(dataFields); i++ {
+					existingField := dataFields[i].(map[string]interface{})
 					existingID := existingField["id"].(string)
 					existingLabel := existingField["label"].(string)
 
 					if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
-						dataField = existingFields[i].(map[string]interface{})
-						newField = false
+						field = existingField
 					}
 				}
 
-				dataField["id"] = f.ID
-				dataField["label"] = f.Label
-				dataField["purpose"] = f.Purpose
-				dataField["type"] = f.Type
-				dataField["value"] = f.Value
+				field["id"] = f.ID
+				field["label"] = f.Label
+				field["type"] = f.Type
+				field["value"] = f.Value
+				fields = append(fields, field)
 
 				if f.Recipe != nil {
 					charSets := map[string]bool{}
@@ -409,35 +419,72 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 						"digits":  charSets["digits"],
 						"symbols": charSets["symbols"],
 					}
-					dataField["password_recipe"] = dataRecipe
-				}
-
-				if newField {
-					existingFields = append(existingFields, dataField)
+					field["password_recipe"] = dataRecipe
 				}
 			}
 		}
-		section["field"] = existingFields
+		section["field"] = fields
 
-		if newSection {
-			dataSections = append(dataSections, section)
-		}
 	}
+	data.Set("section", sections)
 
-	data.Set("section", dataSections)
-
+	dataFields := data.Get("field").([]interface{})
+	fields := []interface{}{}
 	for _, f := range item.Fields {
-		switch f.Purpose {
-		case "USERNAME":
-			data.Set("username", f.Value)
-		case "PASSWORD":
-			data.Set("password", f.Value)
-		default:
-			if f.Section == nil {
-				data.Set(f.Label, f.Value)
+		if f.Section == nil {
+			field := make(map[string]interface{})
+
+			for i := 0; i < len(dataFields); i++ {
+				existingField := dataFields[i].(map[string]interface{})
+				existingID := existingField["id"].(string)
+				existingLabel := existingField["label"].(string)
+
+				if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
+					field = existingField
+				}
+			}
+
+			// Determine if this is a generic field or one of the predefined fields set in the provider
+			switch f.ID {
+			case "username":
+				data.Set("username", f.Value)
+			case "password":
+				data.Set("password", f.Value)
+			case "hostname":
+				data.Set("hostname", f.Value)
+			case "database":
+				data.Set("database", f.Value)
+			case "port":
+				data.Set("port", f.Value)
+			case "database_type":
+				data.Set("type", f.Value)
+			case "notesPlain":
+				data.Set("note_value", f.Value)
+			default:
+				field["id"] = f.ID
+				field["label"] = f.Label
+				field["type"] = f.Type
+				field["value"] = f.Value
+				fields = append(fields, field)
+			}
+
+			if f.Recipe != nil {
+				charSets := map[string]bool{}
+				for _, s := range f.Recipe.CharacterSets {
+					charSets[strings.ToLower(s)] = true
+				}
+
+				dataRecipe := map[string]interface{}{
+					"length":  f.Recipe.Length,
+					"letters": charSets["letters"],
+					"digits":  charSets["digits"],
+					"symbols": charSets["symbols"],
+				}
+				field["password_recipe"] = dataRecipe
 			}
 		}
 	}
+	data.Set("field", fields)
 }
 
 func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
@@ -538,6 +585,55 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 				Value: data.Get("type").(string),
 			},
 		}
+	case "secure_note":
+		item.Category = onepassword.SecureNote
+	}
+
+	if data.Get("note_value") != nil {
+		note := onepassword.ItemField{
+			ID:      "notesPlain",
+			Label:   "notesPlain",
+			Purpose: "NOTES",
+			Type:    "STRING",
+			Value:   data.Get("note_value").(string),
+		}
+		item.Fields = append(item.Fields, &note)
+	}
+
+	fields := data.Get("field").([]interface{})
+	for i := 0; i < len(fields); i++ {
+		field, ok := fields[i].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("Unable to parse field: %v", fields[i])
+		}
+		fid, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, fmt.Errorf("Unable to generate a field id: %w", err)
+		}
+
+		if field["id"].(string) != "" {
+			fid = field["id"].(string)
+		} else {
+			field["id"] = fid
+		}
+
+		f := &onepassword.ItemField{
+			ID:    fid,
+			Type:  field["type"].(string),
+			Label: field["label"].(string),
+			Value: field["value"].(string),
+		}
+
+		recipe, err := parseGeneratorRecipe(field["password_recipe"].([]interface{}))
+		if err != nil {
+			return nil, err
+		}
+
+		if recipe != nil {
+			addRecipe(f, recipe)
+		}
+
+		item.Fields = append(item.Fields, f)
 	}
 
 	sections := data.Get("section").([]interface{})
@@ -574,7 +670,6 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 				Section: s,
 				ID:      field["id"].(string),
 				Type:    field["type"].(string),
-				Purpose: field["purpose"].(string),
 				Label:   field["label"].(string),
 				Value:   field["value"].(string),
 			}

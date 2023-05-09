@@ -13,6 +13,35 @@ import (
 func dataSourceOnepasswordItem() *schema.Resource {
 	exactlyOneOfUUIDAndTitle := []string{"uuid", "title"}
 
+	fieldSchema := map[string]*schema.Schema{
+		"id": {
+			Description: fieldIDDescription,
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
+		"label": {
+			Description: fieldLabelDescription,
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
+		"purpose": {
+			Description: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
+		"type": {
+			Description: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+			Type:        schema.TypeString,
+			Computed:    true,
+		},
+		"value": {
+			Description: fieldValueDescription,
+			Type:        schema.TypeString,
+			Computed:    true,
+			Sensitive:   true,
+		},
+	}
+
 	return &schema.Resource{
 		Description: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
 		Read:        dataSourceOnepasswordItemRead,
@@ -95,6 +124,17 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Optional:    true,
 				Sensitive:   true,
 			},
+			"field": {
+				Description: fieldsDescription,
+				Type:        schema.TypeList,
+				Computed:    true,
+				Optional:    true,
+				MinItems:    0,
+				Elem: &schema.Resource{
+					Description: fieldDescription,
+					Schema:      fieldSchema,
+				},
+			},
 			"section": {
 				Description: sectionsDescription,
 				Type:        schema.TypeList,
@@ -120,34 +160,7 @@ func dataSourceOnepasswordItem() *schema.Resource {
 							MinItems:    0,
 							Elem: &schema.Resource{
 								Description: fieldDescription,
-								Schema: map[string]*schema.Schema{
-									"id": {
-										Description: fieldIDDescription,
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"label": {
-										Description: fieldLabelDescription,
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"purpose": {
-										Description: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"type": {
-										Description: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"value": {
-										Description: fieldValueDescription,
-										Type:        schema.TypeString,
-										Computed:    true,
-										Sensitive:   true,
-									},
-								},
+								Schema:      fieldSchema,
 							},
 						},
 					},
@@ -193,7 +206,6 @@ func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) 
 				dataField := map[string]interface{}{}
 				dataField["id"] = f.ID
 				dataField["label"] = f.Label
-				dataField["purpose"] = f.Purpose
 				dataField["type"] = f.Type
 				dataField["value"] = f.Value
 
@@ -207,20 +219,36 @@ func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) 
 
 	data.Set("section", dataSections)
 
+	fields := []interface{}{}
 	for _, f := range item.Fields {
-		switch f.Purpose {
-		case "USERNAME":
+		switch f.Label {
+		case "username":
 			data.Set("username", f.Value)
-		case "PASSWORD":
+		case "password":
 			data.Set("password", f.Value)
-		case "NOTES":
+		case "hostname":
+			data.Set("hostname", f.Value)
+		case "database":
+			data.Set("database", f.Value)
+		case "port":
+			data.Set("port", f.Value)
+		case "type":
+			data.Set("type", f.Value)
+		case "notesPlain":
 			data.Set("note_value", f.Value)
 		default:
 			if f.Section == nil {
-				data.Set(strings.ToLower(f.Label), f.Value)
+				field := make(map[string]interface{})
+				field["id"] = f.ID
+				field["label"] = f.Label
+				field["purpose"] = f.Purpose
+				field["type"] = f.Type
+				field["value"] = f.Value
+				fields = append(fields, field)
 			}
 		}
 	}
+	data.Set("field", fields)
 
 	return nil
 }
