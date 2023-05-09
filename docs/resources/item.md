@@ -54,9 +54,11 @@ resource "onepassword_item" "demo_db" {
 
 ### Optional
 
-- **category** (String, Optional) The category of the item. One of ["login" "password" "database"]
+- **category** (String, Optional) The category of the item. One of ["login" "password" "database" "secure_note"]
 - **database** (String, Optional) (Only applies to the database category) The name of the database.
+- **field** (Block List) A list of custom fields in an item (see [below for nested schema](#nestedblock--field))
 - **hostname** (String, Optional) (Only applies to the database category) The address where the database can be found
+- **note_value** (String, Optional) Secure Note value.
 - **password** (String, Optional) Password for this item.
 - **password_recipe** (Block List, Max: 1) Password for this item. (see [below for nested schema](#nestedblock--password_recipe))
 - **port** (String, Optional) (Only applies to the database category) The port the database is listening on.
@@ -71,6 +73,35 @@ resource "onepassword_item" "demo_db" {
 
 - **id** (String, Read-only) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - **uuid** (String, Read-only) The UUID of the item. Item identifiers are unique within a specific vault.
+
+<a id="nestedblock--field"></a>
+### Nested Schema for `field`
+
+Required:
+
+- **label** (String, Required) The label for the field.
+
+Optional:
+
+- **password_recipe** (Block List, Max: 1) Password for this item. (see [below for nested schema](#nestedblock--field--password_recipe))
+- **type** (String, Optional) The type of value stored in the field. One of ["STRING" "EMAIL" "CONCEALED" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
+- **value** (String, Optional) The value of the field.
+
+Read-only:
+
+- **id** (String, Read-only) A unique identifier for the field.
+
+<a id="nestedblock--field--password_recipe"></a>
+### Nested Schema for `field.password_recipe`
+
+Optional:
+
+- **digits** (Boolean, Optional) Use digits [0-9] when generating the password.
+- **length** (Number, Optional) The length of the password to be generated.
+- **letters** (Boolean, Optional) Use letters [a-zA-Z] when generating the password.
+- **symbols** (Boolean, Optional) Use symbols [!@.-_*] when generating the password.
+
+
 
 <a id="nestedblock--password_recipe"></a>
 ### Nested Schema for `password_recipe`
@@ -107,11 +138,13 @@ Required:
 
 Optional:
 
-- **id** (String, Optional) A unique identifier for the field.
 - **password_recipe** (Block List, Max: 1) Password for this item. (see [below for nested schema](#nestedblock--section--field--password_recipe))
-- **purpose** (String, Optional) Purpose indicates this is a special field: a username, password, or notes field. One of ["USERNAME" "PASSWORD" "NOTES"]
 - **type** (String, Optional) The type of value stored in the field. One of ["STRING" "EMAIL" "CONCEALED" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
 - **value** (String, Optional) The value of the field.
+
+Read-only:
+
+- **id** (String, Read-only) A unique identifier for the field.
 
 <a id="nestedblock--section--field--password_recipe"></a>
 ### Nested Schema for `section.field.password_recipe`
