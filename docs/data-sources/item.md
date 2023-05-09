@@ -32,8 +32,9 @@ data "onepassword_item" "example" {
 
 ### Read-only
 
-- **category** (String, Read-only) The category of the item. One of ["login" "password" "database"]
+- **category** (String, Read-only) The category of the item. One of ["login" "password" "database" "secure_note"]
 - **database** (String, Read-only) (Only applies to the database category) The name of the database.
+- **field** (Block List) A list of custom fields in an item (see [below for nested schema](#nestedblock--field))
 - **hostname** (String, Read-only) (Only applies to the database category) The address where the database can be found
 - **id** (String, Read-only) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`
 - **password** (String, Read-only) Password for this item.
@@ -43,6 +44,18 @@ data "onepassword_item" "example" {
 - **type** (String, Read-only) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - **url** (String, Read-only) The primary URL for the item.
 - **username** (String, Read-only) Username for this item.
+
+<a id="nestedblock--field"></a>
+### Nested Schema for `field`
+
+Read-only:
+
+- **id** (String, Read-only) A unique identifier for the field.
+- **label** (String, Read-only) The label for the field.
+- **purpose** (String, Read-only) Purpose indicates this is a special field: a username, password, or notes field. One of ["USERNAME" "PASSWORD" "NOTES"]
+- **type** (String, Read-only) The type of value stored in the field. One of ["STRING" "EMAIL" "CONCEALED" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
+- **value** (String, Read-only) The value of the field.
+
 
 <a id="nestedatt--section"></a>
 ### Nested Schema for `section`

@@ -26,9 +26,10 @@ var schemaKeys = []string{
 
 func TestResourceItemToDataDataToTitem(t *testing.T) {
 	resources := map[string]*schema.ResourceData{
-		"login":    generateResourceLoginItem(t),
-		"database": generateResourceDatabaseItem(t),
-		"password": generateResourcePasswordItem(t),
+		"login":       generateResourceLoginItem(t),
+		"database":    generateResourceDatabaseItem(t),
+		"password":    generateResourcePasswordItem(t),
+		"secure_note": generateResourceSecureNoteItem(t),
 	}
 	for name, resource := range resources {
 		t.Run(name, func(t *testing.T) {
@@ -104,6 +105,26 @@ func TestAddSectionsToItem(t *testing.T) {
 	testCRUDForItem(t, item)
 }
 
+func TestAddFieldsToItem(t *testing.T) {
+	item := generateResourceLoginItem(t)
+
+	fields := []interface{}{
+		map[string]interface{}{
+			"label": "secret value",
+			"type":  "CONCEALED",
+			"value": "secret",
+		},
+		map[string]interface{}{
+			"label": "user",
+			"value": "root",
+		},
+	}
+
+	item.Set("field", fields)
+
+	testCRUDForItem(t, item)
+}
+
 func testCRUDForItem(t *testing.T, itemToCreate *schema.ResourceData) {
 	meta := &testClient{
 		GetItemFunc:    getItem,
@@ -133,7 +154,7 @@ func testCRUDForItem(t *testing.T, itemToCreate *schema.ResourceData) {
 	itemToCreate.Set("password", "new_password")
 	err = resourceOnepasswordItemUpdate(itemToCreate, meta)
 	if err != nil {
-		t.Errorf("Unexpected error occured when deleting item")
+		t.Errorf("Unexpected error occured when updating item")
 	}
 	err = resourceOnepasswordItemRead(itemRead, meta)
 	if err != nil {
@@ -219,6 +240,12 @@ func generateResourcePasswordItem(t *testing.T) *schema.ResourceData {
 	resourceData := generateBaseItem(t)
 	resourceData.Set("category", "password")
 	resourceData.Set("password", "test_password")
+	return resourceData
+}
+
+func generateResourceSecureNoteItem(t *testing.T) *schema.ResourceData {
+	resourceData := generateBaseItem(t)
+	resourceData.Set("category", "secure_note")
 	return resourceData
 }
 
