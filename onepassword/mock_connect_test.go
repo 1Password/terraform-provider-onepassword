@@ -1,6 +1,8 @@
 package onepassword
 
 import (
+	"fmt"
+
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
 )
@@ -69,4 +71,48 @@ func (m *testClient) GetFile(fileUUID string, itemUUID string, vaultUUID string)
 
 func (m *testClient) GetFileContent(file *onepassword.File) ([]byte, error) {
 	return m.GetFileContentFunc(file)
+}
+
+func (m *testClient) DeleteItemByID(itemUUID, vaultUUID string) error {
+	return fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) DeleteItemByTitle(itemName, vaultUUID string) error {
+	return fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) DownloadFile(file *onepassword.File, targetDirectory string, overwrite bool) (string, error) {
+	return "", fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) GetFiles(itemQuery string, vaultQuery string) ([]onepassword.File, error) {
+	return nil, fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) GetItemByUUID(uuid string, vaultQuery string) (*onepassword.Item, error) {
+	return nil, fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) GetVaultByTitle(title string) (*onepassword.Vault, error) {
+	return nil, fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) GetVaultByUUID(uuid string) (*onepassword.Vault, error) {
+	return nil, fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) LoadStruct(config interface{}) error {
+	return fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) LoadStructFromItem(config interface{}, itemQuery string, vaultQuery string) error {
+	return fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) LoadStructFromItemByTitle(config interface{}, itemTitle string, vaultQuery string) error {
+	return fmt.Errorf("This method is currently not supported by the test client")
+}
+
+func (m *testClient) LoadStructFromItemByUUID(config interface{}, itemUUID string, vaultQuery string) error {
+	return fmt.Errorf("This method is currently not supported by the test client")
 }
