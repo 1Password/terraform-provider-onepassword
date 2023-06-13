@@ -573,8 +573,8 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 			f := &onepassword.ItemField{
 				Section: s,
 				ID:      field["id"].(string),
-				Type:    field["type"].(string),
-				Purpose: field["purpose"].(string),
+				Type:    onepassword.ItemFieldType(field["type"].(string)),
+				Purpose: onepassword.ItemFieldPurpose(field["type"].(string)),
 				Label:   field["label"].(string),
 				Value:   field["value"].(string),
 			}
