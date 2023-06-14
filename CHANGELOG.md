@@ -12,6 +12,22 @@
 
 ---
 
+[//]: # (START/v1.2.0)
+# v1.2.0
+
+## Features
+  * Updating go version to 1.20
+  * Updating to use version 1.5.1 of the Connect SDK.
+
+## Fixes
+ * Improved sanitization for use with Github action.
+ * Terraform provider no longer lowercases item label. {59}
+
+## Security
+ * Updated dependencies with secuirty vulnerbilities to patched versions
+
+---
+
 [//]: # (START/v1.1.4)
 # v1.1.4
 
