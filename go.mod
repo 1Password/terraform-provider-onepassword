@@ -1,6 +1,6 @@
 module github.com/1Password/terraform-provider-onepassword
 
-go 1.20
+go 1.19
 
 require (
 	github.com/1Password/connect-sdk-go v1.5.1
