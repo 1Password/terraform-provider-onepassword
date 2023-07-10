@@ -3,7 +3,7 @@ module github.com/1Password/terraform-provider-onepassword
 go 1.19
 
 require (
-	github.com/1Password/connect-sdk-go v1.5.1
+	github.com/1Password/connect-sdk-go v1.5.2
 	github.com/hashicorp/go-uuid v1.0.1
 	github.com/hashicorp/terraform-plugin-docs v0.2.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.2.0
@@ -70,7 +70,7 @@ require (
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/zclconf/go-cty v1.8.2 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	go.uber.org/atomic v1.10.0 // indirect
+	go.uber.org/atomic v1.9.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.1.0 // indirect
