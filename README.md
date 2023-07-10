@@ -1,10 +1,19 @@
-# 1Password Connect Terraform Provider
+<!-- Image sourced from https://blog.1password.com/introducing-secrets-automation/ -->
+<img alt="" role="img" src="https://blog.1password.com/posts/2021/secrets-automation-launch/header.svg"/>
+
+<div align="center">
+  <h1>1Password Connect Terraform Provider</h1>
+  <p>Use the 1Password Connect Terraform Provider to access and manage items in your 1Password vaults.</p>
+  <a href="#-get-started">
+    <img alt="Get started" src="https://user-images.githubusercontent.com/45081667/226940040-16d3684b-60f4-4d95-adb2-5757a8f1bc15.png" height="37"/>
+  </a>
+</div>
 
 ---
 
 ## ✨ Get started
 
-- See the [examples](./examples/) directory for a full example.
+- See the [examples](./examples/) directory for detailed examples.
 - Detailed documentation for using this provider can be found on the [Terraform Registry docs](https://registry.terraform.io/providers/1Password/onepassword/latest/docs).
 
 ```tf
