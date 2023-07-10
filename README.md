@@ -46,3 +46,17 @@ For the contribution guidelines, see [CONTRIBUTING.md](/CONTRIBUTING.md).
 Still not sure where or how to begin? We're happy to help! You can:
 
 - Join the [Developer Slack workspace](https://join.slack.com/t/1password-devs/shared_invite/zt-1halo11ps-6o9pEv96xZ3LtX_VE0fJQA), and ask us any questions there.
+
+## 💙 Community & Support
+
+- File an [issue](https://github.com/1Password/terraform-provider-onepassword/issues) for bugs and feature requests.
+- Join the [Developer Slack workspace](https://join.slack.com/t/1password-devs/shared_invite/zt-1halo11ps-6o9pEv96xZ3LtX_VE0fJQA).
+- Subscribe to the [Developer Newsletter](https://1password.com/dev-subscribe/).
+
+## 🔐 Security
+
+1Password requests you practice responsible disclosure if you discover a vulnerability.
+
+Please file requests via [**BugCrowd**](https://bugcrowd.com/agilebits).
+
+For information about security practices, please visit the [1Password Bug Bounty Program](https://bugcrowd.com/agilebits).
