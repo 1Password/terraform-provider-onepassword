@@ -39,6 +39,10 @@ resource "onepassword_item" "demo_login" {
 
 See the [examples](./examples/) directory for a full example.
 
-## Contributing
+## 🛠️ Contributing
 
-Detailed documentation for contributing to the 1Password Terraform provider can be found [here](./CONTRIBUTING.md).
+For the contribution guidelines, see [CONTRIBUTING.md](/CONTRIBUTING.md).
+
+Still not sure where or how to begin? We're happy to help! You can:
+
+- Join the [Developer Slack workspace](https://join.slack.com/t/1password-devs/shared_invite/zt-1halo11ps-6o9pEv96xZ3LtX_VE0fJQA), and ask us any questions there.
