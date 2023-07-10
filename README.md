@@ -51,9 +51,7 @@ resource "onepassword_item" "demo_login" {
 
 For the contribution guidelines, see [CONTRIBUTING.md](/CONTRIBUTING.md).
 
-Still not sure where or how to begin? We're happy to help! You can:
-
-- Join the [Developer Slack workspace](https://join.slack.com/t/1password-devs/shared_invite/zt-1halo11ps-6o9pEv96xZ3LtX_VE0fJQA), and ask us any questions there.
+Still not sure where or how to begin? We're happy to help! You can join the [Developer Slack workspace](https://join.slack.com/t/1password-devs/shared_invite/zt-1halo11ps-6o9pEv96xZ3LtX_VE0fJQA), and ask us any questions there.
 
 ## 💙 Community & Support
 
