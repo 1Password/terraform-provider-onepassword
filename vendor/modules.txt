@@ -16,7 +16,7 @@ cloud.google.com/go/storage
 cloud.google.com/go/storage/internal
 cloud.google.com/go/storage/internal/apiv2
 cloud.google.com/go/storage/internal/apiv2/stubs
-# github.com/1Password/connect-sdk-go v1.5.1
+# github.com/1Password/connect-sdk-go v1.5.2
 ## explicit; go 1.20
 github.com/1Password/connect-sdk-go/connect
 github.com/1Password/connect-sdk-go/onepassword
@@ -348,8 +348,8 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# go.uber.org/atomic v1.10.0
-## explicit; go 1.18
+# go.uber.org/atomic v1.9.0
+## explicit; go 1.13
 go.uber.org/atomic
 # golang.org/x/crypto v0.1.0
 ## explicit; go 1.17
