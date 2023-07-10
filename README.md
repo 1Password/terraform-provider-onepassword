@@ -1,10 +1,11 @@
 # 1Password Connect Terraform Provider
 
-Use the 1Password Connect Terraform Provider to reference, create, or update items in your 1Password Vaults.
+---
 
-## Usage
+## ✨ Get started
 
-Detailed documentation for using this provider can be found on the [Terraform Registry docs](https://registry.terraform.io/providers/1Password/onepassword/latest/docs).
+- See the [examples](./examples/) directory for a full example.
+- Detailed documentation for using this provider can be found on the [Terraform Registry docs](https://registry.terraform.io/providers/1Password/onepassword/latest/docs).
 
 ```tf
 terraform {
@@ -36,8 +37,6 @@ resource "onepassword_item" "demo_login" {
   }
 }
 ```
-
-See the [examples](./examples/) directory for a full example.
 
 ## 🛠️ Contributing
 
