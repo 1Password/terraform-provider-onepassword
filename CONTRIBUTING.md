@@ -1,20 +1,20 @@
-# Contributing to 1Password
+# Contributing
 
 Thank you so much for contributing to 1Password. We appreciate your time and help. Here are some guidelines to help you get started.
 
 ## Building
 
-To build the 1Password Connect Terraform provider run the following
+To build the 1Password Connect Terraform provider run the following:
 
 ```sh
 $ go build .
 ```
 
-This will create the `terraform-provider-onepassword` binary
+This will create the `terraform-provider-onepassword` binary.
 
 ## Testing the Provider
 
-To run the go tests and check test coverage run the following
+To run the go tests and check test coverage run the following:
 
 ```sh
 $ go test -v ./... -cover
@@ -24,7 +24,7 @@ $ go test -v ./... -cover
 
 Documentation is generated for the provider using the [terraform documentation plugin](https://github.com/hashicorp/terraform-plugin-docs). This plugin uses the schema `Description` field in conjunction with the contents of the `/templates` and `/examples` folders to generate the `/docs` content.
 
-To regenerate the `/docs` markdown run
+To regenerate the `/docs` markdown run:
 
 ```sh
 $ go generate
@@ -43,7 +43,7 @@ $ cp ./terraform-provider-onepassword ~/.terraform.d/plugins/github.com/1Passwor
 
 ## Using plugin locally
 
-In your Terraform configuration you will need to specify the op plugin with
+In your Terraform configuration you will need to specify the op plugin with:
 
 ```tf
 terraform {
