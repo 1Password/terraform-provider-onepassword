@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package schema
 
 import (
@@ -16,19 +19,23 @@ import (
 // derives a terraform.InstanceDiff to give to the legacy providers. This is
 // used to take the states provided by the new ApplyResourceChange method and
 // convert them to a state+diff required for the legacy Apply method.
-func DiffFromValues(ctx context.Context, prior, planned cty.Value, res *Resource) (*terraform.InstanceDiff, error) {
-	return diffFromValues(ctx, prior, planned, res, nil)
+func DiffFromValues(ctx context.Context, prior, planned, config cty.Value, res *Resource) (*terraform.InstanceDiff, error) {
+	return diffFromValues(ctx, prior, planned, config, res, nil)
 }
 
 // diffFromValues takes an additional CustomizeDiffFunc, so we can generate our
 // test fixtures from the legacy tests. In the new provider protocol the diff
 // only needs to be created for the apply operation, and any customizations
 // have already been done.
-func diffFromValues(ctx context.Context, prior, planned cty.Value, res *Resource, cust CustomizeDiffFunc) (*terraform.InstanceDiff, error) {
+func diffFromValues(ctx context.Context, prior, planned, config cty.Value, res *Resource, cust CustomizeDiffFunc) (*terraform.InstanceDiff, error) {
 	instanceState, err := res.ShimInstanceStateFromValue(prior)
 	if err != nil {
 		return nil, err
 	}
+
+	instanceState.RawConfig = config
+	instanceState.RawPlan = planned
+	instanceState.RawState = prior
 
 	configSchema := res.CoreConfigSchema()
 
@@ -36,7 +43,7 @@ func diffFromValues(ctx context.Context, prior, planned cty.Value, res *Resource
 	removeConfigUnknowns(cfg.Config)
 	removeConfigUnknowns(cfg.Raw)
 
-	diff, err := schemaMap(res.Schema).Diff(ctx, instanceState, cfg, cust, nil, false)
+	diff, err := schemaMap(res.SchemaMap()).Diff(ctx, instanceState, cfg, cust, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -77,14 +84,24 @@ func ApplyDiff(base cty.Value, d *terraform.InstanceDiff, schema *configschema.B
 // StateValueToJSONMap converts a cty.Value to generic JSON map via the cty JSON
 // encoding.
 func StateValueToJSONMap(val cty.Value, ty cty.Type) (map[string]interface{}, error) {
+	return stateValueToJSONMap(val, ty, false)
+}
+
+func stateValueToJSONMap(val cty.Value, ty cty.Type, useJSONNumber bool) (map[string]interface{}, error) {
 	js, err := ctyjson.Marshal(val, ty)
 	if err != nil {
 		return nil, err
 	}
 
 	var m map[string]interface{}
-	if err := json.Unmarshal(js, &m); err != nil {
-		return nil, err
+	if useJSONNumber {
+		if err := unmarshalJSON(js, &m); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := json.Unmarshal(js, &m); err != nil {
+			return nil, err
+		}
 	}
 
 	return m, nil

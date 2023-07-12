@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package validation
 
 import (
@@ -138,7 +141,7 @@ func StringInSlice(valid []string, ignoreCase bool) schema.SchemaValidateFunc {
 		}
 
 		for _, str := range valid {
-			if v == str || (ignoreCase && strings.ToLower(v) == strings.ToLower(str)) {
+			if v == str || (ignoreCase && strings.EqualFold(v, str)) {
 				return warnings, errors
 			}
 		}
@@ -160,7 +163,7 @@ func StringNotInSlice(invalid []string, ignoreCase bool) schema.SchemaValidateFu
 		}
 
 		for _, str := range invalid {
-			if v == str || (ignoreCase && strings.ToLower(v) == strings.ToLower(str)) {
+			if v == str || (ignoreCase && strings.EqualFold(v, str)) {
 				errors = append(errors, fmt.Errorf("expected %s to not be any of %v, got %s", k, invalid, v))
 				return warnings, errors
 			}

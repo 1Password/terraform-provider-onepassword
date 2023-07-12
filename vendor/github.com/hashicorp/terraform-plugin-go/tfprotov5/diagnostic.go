@@ -1,6 +1,9 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package tfprotov5
 
-import "github.com/hashicorp/terraform-plugin-go/tfprotov5/tftypes"
+import "github.com/hashicorp/terraform-plugin-go/tftypes"
 
 const (
 	// DiagnosticSeverityInvalid is used to indicate an invalid

@@ -1,9 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package validation
 
 import (
 	"fmt"
 	"reflect"
 
+	"github.com/hashicorp/go-cty/cty"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -55,5 +60,45 @@ func Any(validators ...schema.SchemaValidateFunc) schema.SchemaValidateFunc {
 			allErrors = append(allErrors, validatorErrors...)
 		}
 		return allWarnings, allErrors
+	}
+}
+
+// ToDiagFunc is a wrapper for legacy schema.SchemaValidateFunc
+// converting it to schema.SchemaValidateDiagFunc
+func ToDiagFunc(validator schema.SchemaValidateFunc) schema.SchemaValidateDiagFunc {
+	return func(i interface{}, p cty.Path) diag.Diagnostics {
+		var diags diag.Diagnostics
+
+		// A practitioner-friendly key for any SchemaValidateFunc output.
+		// Generally this should be the last attribute name on the path.
+		// If not found for some unexpected reason, an empty string is fine
+		// as the diagnostic will have the full attribute path anyways.
+		var key string
+
+		// Reverse search for last cty.GetAttrStep
+		for i := len(p) - 1; i >= 0; i-- {
+			if pathStep, ok := p[i].(cty.GetAttrStep); ok {
+				key = pathStep.Name
+				break
+			}
+		}
+
+		ws, es := validator(i, key)
+
+		for _, w := range ws {
+			diags = append(diags, diag.Diagnostic{
+				Severity:      diag.Warning,
+				Summary:       w,
+				AttributePath: p,
+			})
+		}
+		for _, e := range es {
+			diags = append(diags, diag.Diagnostic{
+				Severity:      diag.Error,
+				Summary:       e.Error(),
+				AttributePath: p,
+			})
+		}
+		return diags
 	}
 }

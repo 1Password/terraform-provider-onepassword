@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -95,6 +98,7 @@ func validateStaticDocs(ui cli.Ui, dir string) error {
 			"data-sources",
 			"guides",
 			"resources",
+			"cdktf",
 		),
 		checkBlockedExtensions(
 			".html.md.tmpl",

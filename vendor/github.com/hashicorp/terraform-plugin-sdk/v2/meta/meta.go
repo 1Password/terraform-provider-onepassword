@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // The meta package provides a location to set the release version
 // and any other relevant metadata for the SDK.
 //
@@ -11,7 +14,7 @@ import (
 )
 
 // The main version number that is being run at the moment.
-var SDKVersion = "2.2.0"
+var SDKVersion = "2.10.1"
 
 // A pre-release marker for the version. If this is "" (empty string)
 // then it means that it is a final release. Otherwise, this is a pre-release

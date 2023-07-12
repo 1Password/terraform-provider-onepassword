@@ -1,14 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	tfjson "github.com/hashicorp/terraform-json"
 )
 
 func providerShortName(n string) string {
@@ -52,6 +56,23 @@ func removeAllExt(file string) string {
 	}
 }
 
+// resourceSchema determines whether there is a schema in the supplied schemas map which
+// has either the providerShortName or the providerShortName concatenated with the
+// templateFileName (stripped of file extension.
+func resourceSchema(schemas map[string]*tfjson.Schema, providerShortName, templateFileName string) (*tfjson.Schema, string) {
+	if schema, ok := schemas[providerShortName]; ok {
+		return schema, providerShortName
+	}
+
+	resName := providerShortName + "_" + removeAllExt(templateFileName)
+
+	if schema, ok := schemas[resName]; ok {
+		return schema, resName
+	}
+
+	return nil, resName
+}
+
 func writeFile(path string, data string) error {
 	dir, _ := filepath.Split(path)
 	err := os.MkdirAll(dir, 0755)
@@ -59,7 +80,7 @@ func writeFile(path string, data string) error {
 		return fmt.Errorf("unable to make dir %q: %w", dir, err)
 	}
 
-	err = ioutil.WriteFile(path, []byte(data), 0644)
+	err = os.WriteFile(path, []byte(data), 0644)
 	if err != nil {
 		return fmt.Errorf("unable to write file %q: %w", path, err)
 	}
@@ -71,7 +92,7 @@ func runCmd(cmd *exec.Cmd) ([]byte, error) {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("error executing %q, %v", cmd.Path, cmd.Args)
-		log.Printf(string(output))
+		log.Print(string(output))
 		return nil, fmt.Errorf("error executing %q: %w", cmd.Path, err)
 	}
 	return output, nil
