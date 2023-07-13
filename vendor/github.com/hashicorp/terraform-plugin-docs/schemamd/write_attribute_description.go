@@ -1,13 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package schemamd
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
 	tfjson "github.com/hashicorp/terraform-json"
 )
 
-func WriteAttributeDescription(w io.Writer, att *tfjson.SchemaAttribute) error {
+func WriteAttributeDescription(w io.Writer, att *tfjson.SchemaAttribute, includeRW bool) error {
 	_, err := io.WriteString(w, "(")
 	if err != nil {
 		return err
@@ -18,19 +22,30 @@ func WriteAttributeDescription(w io.Writer, att *tfjson.SchemaAttribute) error {
 		return err
 	}
 
-	switch {
-	case att.Required:
-		_, err = io.WriteString(w, ", Required")
-		if err != nil {
-			return err
+	if includeRW {
+		switch {
+		case childAttributeIsRequired(att):
+			_, err = io.WriteString(w, ", Required")
+			if err != nil {
+				return err
+			}
+		case childAttributeIsOptional(att):
+			_, err = io.WriteString(w, ", Optional")
+			if err != nil {
+				return err
+			}
+		case childAttributeIsReadOnly(att):
+			_, err = io.WriteString(w, ", Read-only")
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("attribute does not match any filter states")
 		}
-	case att.Optional:
-		_, err = io.WriteString(w, ", Optional")
-		if err != nil {
-			return err
-		}
-	case att.Computed:
-		_, err = io.WriteString(w, ", Read-only")
+	}
+
+	if att.Sensitive {
+		_, err := io.WriteString(w, ", Sensitive")
 		if err != nil {
 			return err
 		}

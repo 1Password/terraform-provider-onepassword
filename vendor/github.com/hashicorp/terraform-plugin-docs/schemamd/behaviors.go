@@ -1,44 +1,49 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package schemamd
 
 import (
 	tfjson "github.com/hashicorp/terraform-json"
 )
 
-// childIsRequired returns true for blocks with min items > 0 or explicitly required
-// attributes
-func childIsRequired(block *tfjson.SchemaBlockType, att *tfjson.SchemaAttribute) bool {
-	if att != nil {
-		return att.Required
-	}
+func childAttributeIsRequired(att *tfjson.SchemaAttribute) bool {
+	return att.Required
+}
 
+func childBlockIsRequired(block *tfjson.SchemaBlockType) bool {
 	return block.MinItems > 0
 }
 
-// childIsOptional returns true for blocks with with min items 0, but any required or
-// optional children, or explicitly optional attributes
-func childIsOptional(block *tfjson.SchemaBlockType, att *tfjson.SchemaAttribute) bool {
-	if att != nil {
-		return att.Optional
-	}
+func childAttributeIsOptional(att *tfjson.SchemaAttribute) bool {
+	return att.Optional
+}
 
+// childBlockIsOptional returns true for blocks with with min items 0
+// which are either empty or have any required or optional children.
+func childBlockIsOptional(block *tfjson.SchemaBlockType) bool {
 	if block.MinItems > 0 {
 		return false
 	}
 
+	if len(block.Block.NestedBlocks) == 0 && len(block.Block.Attributes) == 0 {
+		return true
+	}
+
 	for _, childBlock := range block.Block.NestedBlocks {
-		if childIsRequired(childBlock, nil) {
+		if childBlockIsRequired(childBlock) {
 			return true
 		}
-		if childIsOptional(childBlock, nil) {
+		if childBlockIsOptional(childBlock) {
 			return true
 		}
 	}
 
 	for _, childAtt := range block.Block.Attributes {
-		if childIsRequired(nil, childAtt) {
+		if childAttributeIsRequired(childAtt) {
 			return true
 		}
-		if childIsOptional(nil, childAtt) {
+		if childAttributeIsOptional(childAtt) {
 			return true
 		}
 	}
@@ -46,26 +51,26 @@ func childIsOptional(block *tfjson.SchemaBlockType, att *tfjson.SchemaAttribute)
 	return false
 }
 
-// childIsReadOnly returns true for blocks where all leaves are read only (computed
-// but not optional)
-func childIsReadOnly(block *tfjson.SchemaBlockType, att *tfjson.SchemaAttribute) bool {
-	if att != nil {
-		// these shouldn't be able to be required, but just in case
-		return att.Computed && !att.Optional && !att.Required
-	}
+// Read-only is computed but not optional.
+func childAttributeIsReadOnly(att *tfjson.SchemaAttribute) bool {
+	// these shouldn't be able to be required, but just in case
+	return att.Computed && !att.Optional && !att.Required
+}
 
+// childBlockIsReadOnly returns true for blocks where all leaves are read-only.
+func childBlockIsReadOnly(block *tfjson.SchemaBlockType) bool {
 	if block.MinItems != 0 || block.MaxItems != 0 {
 		return false
 	}
 
 	for _, childBlock := range block.Block.NestedBlocks {
-		if !childIsReadOnly(childBlock, nil) {
+		if !childBlockIsReadOnly(childBlock) {
 			return false
 		}
 	}
 
 	for _, childAtt := range block.Block.Attributes {
-		if !childIsReadOnly(nil, childAtt) {
+		if !childAttributeIsReadOnly(childAtt) {
 			return false
 		}
 	}
