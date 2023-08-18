@@ -43,20 +43,20 @@ cp ./terraform-provider-onepassword ~/.terraform.d/plugins/github.com/1Password/
 
 ## Using plugin locally
 
-In your Terraform configuration you will need to specify the op plugin with:
+In your Terraform configuration you will need to specify the `op` plugin with:
 
 ```tf
 terraform {
   required_providers {
     onepassword = {
-      source   = "github.com/1Password/onepassword"
+      source  = "1Password/onepassword"
       version = "~> 1.2.0"
     }
   }
 }
 
 provider "onepassword" {
-  url     = "http://<1Password Connect API Hostname>"
+  url = "http://<1Password Connect API Hostname>"
 }
 ```
 
