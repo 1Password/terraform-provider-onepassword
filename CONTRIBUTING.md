@@ -7,7 +7,7 @@ Thank you so much for contributing to 1Password. We appreciate your time and hel
 To build the 1Password Connect Terraform provider run the following:
 
 ```sh
-$ go build .
+go build .
 ```
 
 This will create the `terraform-provider-onepassword` binary.
@@ -17,7 +17,7 @@ This will create the `terraform-provider-onepassword` binary.
 To run the go tests and check test coverage run the following:
 
 ```sh
-$ go test -v ./... -cover
+go test -v ./... -cover
 ```
 
 ## Generating Documentation
@@ -27,7 +27,7 @@ Documentation is generated for the provider using the [terraform documentation p
 To regenerate the `/docs` markdown run:
 
 ```sh
-$ go generate
+go generate
 ```
 
 ## Installing Locally
@@ -37,8 +37,8 @@ To install the binary it must be copied to the appropriate terraform plugin dire
 The current version of the provider is considered to be 0.2 and `darwin_amd64` should match your machines operating system and architecture in the format `$OS_$ARCH`. For example macOS is `darwin_amd64` and linux is `linux_amd64`.
 
 ```sh
-$ mkdir -p ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/
-$ cp ./terraform-provider-onepassword ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/terraform-provider-onepassword
+mkdir -p ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/
+cp ./terraform-provider-onepassword ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/terraform-provider-onepassword
 ```
 
 ## Using plugin locally
