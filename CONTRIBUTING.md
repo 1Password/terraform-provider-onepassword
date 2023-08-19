@@ -34,7 +34,7 @@ go generate
 
 To install the binary it must be copied to the appropriate Terraform plugin directory (note that you may need to create these directories first). You can refer to the [Terraform 0.13 plugin docs](https://www.hashicorp.com/blog/automatic-installation-of-third-party-providers-with-terraform-0-13) for more information.
 
-The current version of the provider is considered to be 0.2 and `darwin_amd64` should match your machines operating system and architecture in the format `$OS_$ARCH`. For example, macOS is `darwin_amd64` and Linux is `linux_amd64`.
+The current version of the provider is 1.2.0. Your machine's operating system and architecture should be specified in the `$OS_$ARCH` format. For example, macOS is `darwin_amd64` and Linux is `linux_amd64`.
 
 ```sh
 mkdir -p ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/
