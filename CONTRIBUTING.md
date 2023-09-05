@@ -32,14 +32,10 @@ go generate
 
 ## Installing plugin locally
 
-To install the binary it must be copied to the appropriate Terraform plugin directory (note that you may need to create these directories first). You can refer to the [Terraform 0.13 plugin docs](https://www.hashicorp.com/blog/automatic-installation-of-third-party-providers-with-terraform-0-13) for more information.
+Refer to the following sections of the Terraform's "Custom Framework Providers" tutorial to install this plugin locally:
 
-The current version of the provider is 1.2.0. Your machine's operating system and architecture should be specified in the `$OS_$ARCH` format. For example, macOS is `darwin_amd64` and Linux is `linux_amd64`.
-
-```sh
-mkdir -p ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/
-cp ./terraform-provider-onepassword ~/.terraform.d/plugins/github.com/1Password/onepassword/0.2/darwin_amd64/terraform-provider-onepassword
-```
+- [Prepare Terraform for local provider install](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider#prepare-terraform-for-local-provider-install)
+- [Locally install provider and verify with Terraform](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider#locally-install-provider-and-verify-with-terraform)
 
 ## Using plugin locally
 
