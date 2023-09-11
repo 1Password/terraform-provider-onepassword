@@ -1,9 +1,10 @@
 package onepassword
 
 import (
+	"context"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 
-	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -13,7 +14,7 @@ var oneOfUUIDName = []string{"uuid", "name"}
 func dataSourceOnepasswordVault() *schema.Resource {
 	return &schema.Resource{
 		Description: "Use this data source to get details of a vault by either its name or uuid.",
-		Read:        dataSourceOnepasswordVaultRead,
+		ReadContext: dataSourceOnepasswordVaultRead,
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Description: "The Terraform resource identifier for this item in the format `vaults/<vault_id>`",
@@ -43,28 +44,28 @@ func dataSourceOnepasswordVault() *schema.Resource {
 	}
 }
 
-func dataSourceOnepasswordVaultRead(data *schema.ResourceData, meta interface{}) error {
-	client := meta.(connect.Client)
+func dataSourceOnepasswordVaultRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client := meta.(Client)
 
 	title := data.Get("name").(string)
 	vaultUUID := data.Get("uuid").(string)
 
 	var vault *onepassword.Vault
 	if vaultUUID != "" {
-		vaultByUUID, err := client.GetVault(vaultUUID)
+		vaultByUUID, err := client.GetVault(ctx, vaultUUID)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		vault = vaultByUUID
 	} else {
-		vaultsByName, err := client.GetVaultsByTitle(title)
+		vaultsByName, err := client.GetVaultsByTitle(ctx, title)
 		if err != nil {
-			return err
+			return diag.FromErr(err)
 		}
 		if len(vaultsByName) == 0 {
-			return fmt.Errorf("no vault found with name '%s'", title)
+			return diag.Errorf("no vault found with name '%s'", title)
 		} else if len(vaultsByName) > 1 {
-			return fmt.Errorf("multiple vaults found with name '%s'", title)
+			return diag.Errorf("multiple vaults found with name '%s'", title)
 		}
 		vault = &vaultsByName[0]
 	}

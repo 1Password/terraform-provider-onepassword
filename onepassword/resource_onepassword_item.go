@@ -1,11 +1,14 @@
 package onepassword
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"regexp"
 	"strings"
 
-	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -101,14 +104,14 @@ func resourceOnepasswordItem() *schema.Resource {
 	}
 
 	return &schema.Resource{
-		Description: "A 1Password item.",
-		Create:      resourceOnepasswordItemCreate,
-		Read:        resourceOnepasswordItemRead,
-		Update:      resourceOnepasswordItemUpdate,
-		Delete:      resourceOnepasswordItemDelete,
+		Description:   "A 1Password item.",
+		CreateContext: resourceOnepasswordItemCreate,
+		ReadContext:   resourceOnepasswordItemRead,
+		UpdateContext: resourceOnepasswordItemUpdate,
+		DeleteContext: resourceOnepasswordItemDelete,
 
 		Importer: &schema.ResourceImporter{
-			State: schema.ImportStatePassthrough,
+			StateContext: schema.ImportStatePassthroughContext,
 		},
 
 		Schema: map[string]*schema.Schema{
@@ -254,18 +257,18 @@ func resourceOnepasswordItem() *schema.Resource {
 	}
 }
 
-func resourceOnepasswordItemCreate(data *schema.ResourceData, meta interface{}) error {
-	client := meta.(connect.Client)
+func resourceOnepasswordItemCreate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client := meta.(Client)
 	vaultUUID := data.Get("vault").(string)
 
 	item, err := dataToItem(data)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	createdItem, err := client.CreateItem(item, vaultUUID)
+	createdItem, err := client.CreateItem(ctx, item, vaultUUID)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	itemToData(createdItem, data)
@@ -273,14 +276,14 @@ func resourceOnepasswordItemCreate(data *schema.ResourceData, meta interface{}) 
 	return nil
 }
 
-func resourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) error {
+func resourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	vaultUUID, itemUUID := vaultAndItemUUID(data.Id())
 
-	client := meta.(connect.Client)
-	item, err := client.GetItem(itemUUID, vaultUUID)
+	client := meta.(Client)
+	item, err := client.GetItem(ctx, itemUUID, vaultUUID)
 
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	itemToData(item, data)
@@ -288,17 +291,20 @@ func resourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) er
 	return nil
 }
 
-func resourceOnepasswordItemUpdate(data *schema.ResourceData, meta interface{}) error {
-	client := meta.(connect.Client)
+func resourceOnepasswordItemUpdate(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client := meta.(Client)
 
 	item, err := dataToItem(data)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	updated, err := client.UpdateItem(item, data.Get("vault").(string))
+	payload, _ := json.Marshal(item)
+	tflog.Info(ctx, "update op payload: "+string(payload))
+
+	updated, err := client.UpdateItem(ctx, item, data.Get("vault").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	itemToData(updated, data)
@@ -306,17 +312,17 @@ func resourceOnepasswordItemUpdate(data *schema.ResourceData, meta interface{}) 
 	return nil
 }
 
-func resourceOnepasswordItemDelete(data *schema.ResourceData, meta interface{}) error {
-	client := meta.(connect.Client)
+func resourceOnepasswordItemDelete(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client := meta.(Client)
 
 	item, err := dataToItem(data)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
-	err = client.DeleteItem(item, data.Get("vault").(string))
+	err = client.DeleteItem(ctx, item, data.Get("vault").(string))
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	return nil
