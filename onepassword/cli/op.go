@@ -1,12 +1,16 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type OP struct {
@@ -107,4 +111,39 @@ func (op *OP) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid 
 	item.Vault.ID = vaultUuid
 
 	return op.exec(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
+}
+
+func (op *OP) exec(ctx context.Context, dst any, stdin []byte, args ...opArg) error {
+	var cmdArgs []string
+	for _, arg := range args {
+		cmdArgs = append(cmdArgs, arg.format())
+	}
+
+	cmd := exec.CommandContext(ctx, op.binaryPath, cmdArgs...)
+	cmd.Env = append(cmd.Environ(),
+		"OP_SERVICE_ACCOUNT_TOKEN="+op.serviceAccountToken,
+		"OP_FORMAT=json",
+		"OP_INTEGRATION_NAME=terraform-provider-connect",
+		"OP_INTEGRATION_ID=GO",
+		//"OP_INTEGRATION_BUILDNUMBER="+version.ProviderVersion, // causes bad request errors from CLI
+	)
+	if stdin != nil {
+		cmd.Stdin = bytes.NewReader(stdin)
+	}
+
+	tflog.Debug(ctx, "running op command: "+cmd.String())
+
+	result, err := cmd.Output()
+	var exitError *exec.ExitError
+	if errors.As(err, &exitError) {
+		return parseCliError(exitError.Stderr)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to execute command: %w", err)
+	}
+
+	if dst != nil {
+		return json.Unmarshal(result, dst)
+	}
+	return nil
 }
