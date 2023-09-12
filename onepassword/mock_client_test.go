@@ -2,6 +2,7 @@ package onepassword
 
 import (
 	"context"
+
 	"github.com/1Password/connect-sdk-go/onepassword"
 )
 

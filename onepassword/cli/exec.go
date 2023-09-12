@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"os/exec"
 	"regexp"
+
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 type opArg interface {

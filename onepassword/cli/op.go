@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/1Password/connect-sdk-go/onepassword"
 	"time"
+
+	"github.com/1Password/connect-sdk-go/onepassword"
 )
 
 type OP struct {

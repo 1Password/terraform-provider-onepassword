@@ -2,6 +2,7 @@ package connectctx
 
 import (
 	"context"
+
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
 )
