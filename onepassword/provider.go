@@ -88,14 +88,20 @@ func Provider() *schema.Provider {
 			if token != "" || url != "" {
 				return nil, diag.Errorf("Either (\"token\" and \"url\") or \"service_account_token\" field can be set. Both are set. Please unset one of them.")
 			}
+			if opCliPath == "" {
+				return nil, diag.Errorf("Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
+			}
 			return (Client)(cli.New(serviceAccountToken, opCliPath)), nil
 		}
 
 		if token == "" {
-			return nil, diag.Errorf("Token for Connect API is not set. Either provide the \"token\" field in the provider configuration or set the OP_CONNECT_TOKEN environment variable")
+			return nil, diag.Errorf("Token for Connect API is not set. Either provide the \"token\" field in the provider configuration or set the OP_CONNECT_TOKEN environment variable.")
 		}
 		if url == "" {
-			return nil, diag.Errorf("URL for Connect API is not set. Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable")
+			return nil, diag.Errorf("URL for Connect API is not set. Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable.")
+		}
+		if opCliPath != "" {
+			return nil, diag.Errorf("Path to op CLI binary is set, but no service account token is provided. Either remove the \"op_cli_path\" field from the provider configuration or set the \"service_account_token\" field.")
 		}
 
 		return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
