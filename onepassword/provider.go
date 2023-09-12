@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/onepassword/cli"
 	"github.com/1Password/terraform-provider-onepassword/onepassword/connectctx"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-
-	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/terraform-provider-onepassword/version"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
