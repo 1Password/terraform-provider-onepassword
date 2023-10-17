@@ -546,7 +546,6 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 		if !ok {
 			return nil, fmt.Errorf("Unable to parse section: %v", sections[i])
 		}
-
 		sid, err := uuid.GenerateUUID()
 		if err != nil {
 			return nil, fmt.Errorf("Unable to generate a section id: %w", err)
