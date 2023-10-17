@@ -547,16 +547,19 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 			return nil, fmt.Errorf("Unable to parse section: %v", sections[i])
 		}
 
-		if section["id"].(string) == "" {
-			sid, err := uuid.GenerateUUID()
-			if err != nil {
-				return nil, fmt.Errorf("Unable to generate a section id: %w", err)
-			}
+		sid, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, fmt.Errorf("Unable to generate a section id: %w", err)
+		}
+
+		if section["id"].(string) != "" {
+			sid = section["id"].(string)
+		} else {
 			section["id"] = sid
 		}
 
 		s := &onepassword.ItemSection{
-			ID:    section["id"].(string),
+			ID:    sid,
 			Label: section["label"].(string),
 		}
 		item.Sections = append(item.Sections, s)
@@ -566,14 +569,6 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 			field, ok := sectionFields[j].(map[string]interface{})
 			if !ok {
 				return nil, fmt.Errorf("Unable to parse section field: %v", sectionFields[j])
-			}
-
-			if field["id"].(string) == "" {
-				fid, err := uuid.GenerateUUID()
-				if err != nil {
-					return nil, fmt.Errorf("Unable to generate a field id: %w", err)
-				}
-				field["id"] = fid
 			}
 
 			f := &onepassword.ItemField{
