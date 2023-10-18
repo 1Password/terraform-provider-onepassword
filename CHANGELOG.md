@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v1.2.1)
+# v1.2.1
+
+## Fixes
+ * Fix item creation with sections. {#96}
+
+---
+
 [//]: # (START/v1.2.0)
 # v1.2.0
 
@@ -21,7 +29,7 @@
 
 ## Fixes
  * Improved sanitization for use with Github action.
- * Terraform provider no longer lowercases item label. {59}
+ * Terraform provider no longer lowercases item label. {#59}
 
 ## Security
  * Updated dependencies with secuirty vulnerbilities to patched versions
