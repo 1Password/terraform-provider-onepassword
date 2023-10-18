@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v1.2.1)
+# v1.2.1
+
+## Fixes
+ * Fix item creation with sections. {96}
+
+---
+
 [//]: # (START/v1.2.0)
 # v1.2.0
 
