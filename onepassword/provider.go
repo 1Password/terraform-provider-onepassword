@@ -9,12 +9,14 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/onepassword/cli"
 	"github.com/1Password/terraform-provider-onepassword/onepassword/connectctx"
 	"github.com/1Password/terraform-provider-onepassword/version"
+	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const (
 	terraformProviderUserAgent = "terraform-provider-connect/%s"
+	minimumOpCliVersion        = "2.23.0" // introduction of stdin json support for `op item update`
 )
 
 func init() {
@@ -91,7 +93,18 @@ func Provider() *schema.Provider {
 			if opCliPath == "" {
 				return nil, diag.Errorf("Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
 			}
-			return (Client)(cli.New(serviceAccountToken, opCliPath)), nil
+
+			op := cli.New(serviceAccountToken, opCliPath)
+
+			cliVersion, err := op.GetVersion(ctx)
+			if err != nil {
+				return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
+			}
+			if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
+				return nil, diag.Errorf("Version of op CLI is too old. Please upgrade to at least %s.", minimumOpCliVersion)
+			}
+
+			return (Client)(op), nil
 		}
 
 		if token == "" {
