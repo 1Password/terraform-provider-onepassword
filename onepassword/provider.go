@@ -88,7 +88,7 @@ func Provider() *schema.Provider {
 		// requirement of one of the attributes manually.
 		if serviceAccountToken != "" {
 			if token != "" || url != "" {
-				return nil, diag.Errorf("Either (\"token\" and \"url\") or \"service_account_token\" field can be set. Both are set. Please unset one of them.")
+				return nil, diag.Errorf("Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\") credentials can be set. Both are set. Please unset one of them.")
 			}
 			if opCliPath == "" {
 				return nil, diag.Errorf("Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
@@ -101,17 +101,17 @@ func Provider() *schema.Provider {
 				return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
 			}
 			if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
-				return nil, diag.Errorf("Version of op CLI is too old. Please upgrade to at least %s.", minimumOpCliVersion)
+				return nil, diag.Errorf("Current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\".", cliVersion, minimumOpCliVersion)
 			}
 
 			return (Client)(op), nil
 		}
 
 		if token == "" {
-			return nil, diag.Errorf("Token for Connect API is not set. Either provide the \"token\" field in the provider configuration or set the OP_CONNECT_TOKEN environment variable.")
+			return nil, diag.Errorf("Connect Token is not set. Either provide the \"token\" field in the provider configuration or set the \"OP_CONNECT_TOKEN\" environment variable.")
 		}
 		if url == "" {
-			return nil, diag.Errorf("URL for Connect API is not set. Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable.")
+			return nil, diag.Errorf("Connect URL is not set. Either provide the \"url\" field in the provider configuration or set the \"OP_CONNECT_HOST\" environment variable.")
 		}
 
 		return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
