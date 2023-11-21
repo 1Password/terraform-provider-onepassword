@@ -105,16 +105,11 @@ func Provider() *schema.Provider {
 			}
 
 			return (Client)(op), nil
+		} else if token != "" && url != "" {
+			return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
+		} else {
+			return nil, diag.Errorf("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\") credentials should be set.")
 		}
-
-		if token == "" {
-			return nil, diag.Errorf("Connect Token is not set. Either provide the \"token\" field in the provider configuration or set the \"OP_CONNECT_TOKEN\" environment variable.")
-		}
-		if url == "" {
-			return nil, diag.Errorf("Connect URL is not set. Either provide the \"url\" field in the provider configuration or set the \"OP_CONNECT_HOST\" environment variable.")
-		}
-
-		return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
 	}
 	return provider
 }
