@@ -113,9 +113,6 @@ func Provider() *schema.Provider {
 		if url == "" {
 			return nil, diag.Errorf("URL for Connect API is not set. Either provide the \"url\" field in the provider configuration or set the OP_CONNECT_HOST environment variable.")
 		}
-		if opCliPath != "" {
-			return nil, diag.Errorf("Path to op CLI binary is set, but no service account token is provided. Either remove the \"op_cli_path\" field from the provider configuration or set the \"service_account_token\" field.")
-		}
 
 		return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
 	}
