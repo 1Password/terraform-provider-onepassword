@@ -89,7 +89,18 @@ func (op *OP) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid 
 	}
 
 	var res *onepassword.Item
-	err = op.execJson(ctx, &res, payload, p("item"), p("create"), p("-"))
+	args := []opArg{p("item"), p("create"), p("-")}
+	// 'op item create' command doesn't support generating passwords when using templates
+	// therefore need to use --generate-password flag to set it
+	if pf := passwordField(item); pf != nil {
+		recipeStr := "letters,digits,32"
+		if pf.Recipe != nil {
+			recipeStr = passwordRecipeToString(pf.Recipe)
+		}
+		args = append(args, f("generate-password", recipeStr))
+	}
+
+	err = op.execJson(ctx, &res, payload, args...)
 	if err != nil {
 		return nil, err
 	}

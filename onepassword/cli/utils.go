@@ -3,6 +3,9 @@ package cli
 import (
 	"fmt"
 	"regexp"
+	"strings"
+
+	"github.com/1Password/connect-sdk-go/onepassword"
 )
 
 type opArg interface {
@@ -42,4 +45,28 @@ func parseCliError(stderr []byte) error {
 		return fmt.Errorf("unkown op error: %s", string(stderr))
 	}
 	return fmt.Errorf("op error: %s", subMatches[2])
+}
+
+func passwordField(item *onepassword.Item) *onepassword.ItemField {
+	for _, f := range item.Fields {
+		if f.Purpose == onepassword.FieldPurposePassword {
+			return f
+		}
+	}
+	return nil
+}
+
+func passwordRecipeToString(recipe *onepassword.GeneratorRecipe) string {
+	str := ""
+	if recipe != nil {
+		str += strings.Join(recipe.CharacterSets, ",")
+		if recipe.Length > 0 {
+			if str == "" {
+				str += fmt.Sprintf("%d", recipe.Length)
+			} else {
+				str += fmt.Sprintf(",%d", recipe.Length)
+			}
+		}
+	}
+	return str
 }
