@@ -50,7 +50,7 @@ After copying a newly-built version of the provider to the plugins directory you
 
 ## Debugging
 
-Ensure that the `dev_overrides` block was added to your `~/.terraformrc` file, using `"1Password/onepassword"` as the source. Refer to the [Installing the Plugin Locally](#installing-the-plugin-locally) section for instructions.
+Ensure that the `dev_overrides` block was added to your `~/.terraformrc` file, using `"1Password/onepassword"` as the source. Refer to the [Installing the Provider Locally](#installing-the-provider-locally) section for instructions.
 
 Build the provider without optimizations enabled:
 
