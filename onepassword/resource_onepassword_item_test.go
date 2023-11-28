@@ -1,6 +1,7 @@
 package onepassword
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -113,7 +114,7 @@ func testCRUDForItem(t *testing.T, itemToCreate *schema.ResourceData) {
 	}
 
 	// Creating an Item
-	err := resourceOnepasswordItemCreate(itemToCreate, meta)
+	err := resourceOnepasswordItemCreate(context.Background(), itemToCreate, meta)
 	if err != nil {
 		t.Errorf("Unexpected error occured when creating item")
 	}
@@ -123,7 +124,7 @@ func testCRUDForItem(t *testing.T, itemToCreate *schema.ResourceData) {
 
 	// Reading an Item
 	itemRead := generateResource(t, storedItem)
-	err = resourceOnepasswordItemRead(itemRead, meta)
+	err = resourceOnepasswordItemRead(context.Background(), itemRead, meta)
 	if err != nil {
 		t.Errorf("Unexpected error occured when reading item")
 	}
@@ -131,24 +132,24 @@ func testCRUDForItem(t *testing.T, itemToCreate *schema.ResourceData) {
 
 	//Updating an item
 	itemToCreate.Set("password", "new_password")
-	err = resourceOnepasswordItemUpdate(itemToCreate, meta)
+	err = resourceOnepasswordItemUpdate(context.Background(), itemToCreate, meta)
 	if err != nil {
 		t.Errorf("Unexpected error occured when deleting item")
 	}
-	err = resourceOnepasswordItemRead(itemRead, meta)
+	err = resourceOnepasswordItemRead(context.Background(), itemRead, meta)
 	if err != nil {
 		t.Errorf("Unexpected error occured when reading item")
 	}
 	compareResources(t, itemToCreate, itemRead)
 
 	//Deleting an item
-	err = resourceOnepasswordItemDelete(itemRead, meta)
+	err = resourceOnepasswordItemDelete(context.Background(), itemRead, meta)
 	if err != nil {
 		t.Errorf("Unexpected error occured when deleting item")
 	}
 
 	// Reading an Item That No Longer Exists
-	err = resourceOnepasswordItemRead(itemRead, meta)
+	err = resourceOnepasswordItemRead(context.Background(), itemRead, meta)
 	if err == nil {
 		t.Errorf("Expected an error when retrieving a nonexistent item")
 	}
@@ -250,6 +251,5 @@ func compareResources(t *testing.T, expectedResource, actualResource *schema.Res
 				t.Errorf("Expected %v to be %v but was %v", key, actualResource.Get(key), expectedResource.Get(key))
 			}
 		}
-
 	}
 }

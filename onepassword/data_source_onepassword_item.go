@@ -1,12 +1,13 @@
 package onepassword
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -15,7 +16,7 @@ func dataSourceOnepasswordItem() *schema.Resource {
 
 	return &schema.Resource{
 		Description: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
-		Read:        dataSourceOnepasswordItemRead,
+		ReadContext: dataSourceOnepasswordItemRead,
 		Schema: map[string]*schema.Schema{
 			"id": {
 				Description: "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`",
@@ -157,12 +158,12 @@ func dataSourceOnepasswordItem() *schema.Resource {
 	}
 }
 
-func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) error {
-	client := meta.(connect.Client)
+func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	client := meta.(Client)
 
-	item, err := getItemForDataSource(client, data)
+	item, err := getItemForDataSource(ctx, client, data)
 	if err != nil {
-		return err
+		return diag.FromErr(err)
 	}
 
 	data.SetId(terraformID(item))
@@ -225,16 +226,16 @@ func dataSourceOnepasswordItemRead(data *schema.ResourceData, meta interface{}) 
 	return nil
 }
 
-func getItemForDataSource(client connect.Client, data *schema.ResourceData) (*onepassword.Item, error) {
+func getItemForDataSource(ctx context.Context, client Client, data *schema.ResourceData) (*onepassword.Item, error) {
 	vaultUUID := data.Get("vault").(string)
 	itemTitle := data.Get("title").(string)
 	itemUUID := data.Get("uuid").(string)
 
 	if itemTitle != "" {
-		return client.GetItemByTitle(itemTitle, vaultUUID)
+		return client.GetItemByTitle(ctx, itemTitle, vaultUUID)
 	}
 	if itemUUID != "" {
-		return client.GetItem(itemUUID, vaultUUID)
+		return client.GetItem(ctx, itemUUID, vaultUUID)
 	}
 	return nil, errors.New("uuid or title must be set")
 }

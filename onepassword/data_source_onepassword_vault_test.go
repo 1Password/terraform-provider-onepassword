@@ -1,11 +1,13 @@
 package onepassword
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -92,15 +94,15 @@ func TestDataSourceOnePasswordVaultRead(t *testing.T) {
 				dataSourceData.Set(key, value)
 			}
 
-			err := dataSourceOnepasswordVaultRead(dataSourceData, client)
+			err := dataSourceOnepasswordVaultRead(context.Background(), dataSourceData, client)
 
 			if tc.expectedErr != nil {
-				if err == nil || err.Error() != tc.expectedErr.Error() {
+				if err == nil || getErrorFromDiag(err) != tc.expectedErr.Error() {
 					t.Errorf("Unexpected error occured. Expected %v, got %v", tc.expectedErr, err)
 				}
 			} else {
 				if err != nil {
-					t.Errorf("Got unexpected error: %s", err)
+					t.Errorf("Got unexpected error: %v", err)
 				}
 				assertResourceValue(t, dataSourceData, "uuid", tc.expected.ID)
 				assertResourceValue(t, dataSourceData, "name", tc.expected.Name)
@@ -115,4 +117,13 @@ func assertResourceValue(t *testing.T, data *schema.ResourceData, key, expectedV
 	if value != expectedValue {
 		t.Errorf("unexpected value for field %s. Expected %s, got %s", key, expectedValue, value)
 	}
+}
+
+func getErrorFromDiag(d diag.Diagnostics) string {
+	for _, dd := range d {
+		if dd.Severity == diag.Error {
+			return dd.Summary
+		}
+	}
+	return ""
 }

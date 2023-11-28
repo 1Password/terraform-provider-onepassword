@@ -1,6 +1,7 @@
 package onepassword
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -20,7 +21,7 @@ func TestDataSourceOnePasswordItemRead(t *testing.T) {
 	dataSourceData := generateDataSource(t, expectedItem)
 	dataSourceData.Set("uuid", expectedItem.ID)
 
-	err := dataSourceOnepasswordItemRead(dataSourceData, meta)
+	err := dataSourceOnepasswordItemRead(context.Background(), dataSourceData, meta)
 	if err != nil {
 		t.Errorf("Unexpected error occured")
 	}
@@ -38,7 +39,7 @@ func TestDataSourceOnePasswordItemReadByTitle(t *testing.T) {
 	dataSourceData := generateDataSource(t, expectedItem)
 	dataSourceData.Set("title", expectedItem.Title)
 
-	err := dataSourceOnepasswordItemRead(dataSourceData, meta)
+	err := dataSourceOnepasswordItemRead(context.Background(), dataSourceData, meta)
 	if err != nil {
 		t.Errorf("Unexpected error occured")
 	}
@@ -68,7 +69,7 @@ func TestDataSourceOnePasswordItemReadWithSections(t *testing.T) {
 	dataSourceData := generateDataSource(t, expectedItem)
 	dataSourceData.Set("uuid", expectedItem.ID)
 
-	err := dataSourceOnepasswordItemRead(dataSourceData, meta)
+	err := dataSourceOnepasswordItemRead(context.Background(), dataSourceData, meta)
 	if err != nil {
 		t.Errorf("Unexpected error occured")
 	}
