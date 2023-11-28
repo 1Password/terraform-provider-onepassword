@@ -18,6 +18,11 @@ https://start.1password.com/integrations/active
 -->
 Connect Server Version:
 
+<!-- What version of the OP CLI are you running?
+You can get this information by running 'op --version'
+-->
+CLI Version:
+
 <!-- What OS are you running Terraform on? -->
 OS:
 
