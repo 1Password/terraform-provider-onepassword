@@ -9,8 +9,6 @@ description: |-
 
 Use the 1Password Connect Terraform Provider to reference, create, or update items in your existing vaults using [1Password Secrets Automation](https://1password.com/secrets).
 
-## Using a Service Account Token
-
 The 1Password Connect Terraform Provider supports both the [1Password Connect Server](https://developer.1password.com/docs/secrets-automation/#1password-connect-server)
 and [1Password Service Accounts](https://developer.1password.com/docs/secrets-automation/#1password-service-accounts). To use a service account token, the
 [1Password CLI](https://developer.1password.com/docs/cli) has to be installed on the machine running terraform. For how to do this in terraform cloud, see
@@ -21,6 +19,9 @@ and [1Password Service Accounts](https://developer.1password.com/docs/secrets-au
 ```terraform
 provider "onepassword" {
   url = "http://localhost:8080"
+  token = "CONNECT_TOKEN"
+  service_account_token = "SERVICE_ACCOUNT_TOKEN"
+  op_cli_path = "op_cli_path"
 }
 ```
 
