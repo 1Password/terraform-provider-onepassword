@@ -38,8 +38,10 @@ provider "onepassword" {
 ## Known Service Accounts limitation:
 Users may encounter the following error `op error: (409) Conflict: Internal server conflict` when create/update/delete a bunch of items in the same vault as Terraform Provider handles each resource separately and therefore it makes a bunch of parallel requests using CLI for each of the resources.
 
-There are some ways to avoid this:
+There are ways to avoid this:
 1. Use `depends_on` in your resource definition to make sure the Provider makes requests sequentially.
 2. After it fails with `409` error run `terraform apply` again till all the changes will be applied.
 3. Use Connect.
 4. Put items in the different vaults.
+
+This will be addressed in the next release.
