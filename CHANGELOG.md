@@ -128,7 +128,7 @@ Support custom sections and fields for Login, Password, and Database Items
 
 # v0.1.0
 
-Initial 1Password Connect Terraform Provider release
+Initial 1Password Terraform Provider release
 
 ## Features:
 

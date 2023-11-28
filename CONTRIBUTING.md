@@ -1,10 +1,10 @@
 # Contributing
 
-Thanks for your interest in contributing to the 1Password Connect Terraform Provider project! 🙌 We appreciate your time and effort. Here are some guidelines to help you get started.
+Thanks for your interest in contributing to the 1Password Terraform Provider project! 🙌 We appreciate your time and effort. Here are some guidelines to help you get started.
 
 ## Building
 
-Run the following command to build the 1Password Connect Terraform Provider:
+Run the following command to build the 1Password Terraform Provider:
 
 ```sh
 go build .

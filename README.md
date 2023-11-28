@@ -2,8 +2,8 @@
 <img alt="" role="img" src="https://blog.1password.com/posts/2021/secrets-automation-launch/header.svg"/>
 
 <div align="center">
-  <h1>1Password Connect Terraform Provider</h1>
-  <p>Use the 1Password Connect Terraform Provider to access and manage items in your 1Password vaults.</p>
+  <h1>1Password Terraform Provider</h1>
+  <p>Use the 1Password Terraform Provider to access and manage items in your 1Password vaults.</p>
   <a href="#-get-started">
     <img alt="Get started" src="https://user-images.githubusercontent.com/45081667/226940040-16d3684b-60f4-4d95-adb2-5757a8f1bc15.png" height="37"/>
   </a>
