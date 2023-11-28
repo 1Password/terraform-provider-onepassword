@@ -7,7 +7,7 @@ Thanks for your interest in contributing to the 1Password Connect Terraform Prov
 Run the following command to build the 1Password Connect Terraform Provider:
 
 ```sh
-$ go build .
+go build .
 ```
 
 This will create the `terraform-provider-onepassword` binary.
@@ -17,7 +17,7 @@ This will create the `terraform-provider-onepassword` binary.
 To run the Go tests and check test coverage run the following command:
 
 ```sh
-$ go test -v ./... -cover
+go test -v ./... -cover
 ```
 
 ## Installing the Provider Locally
@@ -55,13 +55,13 @@ Ensure that the `dev_overrides` block was added to your `~/.terraformrc` file, u
 Build the provider without optimizations enabled:
 
 ```sh
-$ go build -gcflags="all=-N -l" .
+go build -gcflags="all=-N -l" .
 ```
 
 Start a Delve debugging session:
 
 ```sh
-$ dlv debug . -- --debug
+dlv debug . -- --debug
 Type 'help' for list of commands.
 (dlv) continue
 ```
@@ -86,7 +86,7 @@ Documentation is generated for the provider using [terraform-plugin-docs](https:
 To regenerate the `/docs` Markdown run:
 
 ```sh
-$ go generate
+go generate
 ```
 
 ## Sign Your Commits
