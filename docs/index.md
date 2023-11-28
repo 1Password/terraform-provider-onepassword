@@ -34,3 +34,12 @@ provider "onepassword" {
 - `service_account_token` (String) A valid token for your 1Password Service Account. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN. Either this or `token` must be set.
 - `token` (String) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN. Either this or `service_account_token` must be set.
 - `url` (String) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set. Can be omitted, if service_account_token is set.
+
+## Known Service Accounts limitation:
+Users may encounter the following error `op error: (409) Conflict: Internal server conflict` when create/update/delete a bunch of items in the same vault as Terraform Provider handles each resource separately and therefore it makes a bunch of parallel requests using CLI for each of the resources.
+
+There are some ways to avoid this:
+1. Use `depends_on` in your resource definition to make sure the Provider makes requests sequentially.
+2. After it fails with `409` error run `terraform apply` again till all the changes will be applied.
+3. Use Connect.
+4. Put items in the different vaults.
