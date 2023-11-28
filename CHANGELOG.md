@@ -12,6 +12,21 @@
 
 ---
 
+[//]: # (START/v1.3.0)
+# v1.3.0
+
+## Features
+  * Service Accounts support. {#79}
+  * Add debugging support. {#102}
+
+## Fixes
+ * Fix item creation with sections. {#96}
+
+## Security
+ * Bump google.golang.org/grpc from 1.56.2 to 1.56.3 {#104}
+
+---
+
 [//]: # (START/v1.2.1)
 # v1.2.1
 
