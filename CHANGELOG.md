@@ -16,7 +16,7 @@
 # v1.3.0
 
 ## Features
-  * Service Accounts support. {#79}
+  * Service Accounts support. Credits to @tim-oster for the contribution! {#79}
   * Add debugging support. {#102}
 
 ## Fixes
