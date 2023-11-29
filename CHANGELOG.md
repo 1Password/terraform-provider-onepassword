@@ -16,12 +16,11 @@
 # v1.3.0
 
 ## Features
-  * Service Accounts support. Credits to @tim-oster for the contribution! {#79}
+  * Add Service Accounts support. Credits to @tim-oster for the contribution! {#79}
   * Add debugging support. {#102}
 
 ## Security
- * Bump google.golang.org/grpc from 1.56.2 to 1.56.3 {#104}
- * Bumps golang.org/x/net from 0.12.0 to 0.17.0. {#112}
+ * Update dependencies with security vulnerabilities to patched versions. {#104, #112}
 
 ---
 
