@@ -1,10 +1,10 @@
 # Contributing
 
-Thanks for your interest in contributing to the 1Password Terraform Provider project! 🙌 We appreciate your time and effort. Here are some guidelines to help you get started.
+Thanks for your interest in contributing to the 1Password Terraform provider project! 🙌 We appreciate your time and effort. Here are some guidelines to help you get started.
 
 ## Building
 
-Run the following command to build the 1Password Terraform Provider:
+Run the following command to build the 1Password Terraform provider:
 
 ```sh
 go build .
@@ -20,16 +20,16 @@ To run the Go tests and check test coverage run the following command:
 go test -v ./... -cover
 ```
 
-## Installing the Provider Locally
+## Installing the provider locally
 
 Refer to the following sections of the Terraform's "Custom Framework Providers" tutorial to install this provider locally:
 
 - [Prepare Terraform for local provider install](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider#prepare-terraform-for-local-provider-install)
 - [Locally install provider and verify with Terraform](https://developer.hashicorp.com/terraform/tutorials/providers-plugin-framework/providers-plugin-framework-provider#locally-install-provider-and-verify-with-terraform)
 
-## Using the Provider Locally
+## Using the provider locally
 
-In your Terraform configuration you will need to specify the `onepassword` provider with:
+You must specify the `onepassword` provider in your Terraform configuration:
 
 ```tf
 terraform {
@@ -46,11 +46,11 @@ provider "onepassword" {
 }
 ```
 
-After copying a newly-built version of the provider to the plugins directory you will have to run `terraform init` again. If you forget to do this then Terraform will error out and tell you to do so.
+After copying a newly built version of the provider to the plugins directory, you need to run `terraform init` again. Otherwise, Terraform returns an error.
 
 ## Debugging
 
-Ensure that the `dev_overrides` block was added to your `~/.terraformrc` file, using `"1Password/onepassword"` as the source. Refer to the [Installing the Provider Locally](#installing-the-provider-locally) section for instructions.
+Make sure you add the `dev_overrides` block to your `~/.terraformrc` file (using `"1Password/onepassword"` as the source). For instructions, refer to the [Installing the provider locally](#installing-the-provider-locally).
 
 Build the provider without optimizations enabled:
 
@@ -66,9 +66,9 @@ Type 'help' for list of commands.
 (dlv) continue
 ```
 
-**Note**: Editors like GoLand can be configured to start a debugging session as well. Just be sure to pass the `--debug` flag as a program argument.
+**Note**: You can also configure editors like GoLand to start a debugging session by passing the `--debug` flag as a program argument.
 
-If a debugging session was started properly, the provider should print the following output to `stdout`: 
+If a debugging session was starts correctly, the provider prints the following output to `stdout`:
 
 ```sh
 Provider started, to attach Terraform set the TF_REATTACH_PROVIDERS env var:
@@ -79,7 +79,7 @@ Provider started, to attach Terraform set the TF_REATTACH_PROVIDERS env var:
 
 Copy the line starting with `TF_REATTACH_PROVIDERS` from your provider's output. Either export it, or prefix every Terraform command with it, and run Terraform as usual. Any breakpoints you have set will halt execution and show you the current variable values.
 
-## Generating Documentation
+## Generating documentation
 
 Documentation is generated for the provider using [terraform-plugin-docs](https://github.com/hashicorp/terraform-plugin-docs). This plugin uses the schema `Description` field in conjunction with the contents of the `/templates` and `/examples` folders to generate the `/docs` content.
 
@@ -89,6 +89,29 @@ To regenerate the `/docs` Markdown run:
 go generate
 ```
 
-## Sign Your Commits
+## Sign your commits
 
-To get your PR merged, we require you to sign your commits. Fortunately, this has become very easy to [set up](https://developer.1password.com/docs/ssh/git-commit-signing/)!
+To get your PR merged, we require you to sign your commits.
+
+### Sign commits with `1Password`
+
+You can also sign commits using 1Password, which lets you sign commits with biometrics without the signing key leaving the local 1Password process.
+
+Learn how to use [1Password to sign your commits](https://developer.1password.com/docs/ssh/git-commit-signing/).
+
+
+### Sign commits with `ssh-agent`
+
+Follow the steps below to set up commit signing with `ssh-agent`:
+
+1. Generate an SSH key and add it to ssh-agent
+2. Add the SSH key to your GitHub account
+3. Configure git to use your SSH key for commit signing
+
+### Sign commits `gpg`
+
+Follow the steps below to set up commit signing with `gpg`:
+
+1. Generate a GPG key
+2. Add the GPG key to your GitHub account
+3. Configure git to use your GPG key for commit signing
