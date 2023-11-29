@@ -24,6 +24,7 @@
 
 ## Security
  * Bump google.golang.org/grpc from 1.56.2 to 1.56.3 {#104}
+ * Bumps golang.org/x/net from 0.12.0 to 0.17.0. {#112}
 
 ---
 
