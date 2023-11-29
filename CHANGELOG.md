@@ -12,6 +12,18 @@
 
 ---
 
+[//]: # (START/v1.3.0)
+# v1.3.0
+
+## Features
+  * Add Service Accounts support. Credits to @tim-oster for the contribution! {#79}
+  * Add debugging support. {#102}
+
+## Security
+ * Update dependencies with security vulnerabilities to patched versions. {#104, #112}
+
+---
+
 [//]: # (START/v1.2.1)
 # v1.2.1
 
