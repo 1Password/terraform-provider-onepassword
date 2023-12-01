@@ -36,15 +36,13 @@ terraform {
   required_providers {
     onepassword = {
       source  = "1Password/onepassword"
-      version = "~> 1.2.0"
+      version = "~> 1.3.0"
     }
   }
 }
 
 provider "onepassword" {
-  # setup provider to use either Connect or service account
   url = "http://<1Password Connect API Hostname>"
-  service_account_token = "SERVICE_ACCOUNT_TOKEN"
 }
 ```
 
