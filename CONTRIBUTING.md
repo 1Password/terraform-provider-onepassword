@@ -42,7 +42,9 @@ terraform {
 }
 
 provider "onepassword" {
+  # setup provider to use either Connect or service account
   url = "http://<1Password Connect API Hostname>"
+  service_account_token = "SERVICE_ACCOUNT_TOKEN"
 }
 ```
 
