@@ -50,23 +50,41 @@ After copying a newly built version of the provider to the plugins directory, yo
 
 ## Debugging
 
-Make sure you add the `dev_overrides` block to your `~/.terraformrc` file (using `"1Password/onepassword"` as the source). For instructions, refer to the [Installing the provider locally](#installing-the-provider-locally).
+To start debugging:
 
-Build the provider without optimizations enabled:
+1. Start a debugging session.
+2. Export `TF_REATTACH_PROVIDERS`.
+3. Run Terraform normally.
+
+
+### Start a debugging session
+
+You can start a debugging session in several ways:
+
+1. [Build the provider without optimizations](#build-the-provider-without-optimizations).
+2. [Start a debugging session](#start-a-debugging-session-1).
+
+**Note**: Before continuing, make sure you add the `dev_overrides` block to your `~/.terraformrc` file (using `"1Password/onepassword"` as the source). For instructions, refer to the [Installing the provider locally](#installing-the-provider-locally).
+
+#### Build the provider without optimizations
+
+Run the following command to build the provider without enabling optimizations:
 
 ```sh
 go build -gcflags="all=-N -l" .
 ```
 
-Start a Delve debugging session:
+#### Start a debugging session
+
+Run the following command to start a Delve debugging session:
 
 ```sh
 dlv debug . -- --debug
-Type 'help' for list of commands.
-(dlv) continue
 ```
 
-**Note**: You can also configure editors like GoLand to start a debugging session by passing the `--debug` flag as a program argument.
+Or use your IDE debugger. You can configure editors like GoLand to start a debugging session by passing the `--debug` flag as a program argument.
+
+### Export `TF_REATTACH_PROVIDERS`
 
 If a debugging session was starts correctly, the provider prints the following output to `stdout`:
 
@@ -74,10 +92,13 @@ If a debugging session was starts correctly, the provider prints the following o
 Provider started, to attach Terraform set the TF_REATTACH_PROVIDERS env var:
 
     TF_REATTACH_PROVIDERS='{"1Password/onepassword":{"Protocol":"grpc","Pid":3382870,"Test":true,"Addr":{"Network":"unix","String":"/tmp/plugin713096927"}}}'
-
 ```
 
-Copy the line starting with `TF_REATTACH_PROVIDERS` from your provider's output. Either export it, or prefix every Terraform command with it, and run Terraform as usual. Any breakpoints you have set will halt execution and show you the current variable values.
+Copy the line starting with `TF_REATTACH_PROVIDERS` from your provider's output. You can either export this variable or prefix every Terraform command with it.
+
+### Run Terraform
+
+After starting a debugging session and exporting the `TF_REATTACH_PROVIDERS` variable, run Terraform as usual. Any breakpoints you have set will halt execution and show you the current variable values.
 
 ## Generating documentation
 
