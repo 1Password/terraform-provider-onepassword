@@ -2,25 +2,26 @@
 layout: ""
 page_title: "Provider: 1Password"
 description: |-
-  Use the 1Password Connect Terraform Provider to reference, create, or update logins, password and database items in your 1Password Vaults.
+  Use the 1Password Terraform provider to reference, create, or update logins, passwords, and database items in your 1Password vaults.
 ---
 
-# 1Password Connect Terraform Provider
+# 1Password Terraform provider
 
-Use the 1Password Connect Terraform Provider to reference, create, or update items in your existing vaults using [1Password Secrets Automation](https://1password.com/secrets).
+Use the 1Password Terraform provider to reference, create, or update items in your existing vaults using [1Password Secrets Automation](https://1password.com/secrets).
 
-## Using a Service Account Token
-
-The 1Password Connect Terraform Provider supports both the [1Password Connect Server](https://developer.1password.com/docs/secrets-automation/#1password-connect-server)
-and [1Password Service Accounts](https://developer.1password.com/docs/secrets-automation/#1password-service-accounts). To use a service account token, the
-[1Password CLI](https://developer.1password.com/docs/cli) has to be installed on the machine running terraform. For how to do this in terraform cloud, see
-[here](https://developer.hashicorp.com/terraform/cloud-docs/run/install-software#only-install-standalone-binaries).
+The 1Password Terraform provider supports using both [1Password Connect Server](https://developer.1password.com/docs/secrets-automation/#1password-connect-server)
+and [1Password Service Accounts](https://developer.1password.com/docs/secrets-automation/#1password-service-accounts).
+To use a service account token, you must install [1Password CLI](https://developer.1password.com/docs/cli) on the machine running Terraform. Refer to the
+[Terraform documentation](https://developer.hashicorp.com/terraform/cloud-docs/run/install-software#only-install-standalone-binaries) to learn how to install 1Password CLI on Terraform Cloud.
 
 ## Example Usage
 
 ```terraform
 provider "onepassword" {
-  url = "http://localhost:8080"
+  url                   = "http://localhost:8080"
+  token                 = "CONNECT_TOKEN"
+  service_account_token = "SERVICE_ACCOUNT_TOKEN"
+  op_cli_path           = "OP_CLI_PATH"
 }
 ```
 
@@ -33,3 +34,20 @@ provider "onepassword" {
 - `service_account_token` (String) A valid token for your 1Password Service Account. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN. Either this or `token` must be set.
 - `token` (String) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN. Either this or `service_account_token` must be set.
 - `url` (String) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set. Can be omitted, if service_account_token is set.
+
+## Known Service Accounts limitation:
+Users might encounter the following error if they create, update, or delete too many items simultaneously in the same 1Password vault.
+
+\```
+op error: (409) Conflict: Internal server conflict
+\```
+
+The 1Password Terraform provider handles each resource separately. As a result, each request to perform a create, update, or delete operation using CLI to create an additional parallel request. Too many parallel requests might result in one or more race conditions.
+
+You can avoid receiving the 409 error in one of the following ways:
+1. Use `depends_on` in your resource definition to make sure the provider makes requests sequentially.
+2. After receiving the `409` error, run `terraform apply` again. You might need to run this multiple times until it applies all the changes.
+3. Use a Connect server.
+4. Put items in the different vaults.
+
+This will be addressed in the future release.

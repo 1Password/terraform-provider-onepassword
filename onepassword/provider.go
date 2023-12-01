@@ -35,7 +35,7 @@ func init() {
 	// }
 }
 
-// Provider The 1Password Connect terraform provider
+// Provider The 1Password Terraform provider
 func Provider() *schema.Provider {
 	providerUserAgent := fmt.Sprintf(terraformProviderUserAgent, version.ProviderVersion)
 	provider := &schema.Provider{
