@@ -50,4 +50,4 @@ You can avoid receiving the 409 error in one of the following ways:
 3. Use a Connect server.
 4. Put items in the different vaults.
 
-This will be addressed in the next release.
+This will be addressed in the future release.
