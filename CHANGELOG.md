@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v1.3.1)
+# v1.3.1
+
+## Fixes
+ * Update documentation to mention that the provider supports Service Accounts. {#106}
+
+---
+
 [//]: # (START/v1.3.0)
 # v1.3.0
 

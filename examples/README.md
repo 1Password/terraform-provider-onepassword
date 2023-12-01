@@ -3,9 +3,13 @@
 This example demonstrates creating the currently supported types of 1Password Items (Logins, Passwords, and Databases).
 ## Prerequisites
 
-To run this example you have to have setup a 1Password Connect API instance and issued a Token with access to a demo vault. You will need to export both the Connect API token and the UUID of your demo vault as environment variables.
+To run this example you have to have either issue a 1Password service account token or setup a 1Password Connect API instance and issued a Connect Token with access to a demo vault. You will need to export both the Connect API token and the UUID of your demo vault as environment variables.
 
 ```sh
+# to use service account, set
+$ export OP_SERVICE_ACCOUNT_TOKEN="Put your 1Password service account token here"
+
+# to use Connect, set
 $ export OP_CONNECT_TOKEN="Put your 1Password Connect API token here"
 $ export TF_VAR_demo_vault="Put a Vault UUID that has been added to your 1Password Connect API here"
 ```
