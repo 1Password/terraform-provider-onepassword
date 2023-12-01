@@ -10,8 +10,8 @@ description: |-
 Use the 1Password Terraform provider to reference, create, or update items in your existing vaults using [1Password Secrets Automation](https://1password.com/secrets).
 
 The 1Password Terraform provider supports using both [1Password Connect Server](https://developer.1password.com/docs/secrets-automation/#1password-connect-server)
-and [1Password Service Accounts](https://developer.1password.com/docs/secrets-automation/#1password-service-accounts). To use a service account token, the
-You must install [1Password CLI](https://developer.1password.com/docs/cli) on the machine running Terraform. Refer to the
+and [1Password Service Accounts](https://developer.1password.com/docs/secrets-automation/#1password-service-accounts).
+To use a service account token, you must install [1Password CLI](https://developer.1password.com/docs/cli) on the machine running Terraform. Refer to the
 [Terraform documentation](https://developer.hashicorp.com/terraform/cloud-docs/run/install-software#only-install-standalone-binaries) to learn how to install 1Password CLI on Terraform Cloud.
 
 ## Example Usage
