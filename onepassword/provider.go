@@ -58,6 +58,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("OP_SERVICE_ACCOUNT_TOKEN", nil),
 				Description: "A valid token for your 1Password Service Account. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN. Either this or `token` must be set.",
 			},
+			"account": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("OP_ACCOUNT", nil),
+				Description: "A valid account's sign-in address or ID to use biometrics unlock. Can also be sourced from OP_ACCOUNT. Either this or `service_account_token` must be set to use with 1Password CLI.",
+			},
 			"op_cli_path": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -78,6 +84,7 @@ func Provider() *schema.Provider {
 			url                 = d.Get("url").(string)
 			token               = d.Get("token").(string)
 			serviceAccountToken = d.Get("service_account_token").(string)
+			account             = d.Get("account").(string)
 			opCliPath           = d.Get("op_cli_path").(string)
 		)
 
@@ -94,8 +101,19 @@ func Provider() *schema.Provider {
 				return nil, diag.Errorf("Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
 			}
 
-			op := cli.New(serviceAccountToken, opCliPath)
+			op := cli.New(serviceAccountToken, opCliPath, "")
 
+			cliVersion, err := op.GetVersion(ctx)
+			if err != nil {
+				return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
+			}
+			if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
+				return nil, diag.Errorf("Current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\".", cliVersion, minimumOpCliVersion)
+			}
+
+			return (Client)(op), nil
+		} else if account != "" {
+			op := cli.New("", opCliPath, account)
 			cliVersion, err := op.GetVersion(ctx)
 			if err != nil {
 				return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
@@ -108,7 +126,7 @@ func Provider() *schema.Provider {
 		} else if token != "" && url != "" {
 			return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
 		} else {
-			return nil, diag.Errorf("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\") credentials should be set.")
+			return nil, diag.Errorf("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\" or \"account\") credentials should be set.")
 		}
 	}
 	return provider
