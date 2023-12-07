@@ -93,36 +93,15 @@ func Provider() *schema.Provider {
 		// the other one is prompted for, but Terraform then forgets the value for the one that
 		// is defined in the code. This confusing user-experience can be avoided by handling the
 		// requirement of one of the attributes manually.
-		if serviceAccountToken != "" {
+		if serviceAccountToken != "" || account != "" {
 			if token != "" || url != "" {
-				return nil, diag.Errorf("Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\") credentials can be set. Both are set. Please unset one of them.")
+				return nil, diag.Errorf("Either Connect credentials (\"token\" and \"url\") or 1Password CLI (\"service_account_token\" or \"account\") credentials can be set. Both are set. Please unset one of them.")
 			}
 			if opCliPath == "" {
 				return nil, diag.Errorf("Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
 			}
 
-			op := cli.New(serviceAccountToken, opCliPath, "")
-
-			cliVersion, err := op.GetVersion(ctx)
-			if err != nil {
-				return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
-			}
-			if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
-				return nil, diag.Errorf("Current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\".", cliVersion, minimumOpCliVersion)
-			}
-
-			return (Client)(op), nil
-		} else if account != "" {
-			op := cli.New("", opCliPath, account)
-			cliVersion, err := op.GetVersion(ctx)
-			if err != nil {
-				return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
-			}
-			if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
-				return nil, diag.Errorf("Current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\".", cliVersion, minimumOpCliVersion)
-			}
-
-			return (Client)(op), nil
+			return initializeCLI(ctx, serviceAccountToken, account, opCliPath)
 		} else if token != "" && url != "" {
 			return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
 		} else {
@@ -130,6 +109,27 @@ func Provider() *schema.Provider {
 		}
 	}
 	return provider
+}
+
+// initializeCLI initializes CLI to use either with service account or with user account
+// service account takes preference if both are set
+func initializeCLI(ctx context.Context, serviceAccountToken, account, opCliPath string) (Client, diag.Diagnostics) {
+	op := cli.New("", opCliPath, account)
+
+	// override OP to use service account token
+	if serviceAccountToken != "" {
+		op = cli.New(serviceAccountToken, opCliPath, "")
+	}
+
+	cliVersion, err := op.GetVersion(ctx)
+	if err != nil {
+		return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
+	}
+	if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
+		return nil, diag.Errorf("Current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\".", cliVersion, minimumOpCliVersion)
+	}
+
+	return op, nil
 }
 
 // Client is a subset of connect.Client with context added.
