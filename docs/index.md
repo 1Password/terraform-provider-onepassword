@@ -19,6 +19,15 @@ You must install [1Password CLI](https://developer.1password.com/docs/cli) on th
 
 To authenticate CLI with service account, set `service_account_token` in the provider configuration.
 
+Retry mechanism is implemented when using provider with service accounts. Each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/).
+
+It's recommended to limit the number of parallel resource operations. It can be done by using `-parallelism=n` flag when running `terraform apply`, where `n` is the number of parallel resource operations (the default is `10`).
+```
+terraform apply `-parallelism=n`
+```
+
+The reason of having retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
+
 ## Authenticate CLI with user account using biometric unlock
 
 To authenticate CLI with user account using biometric unlock:
@@ -30,7 +39,7 @@ acme.dev.com               test.user@acme.com                            HERE_WI
 acme.prod.com              prod.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
 ```
 3. Set `account` in the provider configuration with the `URL` or `USER ID` value from the previous step.
-4. When biometric unlock popup appears while running terraform command, (authenticate it using fingerprint or password)[https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in].
+4. When biometric unlock popup appears while running terraform command, [authenticate it using fingerprint or password](https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in).
 
 ## Use with 1Password Connect
 
@@ -60,13 +69,3 @@ provider "onepassword" {
 - `service_account_token` (String) A valid token for your 1Password Service Account. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN. Must be set to use with 1Password service account.
 - `token` (String) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN. Must be set to use with 1Password Connect server.
 - `url` (String) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set. Must be set to use with 1Password Connect server.
-
-## Use with service accounts:
-Retry mechanism is implemented when using provider with service accounts. Each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/).
-
-It's recommended to limit the number of parallel resource operations. It can be done by using `-parallelism=n` flag when running `terraform apply`, where `n` is the number of parallel resource operations (the default is `10`).
-```
-terraform apply `-parallelism=n`
-```
-
-The reason of having retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
