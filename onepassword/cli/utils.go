@@ -1,9 +1,13 @@
 package cli
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math"
+	"math/big"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
 )
@@ -69,4 +73,20 @@ func passwordRecipeToString(recipe *onepassword.GeneratorRecipe) string {
 		}
 	}
 	return str
+}
+
+// waitBeforeRetry waits some amount of time based on retryAttempt
+// it implements 'exponential backoff with jitter' algorithm
+func waitBeforeRetry(retryAttempts int) {
+	randInt, err := rand.Int(rand.Reader, big.NewInt(100))
+	if err != nil {
+		randInt = big.NewInt(0)
+	}
+	randPercentage := float64(randInt.Int64()) / 100
+	jitter := (1.0 + randPercentage) / 2
+
+	exp := math.Pow(2, float64(retryAttempts))
+	retryTimeMilliseconds := 100 + 500*exp*jitter
+	wait := time.Duration(retryTimeMilliseconds) * time.Millisecond
+	time.Sleep(wait)
 }

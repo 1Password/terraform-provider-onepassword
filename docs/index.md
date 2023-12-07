@@ -35,19 +35,12 @@ provider "onepassword" {
 - `token` (String) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN. Either this or `service_account_token` must be set.
 - `url` (String) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set. Can be omitted, if service_account_token is set.
 
-## Known Service Accounts limitation:
-Users might encounter the following error if they create, update, or delete too many items simultaneously in the same 1Password vault.
+## Use with service accounts:
+Retry mechanism is implemented when using provider with service accounts. Each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/).
 
-\```
-op error: (409) Conflict: Internal server conflict
-\```
+It's recommended to limit the number of parallel resource operations. It can be done by using `-parallelism=n` flag when running `terraform apply`, where `n` is the number of parallel resource operations (the default is `10`).
+```
+terraform apply `-parallelism=n`
+```
 
-The 1Password Terraform provider handles each resource separately. As a result, each request to perform a create, update, or delete operation using CLI to create an additional parallel request. Too many parallel requests might result in one or more race conditions.
-
-You can avoid receiving the 409 error in one of the following ways:
-1. Use `depends_on` in your resource definition to make sure the provider makes requests sequentially.
-2. After receiving the `409` error, run `terraform apply` again. You might need to run this multiple times until it applies all the changes.
-3. Use a Connect server.
-4. Put items in the different vaults.
-
-This will be addressed in the future release.
+The reason of having retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
