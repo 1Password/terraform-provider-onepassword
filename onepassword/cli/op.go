@@ -80,6 +80,12 @@ func (op *OP) GetItemByTitle(ctx context.Context, title string, vaultUuid string
 }
 
 func (op *OP) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	return op.withRetry(func() (*onepassword.Item, error) {
+		return op.create(ctx, item, vaultUuid)
+	})
+}
+
+func (op *OP) create(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
 	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
 		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
@@ -110,6 +116,12 @@ func (op *OP) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid 
 }
 
 func (op *OP) UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	return op.withRetry(func() (*onepassword.Item, error) {
+		return op.update(ctx, item, vaultUuid)
+	})
+}
+
+func (op *OP) update(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
 	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
 		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
@@ -129,12 +141,26 @@ func (op *OP) UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid 
 }
 
 func (op *OP) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error {
+	_, err := op.withRetry(func() (*onepassword.Item, error) {
+		return op.delete(ctx, item, vaultUuid)
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (op *OP) delete(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
 	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
-		return errors.New("item payload contains vault id that does not match vault uuid")
+		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
 	item.Vault.ID = vaultUuid
 
-	return op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
+	err := op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
+	if err != nil {
+		return nil, err
+	}
+	return item, err
 }
 
 func (op *OP) execJson(ctx context.Context, dst any, stdin []byte, args ...opArg) error {
@@ -189,4 +215,31 @@ func (op *OP) execRaw(ctx context.Context, stdin []byte, args ...opArg) ([]byte,
 	}
 
 	return result, nil
+}
+
+func (op *OP) withRetry(action func() (*onepassword.Item, error)) (*onepassword.Item, error) {
+	attempt := 0
+	item, err := action()
+	if err != nil {
+		// retry if there is 409 Conflict error
+		if strings.Contains(err.Error(), "409") {
+			// make 3 retry attempts to successfully finish the operation
+			for attempt < 3 {
+				waitBeforeRetry(attempt)
+				item, err = action()
+				if err != nil {
+					attempt++
+					continue
+				}
+				break
+			}
+		}
+		// return error if operation did not succeed after retries
+		// or error is other than 409
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return item, nil
 }
