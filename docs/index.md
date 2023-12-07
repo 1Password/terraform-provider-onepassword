@@ -19,7 +19,7 @@ You must install [1Password CLI](https://developer.1password.com/docs/cli) on th
 
 To authenticate CLI with service account, set `service_account_token` in the provider configuration.
 
-Retry mechanism is implemented when using provider with service accounts. Each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/).
+Retry mechanism is implemented when using provider with service account. Each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/).
 
 It's recommended to limit the number of parallel resource operations. It can be done by using `-parallelism=n` flag when running `terraform apply`, where `n` is the number of parallel resource operations (the default is `10`).
 ```
