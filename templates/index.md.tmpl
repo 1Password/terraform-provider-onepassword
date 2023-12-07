@@ -23,7 +23,7 @@ To use a service account token, you must install [1Password CLI](https://develop
 ## Use with service accounts:
 Retry mechanism is implemented when using provider with service accounts. Each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/).
 
-It's recommended to limit the number of parallel resource operations. It can be done by using `-parallelism=n` flag when do `terraform apply`, where `n` is the number of parallel resource operations that defaults to `10`.
+It's recommended to limit the number of parallel resource operations. It can be done by using `-parallelism=n` flag when running `terraform apply`, where `n` is the number of parallel resource operations (the default is `10`).
 ```
 terraform apply `-parallelism=n`
 ```

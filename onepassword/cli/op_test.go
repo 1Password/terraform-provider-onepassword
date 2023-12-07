@@ -32,7 +32,7 @@ func TestWithRetry(t *testing.T) {
 			},
 			validate: func(item *onepassword.Item, err error) {
 				if err == nil {
-					t.Error("Action should fail it when error is 409")
+					t.Error("Action should fail when error is 409")
 				}
 				if item != nil {
 					t.Error("Item should be nil when error is 409")
