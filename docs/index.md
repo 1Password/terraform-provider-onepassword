@@ -10,9 +10,33 @@ description: |-
 Use the 1Password Terraform provider to reference, create, or update items in your existing vaults using [1Password Secrets Automation](https://1password.com/secrets).
 
 The 1Password Terraform provider supports using both [1Password Connect Server](https://developer.1password.com/docs/secrets-automation/#1password-connect-server)
-and [1Password Service Accounts](https://developer.1password.com/docs/secrets-automation/#1password-service-accounts).
-To use a service account token, you must install [1Password CLI](https://developer.1password.com/docs/cli) on the machine running Terraform. Refer to the
+and [1Password CLI](https://developer.1password.com/docs/cli).
+
+You must install [1Password CLI](https://developer.1password.com/docs/cli) on the machine running Terraform to use it. Refer to the
 [Terraform documentation](https://developer.hashicorp.com/terraform/cloud-docs/run/install-software#only-install-standalone-binaries) to learn how to install 1Password CLI on Terraform Cloud.
+
+## Authenticate CLI with service account
+
+To authenticate CLI with service account, set `service_account_token` in the provider configuration.
+
+## Authenticate CLI with user account using biometric unlock
+
+To authenticate CLI with user account using biometric unlock:
+1. [Turn on the app integration](https://developer.1password.com/docs/cli/app-integration/#step-1-turn-on-the-app-integration)
+2. In the terminal run `op account ls` to find sign-in address or account ID. It will print similar output in the console:
+```
+URL                        EMAIL                                         USER ID
+acme.dev.com               test.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
+acme.prod.com              prod.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
+```
+3. Set `account` in the provider configuration with the `URL` or `USER ID` value from the previous step.
+4. When biometric unlock popup appears while running terraform command, (authenticate it using fingerprint or password)[https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in].
+
+## Use with 1Password Connect
+
+To use provider with 1Password Connect you need to
+1. [Deploy your Connect server](https://developer.1password.com/docs/connect/get-started#deployment)
+2. Set `url` and `token` in the provider configuration.
 
 ## Example Usage
 
@@ -21,6 +45,7 @@ provider "onepassword" {
   url                   = "http://localhost:8080"
   token                 = "CONNECT_TOKEN"
   service_account_token = "SERVICE_ACCOUNT_TOKEN"
+  account               = "ACCOUNT_ID_OR_SIGN_IN_ADDRESS"
   op_cli_path           = "OP_CLI_PATH"
 }
 ```
@@ -30,10 +55,11 @@ provider "onepassword" {
 
 ### Optional
 
-- `op_cli_path` (String) The path to the 1Password CLI binary. Can also be sourced from OP_CLI_PATH. Defaults to `op`. Only used when setting a `service_account_token`.
-- `service_account_token` (String) A valid token for your 1Password Service Account. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN. Either this or `token` must be set.
-- `token` (String) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN. Either this or `service_account_token` must be set.
-- `url` (String) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set. Can be omitted, if service_account_token is set.
+- `account` (String) A valid account's sign-in address or ID to use biometrics unlock. Can also be sourced from OP_ACCOUNT. Must be set to use with biometric unlock.
+- `op_cli_path` (String) The path to the 1Password CLI binary. Can also be sourced from OP_CLI_PATH. Defaults to `op`.
+- `service_account_token` (String) A valid token for your 1Password Service Account. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN. Must be set to use with 1Password service account.
+- `token` (String) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN. Must be set to use with 1Password Connect server.
+- `url` (String) The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set. Must be set to use with 1Password Connect server.
 
 ## Use with service accounts:
 Retry mechanism is implemented when using provider with service accounts. Each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/).
