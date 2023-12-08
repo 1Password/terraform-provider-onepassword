@@ -100,6 +100,9 @@ func Provider() *schema.Provider {
 			if opCliPath == "" {
 				return nil, diag.Errorf("Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
 			}
+			if serviceAccountToken != "" && account != "" {
+				return nil, diag.Errorf("\"service_account_token\" and \"account\" are set. Please unset one of them to use the provider with 1Password CLI.")
+			}
 
 			return initializeCLI(ctx, serviceAccountToken, account, opCliPath)
 		} else if token != "" && url != "" {
