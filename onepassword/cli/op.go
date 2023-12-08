@@ -156,11 +156,7 @@ func (op *OP) delete(ctx context.Context, item *onepassword.Item, vaultUuid stri
 	}
 	item.Vault.ID = vaultUuid
 
-	err := op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
-	if err != nil {
-		return nil, err
-	}
-	return item, err
+	return nil, op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
 }
 
 func (op *OP) execJson(ctx context.Context, dst any, stdin []byte, args ...opArg) error {
