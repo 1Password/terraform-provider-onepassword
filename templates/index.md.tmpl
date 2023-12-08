@@ -26,11 +26,11 @@ It's recommended to limit the number of parallel resource operations. It can be 
 terraform apply `-parallelism=n`
 ```
 
-The reason of having retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
+The reason for having a retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
 
-## Authenticate CLI with user account using biometric unlock
+## Authenticate the CLI with user account using biometric unlock
 
-To authenticate CLI with user account using biometric unlock:
+To authenticate the CLI with user account using biometric unlock:
 1. [Turn on the app integration](https://developer.1password.com/docs/cli/app-integration/#step-1-turn-on-the-app-integration)
 2. In the terminal run `op account ls` to find sign-in address or account ID. It will print similar output in the console:
 ```
@@ -39,11 +39,11 @@ acme.dev.com               test.user@acme.com                            HERE_WI
 acme.prod.com              prod.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
 ```
 3. Set `account` in the provider configuration with the `URL` or `USER ID` value from the previous step.
-4. When biometric unlock popup appears while running terraform command, [authenticate it using fingerprint or password](https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in).
+4. When the biometric unlock popup appears while running terraform command, [authenticate it using fingerprint or password](https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in).
 
 ## Use with 1Password Connect
 
-To use provider with 1Password Connect you need to
+To use the provider with 1Password Connect you need to
 1. [Deploy your Connect server](https://developer.1password.com/docs/connect/get-started#deployment)
 2. Set `url` and `token` in the provider configuration.
 
