@@ -15,20 +15,21 @@ and [1Password CLI](https://developer.1password.com/docs/cli).
 You must install [1Password CLI](https://developer.1password.com/docs/cli) on the machine running Terraform to use it. Refer to the
 [Terraform documentation](https://developer.hashicorp.com/terraform/cloud-docs/run/install-software#only-install-standalone-binaries) to learn how to install 1Password CLI on Terraform Cloud.
 
-## Authenticate CLI with service account
+## Use with 1Password CLI
 
-To authenticate CLI with service account, set `service_account_token` in the provider configuration.
-
-Retry mechanism is implemented when using provider with service account. Each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/).
+Retry mechanism is implemented when using the provider with 1Password CLI. The reason for having a retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
+Note that each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/) if use with service account.
 
 It's recommended to limit the number of parallel resource operations. It can be done by using `-parallelism=n` flag when running `terraform apply`, where `n` is the number of parallel resource operations (the default is `10`).
 ```
 terraform apply `-parallelism=n`
 ```
 
-The reason for having a retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
+### Authenticate CLI with service account
 
-## Authenticate the CLI with user account using biometric unlock
+To authenticate CLI with service account, set `service_account_token` in the provider configuration.
+
+### Authenticate the CLI with user account using biometric unlock
 
 To authenticate the CLI with user account using biometric unlock:
 1. [Turn on the app integration](https://developer.1password.com/docs/cli/app-integration/#step-1-turn-on-the-app-integration)
