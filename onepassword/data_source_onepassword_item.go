@@ -13,6 +13,66 @@ import (
 
 func dataSourceOnepasswordItem() *schema.Resource {
 	exactlyOneOfUUIDAndTitle := []string{"uuid", "title"}
+	fieldResource := &schema.Resource{
+		Description: fieldDescription,
+		Schema: map[string]*schema.Schema{
+			"id": {
+				Description: fieldIDDescription,
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
+			"label": {
+				Description: fieldLabelDescription,
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
+			"purpose": {
+				Description: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
+			"type": {
+				Description: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
+			"value": {
+				Description: fieldValueDescription,
+				Type:        schema.TypeString,
+				Computed:    true,
+				Sensitive:   true,
+			},
+		},
+	}
+	sectionResource := &schema.Resource{
+		Description: sectionDescription,
+		Schema: map[string]*schema.Schema{
+			"id": {
+				Description: sectionIDDescription,
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
+			"label": {
+				Description: sectionLabelDescription,
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
+			"keyed_fields": {
+				Description: sectionFieldsDescription,
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Elem:        fieldResource,
+			},
+			"field": {
+				Deprecated:  "Use `keyed_fields` instead.", // bringing the conversation up
+				Description: sectionFieldsDescription,
+				Type:        schema.TypeList,
+				Computed:    true,
+				MinItems:    0,
+				Elem:        fieldResource,
+			},
+		},
+	}
 
 	return &schema.Resource{
 		Description: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
@@ -96,63 +156,19 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Optional:    true,
 				Sensitive:   true,
 			},
+			"keyed_sections": {
+				Description: sectionsDescription,
+				Type:        schema.TypeMap,
+				Computed:    true,
+				Elem:        sectionResource,
+			},
 			"section": {
+				Deprecated:  "Use `keyed_sections` instead.", // bringing the conversation up
 				Description: sectionsDescription,
 				Type:        schema.TypeList,
 				Computed:    true,
 				MinItems:    0,
-				Elem: &schema.Resource{
-					Description: sectionDescription,
-					Schema: map[string]*schema.Schema{
-						"id": {
-							Description: sectionIDDescription,
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"label": {
-							Description: sectionLabelDescription,
-							Type:        schema.TypeString,
-							Computed:    true,
-						},
-						"field": {
-							Description: sectionFieldsDescription,
-							Type:        schema.TypeList,
-							Computed:    true,
-							MinItems:    0,
-							Elem: &schema.Resource{
-								Description: fieldDescription,
-								Schema: map[string]*schema.Schema{
-									"id": {
-										Description: fieldIDDescription,
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"label": {
-										Description: fieldLabelDescription,
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"purpose": {
-										Description: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"type": {
-										Description: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
-										Type:        schema.TypeString,
-										Computed:    true,
-									},
-									"value": {
-										Description: fieldValueDescription,
-										Type:        schema.TypeString,
-										Computed:    true,
-										Sensitive:   true,
-									},
-								},
-							},
-						},
-					},
-				},
+				Elem:        sectionResource,
 			},
 		},
 	}
@@ -181,6 +197,8 @@ func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceDat
 	data.Set("category", strings.ToLower(string(item.Category)))
 
 	dataSections := []interface{}{}
+	dataKeyedSections := make(map[string]interface{}, len(item.Sections))
+
 	for _, s := range item.Sections {
 		section := map[string]interface{}{}
 
@@ -188,6 +206,7 @@ func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceDat
 		section["label"] = s.Label
 
 		fields := []interface{}{}
+		keyedFields := make(map[string]interface{}, len(item.Fields))
 
 		for _, f := range item.Fields {
 			if f.Section != nil && f.Section.ID == s.ID {
@@ -199,14 +218,18 @@ func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceDat
 				dataField["value"] = f.Value
 
 				fields = append(fields, dataField)
+				keyedFields[f.Label] = dataField
 			}
 		}
 		section["field"] = fields
+		section["keyed_fields"] = keyedFields
 
 		dataSections = append(dataSections, section)
+		dataKeyedSections[s.Label] = section
 	}
 
 	data.Set("section", dataSections)
+	data.Set("keyed_sections", dataKeyedSections)
 
 	for _, f := range item.Fields {
 		switch f.Purpose {
