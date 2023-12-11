@@ -44,25 +44,31 @@ func Provider() *schema.Provider {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("OP_CONNECT_HOST", nil),
-				Description: "The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set. Can be omitted, if service_account_token is set.",
+				Description: "The HTTP(S) URL where your 1Password Connect API can be found. Must be provided through the OP_CONNECT_HOST environment variable if this attribute is not set. Must be set to use with 1Password Connect server.",
 			},
 			"token": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("OP_CONNECT_TOKEN", nil),
-				Description: "A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN. Either this or `service_account_token` must be set.",
+				Description: "A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN. Must be set to use with 1Password Connect server.",
 			},
 			"service_account_token": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("OP_SERVICE_ACCOUNT_TOKEN", nil),
-				Description: "A valid token for your 1Password Service Account. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN. Either this or `token` must be set.",
+				Description: "A valid token for your 1Password Service Account. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN. Must be set to use with 1Password service account.",
+			},
+			"account": {
+				Type:        schema.TypeString,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("OP_ACCOUNT", nil),
+				Description: "A valid account's sign-in address or ID to use biometrics unlock. Can also be sourced from OP_ACCOUNT. Must be set to use with biometric unlock.",
 			},
 			"op_cli_path": {
 				Type:        schema.TypeString,
 				Optional:    true,
 				DefaultFunc: schema.EnvDefaultFunc("OP_CLI_PATH", "op"),
-				Description: "The path to the 1Password CLI binary. Can also be sourced from OP_CLI_PATH. Defaults to `op`. Only used when setting a `service_account_token`.",
+				Description: "The path to the 1Password CLI binary. Can also be sourced from OP_CLI_PATH. Defaults to `op`.",
 			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{
@@ -78,6 +84,7 @@ func Provider() *schema.Provider {
 			url                 = d.Get("url").(string)
 			token               = d.Get("token").(string)
 			serviceAccountToken = d.Get("service_account_token").(string)
+			account             = d.Get("account").(string)
 			opCliPath           = d.Get("op_cli_path").(string)
 		)
 
@@ -86,32 +93,46 @@ func Provider() *schema.Provider {
 		// the other one is prompted for, but Terraform then forgets the value for the one that
 		// is defined in the code. This confusing user-experience can be avoided by handling the
 		// requirement of one of the attributes manually.
-		if serviceAccountToken != "" {
+		if serviceAccountToken != "" || account != "" {
 			if token != "" || url != "" {
-				return nil, diag.Errorf("Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\") credentials can be set. Both are set. Please unset one of them.")
+				return nil, diag.Errorf("Either Connect credentials (\"token\" and \"url\") or 1Password CLI (\"service_account_token\" or \"account\") credentials can be set. Both are set. Please unset one of them.")
 			}
 			if opCliPath == "" {
 				return nil, diag.Errorf("Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
 			}
-
-			op := cli.New(serviceAccountToken, opCliPath)
-
-			cliVersion, err := op.GetVersion(ctx)
-			if err != nil {
-				return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
-			}
-			if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
-				return nil, diag.Errorf("Current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\".", cliVersion, minimumOpCliVersion)
+			if serviceAccountToken != "" && account != "" {
+				return nil, diag.Errorf("\"service_account_token\" and \"account\" are set. Please unset one of them to use the provider with 1Password CLI.")
 			}
 
-			return (Client)(op), nil
+			return initializeCLI(ctx, serviceAccountToken, account, opCliPath)
 		} else if token != "" && url != "" {
 			return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
 		} else {
-			return nil, diag.Errorf("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\") credentials should be set.")
+			return nil, diag.Errorf("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\" or \"account\") credentials should be set.")
 		}
 	}
 	return provider
+}
+
+// initializeCLI initializes CLI to use either with service account or with user account
+// service account takes preference if both are set
+func initializeCLI(ctx context.Context, serviceAccountToken, account, opCliPath string) (Client, diag.Diagnostics) {
+	op := cli.New("", opCliPath, account)
+
+	// override OP to use service account token
+	if serviceAccountToken != "" {
+		op = cli.New(serviceAccountToken, opCliPath, "")
+	}
+
+	cliVersion, err := op.GetVersion(ctx)
+	if err != nil {
+		return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
+	}
+	if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
+		return nil, diag.Errorf("Current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\".", cliVersion, minimumOpCliVersion)
+	}
+
+	return op, nil
 }
 
 // Client is a subset of connect.Client with context added.

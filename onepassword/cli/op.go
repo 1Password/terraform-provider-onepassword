@@ -17,12 +17,14 @@ import (
 type OP struct {
 	binaryPath          string
 	serviceAccountToken string
+	account             string
 }
 
-func New(serviceAccountToken, binaryPath string) *OP {
+func New(serviceAccountToken, binaryPath, account string) *OP {
 	return &OP{
 		binaryPath:          binaryPath,
 		serviceAccountToken: serviceAccountToken,
+		account:             account,
 	}
 }
 
@@ -154,11 +156,7 @@ func (op *OP) delete(ctx context.Context, item *onepassword.Item, vaultUuid stri
 	}
 	item.Vault.ID = vaultUuid
 
-	err := op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
-	if err != nil {
-		return nil, err
-	}
-	return item, err
+	return nil, op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
 }
 
 func (op *OP) execJson(ctx context.Context, dst any, stdin []byte, args ...opArg) error {
@@ -174,18 +172,29 @@ func (op *OP) execJson(ctx context.Context, dst any, stdin []byte, args ...opArg
 
 func (op *OP) execRaw(ctx context.Context, stdin []byte, args ...opArg) ([]byte, error) {
 	var cmdArgs []string
+
+	if op.account != "" {
+		args = append(args, f("account", op.account))
+	}
+
 	for _, arg := range args {
 		cmdArgs = append(cmdArgs, arg.format())
 	}
 
 	cmd := exec.CommandContext(ctx, op.binaryPath, cmdArgs...)
 	cmd.Env = append(cmd.Environ(),
-		"OP_SERVICE_ACCOUNT_TOKEN="+op.serviceAccountToken,
 		"OP_FORMAT=json",
 		"OP_INTEGRATION_NAME=terraform-provider-connect",
 		"OP_INTEGRATION_ID=GO",
 		//"OP_INTEGRATION_BUILDNUMBER="+version.ProviderVersion, // causes bad request errors from CLI
 	)
+	if op.serviceAccountToken != "" {
+		cmd.Env = append(cmd.Env, "OP_SERVICE_ACCOUNT_TOKEN="+op.serviceAccountToken)
+	}
+	if op.account != "" {
+		cmd.Env = append(cmd.Env, "OP_BIOMETRIC_UNLOCK_ENABLED=true")
+	}
+
 	if stdin != nil {
 		cmd.Stdin = bytes.NewReader(stdin)
 	}
