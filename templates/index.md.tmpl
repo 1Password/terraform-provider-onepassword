@@ -17,6 +17,8 @@ You must install [1Password CLI](https://developer.1password.com/docs/cli) on th
 
 ## Use with 1Password CLI
 
+Minimum 1Password CLI version `v2.23.0` is required.
+
 Retry mechanism is implemented when using the provider with 1Password CLI. The reason for having a retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
 Note that each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/) if use with service account.
 
@@ -27,7 +29,9 @@ terraform apply `-parallelism=n`
 
 ### Authenticate CLI with service account
 
-To authenticate CLI with service account, set `service_account_token` in the provider configuration.
+To authenticate CLI with service account:
+1. [Create a service account](https://developer.1password.com/docs/service-accounts/get-started#create-a-service-account)
+2. Set `OP_SERVICE_ACCOUNT_TOKEN` environment variable or `service_account_token` in the provider configuration.
 
 ### Authenticate the CLI with user account using biometric unlock
 
@@ -39,17 +43,27 @@ URL                        EMAIL                                         USER ID
 acme.dev.com               test.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
 acme.prod.com              prod.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
 ```
-3. Set `account` in the provider configuration with the `URL` or `USER ID` value from the previous step.
+3. Set `OP_ACCOUNT` environment variable or `account` in the provider configuration with the `URL` or `USER ID` value from the previous step.
 4. When the biometric unlock popup appears while running terraform command, [authenticate it using fingerprint or password](https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in).
 
 ## Use with 1Password Connect
 
 To use the provider with 1Password Connect you need to
 1. [Deploy your Connect server](https://developer.1password.com/docs/connect/get-started#deployment)
-2. Set `url` and `token` in the provider configuration.
+2. Set `OP_CONNECT_HOST` environment variable or `url` in the provider configuration.
+3. Set `OP_CONNECT_TOKEN` environment variable or `token` in the provider configuration.
 
 ## Example Usage
 
 {{tffile "examples/provider/provider.tf"}}
+
+Each of the configuration options can be set using env variables.
+That's more secure way to do that as prevents from accidentally pushing sensitive values to the project repo.
+
+- `OP_CONNECT_HOST` - The URL where your 1Password Connect API can be found.
+- `OP_CONNECT_TOKEN` - A valid token for your 1Password Connect API.
+- `OP_SERVICE_ACCOUNT_TOKEN` - A valid 1Password service account token to use with 1Password CLI
+- `OP_ACCOUNT` - A valid account's sign-in address or ID to use with 1Password CLI and biometrics unlock.
+- `OP_CLI_PATH` - The path to the 1Password CLI binary.
 
 {{ .SchemaMarkdown | trimspace }}
