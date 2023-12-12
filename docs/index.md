@@ -17,7 +17,7 @@ You must install [1Password CLI](https://developer.1password.com/docs/cli) on th
 
 ## Use with 1Password CLI
 
-Minimum 1Password CLI version `v2.23.0` is required.
+:warning: Minimum [1Password CLI version](https://app-updates.agilebits.com/product_history/CLI2) `v2.23.0` is required.
 
 Retry mechanism is implemented when using the provider with 1Password CLI. The reason for having a retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
 Note that each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/) if use with service account.
@@ -65,8 +65,8 @@ provider "onepassword" {
 }
 ```
 
-Each of the configuration options can be set using env variables.
-That's more secure way to do that as prevents from accidentally pushing sensitive values to the project repo.
+You can set each of the configuration options using environment variables.
+Environment variables are a more secure way to set configuration options because they prevent accidentally pushing sensitive values to the project repo.
 
 - `OP_CONNECT_HOST` - The URL where your 1Password Connect API can be found.
 - `OP_CONNECT_TOKEN` - A valid token for your 1Password Connect API.
@@ -79,8 +79,8 @@ That's more secure way to do that as prevents from accidentally pushing sensitiv
 
 ### Optional
 
-- `account` (String) A valid account's sign-in address or ID to use biometrics unlock. Can also be sourced from OP_ACCOUNT environment variable. Provider will use 1Password CLI if set.
-- `op_cli_path` (String) The path to the 1Password CLI binary. Can also be sourced from OP_CLI_PATH environment variable. Defaults to `op`.
-- `service_account_token` (String) A valid 1Password service account token. Can also be sourced from OP_SERVICE_ACCOUNT_TOKEN environment variable. Provider will use 1Password CLI if set.
-- `token` (String) A valid token for your 1Password Connect API. Can also be sourced from OP_CONNECT_TOKEN environment variable. Provider will use 1Password Connect server if set.
-- `url` (String) The HTTP(S) URL where your 1Password Connect API can be found. Can also be sourced OP_CONNECT_HOST environment variable. Provider will use 1Password Connect server if set.
+- `account` (String) A valid account's sign-in address or ID to use biometrics unlock. Can also be sourced from `OP_ACCOUNT` environment variable. Provider will use the 1Password CLI if set.
+- `op_cli_path` (String) The path to the 1Password CLI binary. Can also be sourced from `OP_CLI_PATH` environment variable. Defaults to `op`.
+- `service_account_token` (String) A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable. Provider will use the 1Password CLI if set.
+- `token` (String) A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.
+- `url` (String) The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set.

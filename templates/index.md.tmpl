@@ -17,7 +17,7 @@ You must install [1Password CLI](https://developer.1password.com/docs/cli) on th
 
 ## Use with 1Password CLI
 
-Minimum 1Password CLI version `v2.23.0` is required.
+:warning: Minimum [1Password CLI version](https://app-updates.agilebits.com/product_history/CLI2) `v2.23.0` is required.
 
 Retry mechanism is implemented when using the provider with 1Password CLI. The reason for having a retry mechanism is that 1Password doesn't allow parallel modification on the items located in the same vault.
 Note that each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/) if use with service account.
@@ -57,8 +57,8 @@ To use the provider with 1Password Connect you need to
 
 {{tffile "examples/provider/provider.tf"}}
 
-Each of the configuration options can be set using env variables.
-That's more secure way to do that as prevents from accidentally pushing sensitive values to the project repo.
+You can set each of the configuration options using environment variables.
+Environment variables are a more secure way to set configuration options because they prevent accidentally pushing sensitive values to the project repo.
 
 - `OP_CONNECT_HOST` - The URL where your 1Password Connect API can be found.
 - `OP_CONNECT_TOKEN` - A valid token for your 1Password Connect API.
