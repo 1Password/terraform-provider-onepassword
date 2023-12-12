@@ -27,7 +27,7 @@ terraform {
 }
 
 provider "onepassword" {
-  url = "http://localhost:8080"
+  service_account_token = "<1Password service account token>"
 }
 
 variable "vault_id" {}
