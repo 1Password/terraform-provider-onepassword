@@ -12,6 +12,18 @@
 
 ---
 
+[//]: # (START/v1.4.0)
+# v1.4.0
+
+## Features
+  * Authenticate 1Password CLI with biometric unlock using user account. {#113}
+
+## Fixes
+ * Retry CLI request in case of 409 Conflict error. {#108}
+ * Update documentation. {#115}
+
+---
+
 [//]: # (START/v1.3.1)
 # v1.3.1
 
