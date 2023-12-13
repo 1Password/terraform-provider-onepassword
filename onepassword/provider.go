@@ -9,14 +9,12 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/onepassword/cli"
 	"github.com/1Password/terraform-provider-onepassword/onepassword/connectctx"
 	"github.com/1Password/terraform-provider-onepassword/version"
-	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 const (
 	terraformProviderUserAgent = "terraform-provider-connect/%s"
-	minimumOpCliVersion        = "2.23.0" // introduction of stdin json support for `op item update`
 )
 
 func init() {
@@ -122,14 +120,6 @@ func initializeCLI(ctx context.Context, serviceAccountToken, account, opCliPath 
 	// override OP to use service account token
 	if serviceAccountToken != "" {
 		op = cli.New(serviceAccountToken, opCliPath, "")
-	}
-
-	cliVersion, err := op.GetVersion(ctx)
-	if err != nil {
-		return nil, diag.FromErr(fmt.Errorf("failed to get version of op CLI: %w", err))
-	}
-	if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
-		return nil, diag.Errorf("Current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\".", cliVersion, minimumOpCliVersion)
 	}
 
 	return op, nil
