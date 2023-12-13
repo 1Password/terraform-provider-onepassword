@@ -107,16 +107,16 @@ func (op *OP) GetItemByTitle(ctx context.Context, title string, vaultUuid string
 }
 
 func (op *OP) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	return op.withRetry(func() (*onepassword.Item, error) {
 		return op.create(ctx, item, vaultUuid)
 	})
 }
 
 func (op *OP) create(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
-	versionErr := op.checkCliVersion(ctx)
-	if versionErr != nil {
-		return nil, versionErr
-	}
 	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
 		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
@@ -147,16 +147,16 @@ func (op *OP) create(ctx context.Context, item *onepassword.Item, vaultUuid stri
 }
 
 func (op *OP) UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	return op.withRetry(func() (*onepassword.Item, error) {
 		return op.update(ctx, item, vaultUuid)
 	})
 }
 
 func (op *OP) update(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
-	versionErr := op.checkCliVersion(ctx)
-	if versionErr != nil {
-		return nil, versionErr
-	}
 	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
 		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
@@ -176,6 +176,10 @@ func (op *OP) update(ctx context.Context, item *onepassword.Item, vaultUuid stri
 }
 
 func (op *OP) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return versionErr
+	}
 	_, err := op.withRetry(func() (*onepassword.Item, error) {
 		return op.delete(ctx, item, vaultUuid)
 	})
@@ -186,10 +190,6 @@ func (op *OP) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid 
 }
 
 func (op *OP) delete(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
-	versionErr := op.checkCliVersion(ctx)
-	if versionErr != nil {
-		return nil, versionErr
-	}
 	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
 		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
