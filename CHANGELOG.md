@@ -12,8 +12,8 @@
 
 ---
 
-[//]: # (START/v1.4.0-beta01)
-# v1.4.0-beta01
+[//]: # (START/v1.4.1-beta01)
+# v1.4.1-beta01
 
 ## Fixes
 * Using provider on Terraform Cloud. {#116}
