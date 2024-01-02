@@ -60,6 +60,13 @@ func passwordField(item *onepassword.Item) *onepassword.ItemField {
 	return nil
 }
 
+func passwordRecipe(item *onepassword.Item) string {
+	if pf := passwordField(item); pf != nil {
+		return passwordRecipeToString(pf.Recipe)
+	}
+	return ""
+}
+
 func passwordRecipeToString(recipe *onepassword.GeneratorRecipe) string {
 	str := ""
 	if recipe != nil {

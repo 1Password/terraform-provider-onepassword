@@ -50,6 +50,55 @@ func TestPasswordField(t *testing.T) {
 	}
 }
 
+func TestPasswordRecipeExtraction(t *testing.T) {
+	tests := map[string]struct {
+		item           *onepassword.Item
+		expectedString string
+	}{
+		"should return empty string if item has no fields": {
+			item:           &onepassword.Item{},
+			expectedString: "",
+		},
+		"should return empty string if no password field": {
+			item: &onepassword.Item{
+				Fields: []*onepassword.ItemField{
+					{Purpose: onepassword.FieldPurposeNotes},
+				},
+			},
+			expectedString: "",
+		},
+		"should return empty string if no password recipe": {
+			item: &onepassword.Item{
+				Fields: []*onepassword.ItemField{
+					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
+					{ID: "password", Purpose: onepassword.FieldPurposePassword},
+				},
+			},
+			expectedString: "",
+		},
+		"should return recipe string": {
+			item: &onepassword.Item{
+				Fields: []*onepassword.ItemField{
+					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
+					{ID: "password", Purpose: onepassword.FieldPurposePassword, Recipe: &onepassword.GeneratorRecipe{
+						Length: 30,
+					}},
+				},
+			},
+			expectedString: "30",
+		},
+	}
+
+	for description, test := range tests {
+		t.Run(description, func(t *testing.T) {
+			actualString := passwordRecipe(test.item)
+			if actualString != test.expectedString {
+				t.Errorf("Unexpected password recipe string. Expected \"%s\", but got \"%s\"", test.expectedString, actualString)
+			}
+		})
+	}
+}
+
 func TestPasswordRecipeToString(t *testing.T) {
 	tests := map[string]struct {
 		recipe         *onepassword.GeneratorRecipe
