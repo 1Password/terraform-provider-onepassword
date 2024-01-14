@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v1.4.1-beta02)
+# v1.4.1-beta02
+
+## Fixes
+*  op cli always generating passwords {#127}
+
+---
+
 [//]: # (START/v1.4.1-beta01)
 # v1.4.1-beta01
 
