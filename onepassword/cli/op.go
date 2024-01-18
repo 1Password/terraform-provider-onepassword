@@ -14,6 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
+const (
+	minimumOpCliVersion = "2.23.0" // introduction of stdin json support for `op item update`
+)
+
 type OP struct {
 	binaryPath          string
 	serviceAccountToken string
@@ -41,7 +45,22 @@ func (op *OP) GetVersion(ctx context.Context) (*semver.Version, error) {
 	return version, nil
 }
 
+func (op *OP) checkCliVersion(ctx context.Context) error {
+	cliVersion, err := op.GetVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get version of op CLI: %w", err)
+	}
+	if cliVersion.LessThan(semver.MustParse(minimumOpCliVersion)) {
+		return fmt.Errorf("current 1Password CLI version is \"%s\". Please upgrade to at least \"%s\"", cliVersion, minimumOpCliVersion)
+	}
+	return nil
+}
+
 func (op *OP) GetVault(ctx context.Context, uuid string) (*onepassword.Vault, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	var res *onepassword.Vault
 	err := op.execJson(ctx, &res, nil, p("vault"), p("get"), p(uuid))
 	if err != nil {
@@ -51,6 +70,10 @@ func (op *OP) GetVault(ctx context.Context, uuid string) (*onepassword.Vault, er
 }
 
 func (op *OP) GetVaultsByTitle(ctx context.Context, title string) ([]onepassword.Vault, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	var allVaults []onepassword.Vault
 	err := op.execJson(ctx, &allVaults, nil, p("vault"), p("list"))
 	if err != nil {
@@ -67,6 +90,10 @@ func (op *OP) GetVaultsByTitle(ctx context.Context, title string) ([]onepassword
 }
 
 func (op *OP) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*onepassword.Item, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	var res *onepassword.Item
 	err := op.execJson(ctx, &res, nil, p("item"), p("get"), p(itemUuid), f("vault", vaultUuid))
 	if err != nil {
@@ -80,6 +107,10 @@ func (op *OP) GetItemByTitle(ctx context.Context, title string, vaultUuid string
 }
 
 func (op *OP) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	return op.withRetry(func() (*onepassword.Item, error) {
 		return op.create(ctx, item, vaultUuid)
 	})
@@ -113,6 +144,10 @@ func (op *OP) create(ctx context.Context, item *onepassword.Item, vaultUuid stri
 }
 
 func (op *OP) UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
 	return op.withRetry(func() (*onepassword.Item, error) {
 		return op.update(ctx, item, vaultUuid)
 	})
@@ -138,6 +173,10 @@ func (op *OP) update(ctx context.Context, item *onepassword.Item, vaultUuid stri
 }
 
 func (op *OP) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return versionErr
+	}
 	_, err := op.withRetry(func() (*onepassword.Item, error) {
 		return op.delete(ctx, item, vaultUuid)
 	})
