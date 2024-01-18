@@ -12,6 +12,17 @@
 
 ---
 
+[//]: # (START/v1.4.1)
+# v1.4.1
+
+## Features
+ * Using provider on Terraform Cloud. {#116}
+
+## Fixes
+ * Terraform cannot create items with the password we provide in the code. {#128}
+
+---
+
 [//]: # (START/v1.4.1-beta01)
 # v1.4.1-beta01
 
