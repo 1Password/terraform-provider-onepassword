@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/onepassword/util"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -414,8 +413,8 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) error {
 				dataField["type"] = f.Type
 				dataField["value"] = f.Value
 
-				if f.Type == "DATE" {
-					date, err := secondsToYYYYMMDD(f.Value)
+				if f.Type == onepassword.FieldTypeDate {
+					date, err := util.SecondsToYYYYMMDD(f.Value)
 					if err != nil {
 						return err
 					}
@@ -599,7 +598,7 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 			value := field["value"].(string)
 
 			if fieldType == onepassword.FieldTypeDate {
-				if !isValidDateFormat(value) {
+				if !util.IsValidDateFormat(value) {
 					return nil, fmt.Errorf("invalid date value provided \"%s\". Should be in YYYY-MM-DD format", value)
 				}
 			}
@@ -704,23 +703,4 @@ func getTags(data *schema.ResourceData) []string {
 		tags[i] = tag.(string)
 	}
 	return tags
-}
-
-// secondsToYYYYMMDD converts a seconds string to a YYYY-MM-DD formatted date string
-func secondsToYYYYMMDD(secondsStr string) (string, error) {
-	seconds, err := strconv.ParseInt(secondsStr, 10, 64)
-	if err != nil {
-		return "", err
-	}
-	t := time.Unix(seconds, 0)
-	return t.Format(time.DateOnly), nil
-}
-
-// isValidDateFormat checks if provided string is in valid 1Password DATE format (YYYY-MM-DD)
-func isValidDateFormat(dateString string) bool {
-	_, err := time.Parse(time.DateOnly, dateString)
-	if err != nil {
-		return false
-	}
-	return true
 }
