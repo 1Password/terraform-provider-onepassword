@@ -595,13 +595,22 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 				return nil, fmt.Errorf("Unable to parse section field: %v", sectionFields[j])
 			}
 
+			fieldType := onepassword.ItemFieldType(field["type"].(string))
+			value := field["value"].(string)
+
+			if fieldType == onepassword.FieldTypeDate {
+				if !isValidDateFormat(value) {
+					return nil, fmt.Errorf("invalid date value provided \"%s\". Should be in YYYY-MM-DD format", value)
+				}
+			}
+
 			f := &onepassword.ItemField{
 				Section: s,
 				ID:      field["id"].(string),
-				Type:    onepassword.ItemFieldType(field["type"].(string)),
+				Type:    fieldType,
 				Purpose: onepassword.ItemFieldPurpose(field["purpose"].(string)),
 				Label:   field["label"].(string),
-				Value:   field["value"].(string),
+				Value:   value,
 			}
 
 			recipe, err := parseGeneratorRecipe(field["password_recipe"].([]interface{}))
@@ -697,6 +706,7 @@ func getTags(data *schema.ResourceData) []string {
 	return tags
 }
 
+// secondsToYYYYMMDD converts a seconds string to a YYYY-MM-DD formatted date string
 func secondsToYYYYMMDD(secondsStr string) (string, error) {
 	seconds, err := strconv.ParseInt(secondsStr, 10, 64)
 	if err != nil {
@@ -704,4 +714,13 @@ func secondsToYYYYMMDD(secondsStr string) (string, error) {
 	}
 	t := time.Unix(seconds, 0)
 	return t.Format(time.DateOnly), nil
+}
+
+// isValidDateFormat checks if provided string is in valid 1Password DATE format (YYYY-MM-DD)
+func isValidDateFormat(dateString string) bool {
+	_, err := time.Parse(time.DateOnly, dateString)
+	if err != nil {
+		return false
+	}
+	return true
 }
