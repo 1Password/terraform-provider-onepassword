@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/go-uuid"
@@ -271,7 +273,10 @@ func resourceOnepasswordItemCreate(ctx context.Context, data *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	itemToData(createdItem, data)
+	err = itemToData(createdItem, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -286,7 +291,10 @@ func resourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	itemToData(item, data)
+	err = itemToData(item, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -307,7 +315,10 @@ func resourceOnepasswordItemUpdate(ctx context.Context, data *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	itemToData(updated, data)
+	err = itemToData(updated, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -342,7 +353,7 @@ func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
 	return elements[1], elements[3]
 }
 
-func itemToData(item *onepassword.Item, data *schema.ResourceData) {
+func itemToData(item *onepassword.Item, data *schema.ResourceData) error {
 	data.SetId(terraformID(item))
 	data.Set("uuid", item.ID)
 	data.Set("vault", item.Vault.ID)
@@ -403,6 +414,14 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 				dataField["type"] = f.Type
 				dataField["value"] = f.Value
 
+				if f.Type == "DATE" {
+					date, err := secondsToYYYYMMDD(f.Value)
+					if err != nil {
+						return err
+					}
+					dataField["value"] = date
+				}
+
 				if f.Recipe != nil {
 					charSets := map[string]bool{}
 					for _, s := range f.Recipe.CharacterSets {
@@ -444,6 +463,8 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 			}
 		}
 	}
+
+	return nil
 }
 
 func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
@@ -674,4 +695,13 @@ func getTags(data *schema.ResourceData) []string {
 		tags[i] = tag.(string)
 	}
 	return tags
+}
+
+func secondsToYYYYMMDD(secondsStr string) (string, error) {
+	seconds, err := strconv.ParseInt(secondsStr, 10, 64)
+	if err != nil {
+		return "", err
+	}
+	t := time.Unix(seconds, 0)
+	return t.Format(time.DateOnly), nil
 }
