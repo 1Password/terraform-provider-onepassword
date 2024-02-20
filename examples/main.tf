@@ -21,6 +21,16 @@ resource "onepassword_item" "demo_password" {
     length  = 40
     symbols = false
   }
+
+  section {
+    label = "Credential metadata"
+
+    field {
+      label = "Expiration"
+      type  = "DATE"
+      value = "2024-01-31"
+    }
+  }
 }
 
 resource "onepassword_item" "demo_login" {
@@ -64,6 +74,12 @@ resource "onepassword_item" "demo_sections" {
       label = "HOSTNAME"
       value = "example.com"
     }
+
+    field {
+      label = "API key Expiry"
+      type  = "DATE"
+      value = "2024-01-31"
+    }
   }
 
   section {
@@ -82,20 +98,6 @@ resource "onepassword_item" "demo_sections" {
     field {
       label = "User"
       value = "demo"
-    }
-  }
-}
-
-resource "onepassword_item" "demo_date" {
-  vault = var.demo_vault
-  title = "Important Date"
-
-  section {
-    label = "Date"
-    field {
-      label = "date"
-      type  = "DATE"
-      value = "2024-01-31"
     }
   }
 }

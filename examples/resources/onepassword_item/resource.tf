@@ -8,6 +8,16 @@ resource "onepassword_item" "demo_password" {
     length  = 40
     symbols = false
   }
+
+  section {
+    label = "Credential metadata"
+
+    field {
+      label = "Expiration"
+      type  = "DATE"
+      value = "2024-01-31"
+    }
+  }
 }
 
 resource "onepassword_item" "demo_login" {
@@ -29,18 +39,4 @@ resource "onepassword_item" "demo_db" {
   database = "Example MySQL Instance"
   hostname = "localhost"
   port     = 3306
-}
-
-resource "onepassword_item" "demo_date" {
-  vault = var.demo_vault
-  title = "Important Date"
-
-  section {
-    label = "Date"
-    field {
-      label = "date"
-      type  = "DATE"
-      value = "2024-01-31"
-    }
-  }
 }
