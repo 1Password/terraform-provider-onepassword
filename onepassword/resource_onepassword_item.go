@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/onepassword/util"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -271,7 +272,10 @@ func resourceOnepasswordItemCreate(ctx context.Context, data *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	itemToData(createdItem, data)
+	err = itemToData(createdItem, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -286,7 +290,10 @@ func resourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceData,
 		return diag.FromErr(err)
 	}
 
-	itemToData(item, data)
+	err = itemToData(item, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -307,7 +314,10 @@ func resourceOnepasswordItemUpdate(ctx context.Context, data *schema.ResourceDat
 		return diag.FromErr(err)
 	}
 
-	itemToData(updated, data)
+	err = itemToData(updated, data)
+	if err != nil {
+		return diag.FromErr(err)
+	}
 
 	return nil
 }
@@ -342,7 +352,7 @@ func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
 	return elements[1], elements[3]
 }
 
-func itemToData(item *onepassword.Item, data *schema.ResourceData) {
+func itemToData(item *onepassword.Item, data *schema.ResourceData) error {
 	data.SetId(terraformID(item))
 	data.Set("uuid", item.ID)
 	data.Set("vault", item.Vault.ID)
@@ -403,6 +413,14 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 				dataField["type"] = f.Type
 				dataField["value"] = f.Value
 
+				if f.Type == onepassword.FieldTypeDate {
+					date, err := util.SecondsToYYYYMMDD(f.Value)
+					if err != nil {
+						return err
+					}
+					dataField["value"] = date
+				}
+
 				if f.Recipe != nil {
 					charSets := map[string]bool{}
 					for _, s := range f.Recipe.CharacterSets {
@@ -444,6 +462,8 @@ func itemToData(item *onepassword.Item, data *schema.ResourceData) {
 			}
 		}
 	}
+
+	return nil
 }
 
 func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
@@ -574,13 +594,22 @@ func dataToItem(data *schema.ResourceData) (*onepassword.Item, error) {
 				return nil, fmt.Errorf("Unable to parse section field: %v", sectionFields[j])
 			}
 
+			fieldType := onepassword.ItemFieldType(field["type"].(string))
+			value := field["value"].(string)
+
+			if fieldType == onepassword.FieldTypeDate {
+				if !util.IsValidDateFormat(value) {
+					return nil, fmt.Errorf("invalid date value provided \"%s\". Should be in YYYY-MM-DD format", value)
+				}
+			}
+
 			f := &onepassword.ItemField{
 				Section: s,
 				ID:      field["id"].(string),
-				Type:    onepassword.ItemFieldType(field["type"].(string)),
+				Type:    fieldType,
 				Purpose: onepassword.ItemFieldPurpose(field["purpose"].(string)),
 				Label:   field["label"].(string),
-				Value:   field["value"].(string),
+				Value:   value,
 			}
 
 			recipe, err := parseGeneratorRecipe(field["password_recipe"].([]interface{}))
