@@ -86,6 +86,20 @@ resource "onepassword_item" "demo_sections" {
   }
 }
 
+resource "onepassword_item" "demo_date" {
+  vault = var.demo_vault
+  title = "Important Date"
+
+  section {
+    label = "Date"
+    field {
+      label = "date"
+      type  = "DATE"
+      value = "2024-01-31"
+    }
+  }
+}
+
 # Example of a Data Source Item with multiple sections and fields.
 # Uncomment it once the item above has been created to see an example of a Data Source
 # data "onepassword_item" "example" {

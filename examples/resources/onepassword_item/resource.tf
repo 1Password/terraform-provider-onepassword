@@ -30,3 +30,17 @@ resource "onepassword_item" "demo_db" {
   hostname = "localhost"
   port     = 3306
 }
+
+resource "onepassword_item" "demo_date" {
+  vault = var.demo_vault
+  title = "Important Date"
+
+  section {
+    label = "Date"
+    field {
+      label = "date"
+      type  = "DATE"
+      value = "2024-01-31"
+    }
+  }
+}
