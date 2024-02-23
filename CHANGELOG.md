@@ -12,6 +12,17 @@
 
 ---
 
+[//]: # (START/v1.4.2)
+# v1.4.2
+
+## Fixes
+ * Field of type 'DATE' updates item even if there were no changes. {#137}
+
+## Security
+ * Update dependencies with security vulnerabilities to patched versions. {#144}
+
+---
+
 [//]: # (START/v1.4.1)
 # v1.4.1
 
