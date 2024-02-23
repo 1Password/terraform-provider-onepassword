@@ -19,7 +19,7 @@
  * Field of type 'DATE' updates item even if there were no changes. {#137}
 
 ## Security
- * Update dependencies with security vulnerabilities to patched versions. {#144, #145}
+ * Update dependencies with security vulnerabilities to patched versions. {#144}
 
 ---
 
