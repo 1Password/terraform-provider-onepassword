@@ -220,9 +220,9 @@ func (op *OP) execRaw(ctx context.Context, stdin []byte, args ...opArg) ([]byte,
 	cmd := exec.CommandContext(ctx, op.binaryPath, cmdArgs...)
 	cmd.Env = append(cmd.Environ(),
 		"OP_FORMAT=json",
-		"OP_INTEGRATION_NAME=terraform-provider-connect",
-		"OP_INTEGRATION_ID=GO",
 		//"OP_INTEGRATION_BUILDNUMBER="+version.ProviderVersion, // causes bad request errors from CLI
+		"OP_INTEGRATION_NAME=terraform-provider",
+		"OP_INTEGRATION_ID=TFP",
 	)
 	if op.serviceAccountToken != "" {
 		cmd.Env = append(cmd.Env, "OP_SERVICE_ACCOUNT_TOKEN="+op.serviceAccountToken)
