@@ -2,5 +2,5 @@ package version
 
 var (
 	// ProviderVersion is set during release.
-	ProviderVersion = "dev"
+	ProviderVersion = "1.4.2"
 )

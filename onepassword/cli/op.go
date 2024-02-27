@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/version"
 	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -220,9 +221,9 @@ func (op *OP) execRaw(ctx context.Context, stdin []byte, args ...opArg) ([]byte,
 	cmd := exec.CommandContext(ctx, op.binaryPath, cmdArgs...)
 	cmd.Env = append(cmd.Environ(),
 		"OP_FORMAT=json",
-		//"OP_INTEGRATION_BUILDNUMBER="+version.ProviderVersion, // causes bad request errors from CLI
 		"OP_INTEGRATION_NAME=terraform-provider",
 		"OP_INTEGRATION_ID=TFP",
+		"OP_INTEGRATION_BUILDNUMBER="+makeBuildVersion(version.ProviderVersion),
 	)
 	if op.serviceAccountToken != "" {
 		cmd.Env = append(cmd.Env, "OP_SERVICE_ACCOUNT_TOKEN="+op.serviceAccountToken)
