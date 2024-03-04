@@ -25,6 +25,7 @@ const (
 	tagsDescription      = "An array of strings of the tags assigned to the item."
 	usernameDescription  = "Username for this item."
 	passwordDescription  = "Password for this item."
+	publicKeyDescription = "SSH Public Key for this item."
 	noteValueDescription = "Secure Note value."
 
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"

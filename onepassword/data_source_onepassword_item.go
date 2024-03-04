@@ -89,6 +89,11 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Computed:    true,
 				Sensitive:   true,
 			},
+			"ssh_public_key": {
+				Description: publicKeyDescription,
+				Type:        schema.TypeString,
+				Computed:    true,
+			},
 			"note_value": {
 				Description: noteValueDescription,
 				Type:        schema.TypeString,
@@ -217,7 +222,9 @@ func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceDat
 		case "NOTES":
 			data.Set("note_value", f.Value)
 		default:
-			if f.Section == nil {
+			if f.ID == "public_key" {
+				data.Set("ssh_public_key", f.Value)
+			} else if f.Section == nil {
 				data.Set(strings.ToLower(f.Label), f.Value)
 			}
 		}
