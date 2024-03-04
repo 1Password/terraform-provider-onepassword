@@ -17,16 +17,17 @@ import (
 )
 
 const (
-	itemUUIDDescription  = "The UUID of the item. Item identifiers are unique within a specific vault."
-	vaultUUIDDescription = "The UUID of the vault the item is in."
-	categoryDescription  = "The category of the item."
-	itemTitleDescription = "The title of the item."
-	urlDescription       = "The primary URL for the item."
-	tagsDescription      = "An array of strings of the tags assigned to the item."
-	usernameDescription  = "Username for this item."
-	passwordDescription  = "Password for this item."
-	publicKeyDescription = "SSH Public Key for this item."
-	noteValueDescription = "Secure Note value."
+	itemUUIDDescription   = "The UUID of the item. Item identifiers are unique within a specific vault."
+	vaultUUIDDescription  = "The UUID of the vault the item is in."
+	categoryDescription   = "The category of the item."
+	itemTitleDescription  = "The title of the item."
+	urlDescription        = "The primary URL for the item."
+	tagsDescription       = "An array of strings of the tags assigned to the item."
+	usernameDescription   = "Username for this item."
+	passwordDescription   = "Password for this item."
+	publicKeyDescription  = "SSH Public Key for this item."
+	privateKeyDescription = "SSH Private Key for this item."
+	noteValueDescription  = "Secure Note value."
 
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
