@@ -214,6 +214,10 @@ func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceDat
 			data.Set("username", f.Value)
 		case "PASSWORD":
 			data.Set("password", f.Value)
+		case "CREDENTIAL":
+			if strings.ToLower(string(item.Category)) == "api_credential" {
+				data.Set("password", f.Value)
+			}
 		case "NOTES":
 			data.Set("note_value", f.Value)
 		default:
