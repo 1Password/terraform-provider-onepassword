@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v1.4.3)
+# v1.4.3
+
+## Fixes
+ * Pass proper user agent info to the CLI. {#124}
+
+---
+
 [//]: # (START/v1.4.2)
 # v1.4.2
 
