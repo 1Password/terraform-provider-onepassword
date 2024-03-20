@@ -38,12 +38,20 @@ const (
 	sectionLabelDescription  = "The label for the section."
 	sectionFieldsDescription = "A list of custom fields in the section."
 
+	sectionFilesDescription = "A list of files in an item."
+
 	fieldDescription        = "A custom field."
 	fieldIDDescription      = "A unique identifier for the field."
 	fieldLabelDescription   = "The label for the field."
 	fieldPurposeDescription = "Purpose indicates this is a special field: a username, password, or notes field."
 	fieldTypeDescription    = "The type of value stored in the field."
 	fieldValueDescription   = "The value of the field."
+
+	fileDescription              = "A file attached to the item."
+	fileIDDescription            = "A UUID for the file."
+	fileNameDescription          = "The name of the file."
+	fileContentDescription       = "The content of the file."
+	fileContentBase64Description = "The content of the file in base64 encoding. (Use this for binary files.)"
 
 	passwordRecipeDescription  = "The recipe used to generate a new value for a password."
 	passwordElementDescription = "The kinds of characters to include in the password."
@@ -55,7 +63,7 @@ const (
 	enumDescription = "%s One of %q"
 )
 
-var categories = []string{"login", "password", "database"}
+var categories = []string{"login", "password", "database", "document"}
 var dbTypes = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
 var fieldPurposes = []string{"USERNAME", "PASSWORD", "NOTES"}
 var fieldTypes = []string{"STRING", "EMAIL", "CONCEALED", "URL", "OTP", "DATE", "MONTH_YEAR", "MENU"}

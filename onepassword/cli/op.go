@@ -107,6 +107,19 @@ func (op *OP) GetItemByTitle(ctx context.Context, title string, vaultUuid string
 	return op.GetItem(ctx, title, vaultUuid)
 }
 
+func (op *OP) GetFileContent(ctx context.Context, file *onepassword.File, itemUuid, vaultUuid string) ([]byte, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
+	ref := fmt.Sprintf("op://%s/%s/%s", vaultUuid, itemUuid, file.ID)
+	res, err := op.execRaw(ctx, nil, p("read"), p(ref))
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func (op *OP) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
