@@ -14,6 +14,7 @@ type testClient struct {
 	CreateItemFunc       func(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error)
 	UpdateItemFunc       func(item *onepassword.Item, vaultUUID string) (*onepassword.Item, error)
 	DeleteItemFunc       func(item *onepassword.Item, vaultUUID string) error
+	GetFileFunc          func(file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error)
 }
 
 var _ Client = (*testClient)(nil)
@@ -44,4 +45,8 @@ func (m *testClient) DeleteItem(_ context.Context, item *onepassword.Item, vault
 
 func (m *testClient) UpdateItem(_ context.Context, item *onepassword.Item, vaultUUID string) (*onepassword.Item, error) {
 	return m.UpdateItemFunc(item, vaultUUID)
+}
+
+func (m *testClient) GetFileContent(_ context.Context, file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error) {
+	return m.GetFileFunc(file, itemUUID, vaultUUID)
 }

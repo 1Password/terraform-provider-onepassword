@@ -2,6 +2,7 @@ package onepassword
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -154,6 +155,39 @@ func dataSourceOnepasswordItem() *schema.Resource {
 					},
 				},
 			},
+			"file": {
+				Description: sectionFilesDescription,
+				Type:        schema.TypeList,
+				Computed:    true,
+				MinItems:    0,
+				Elem: &schema.Resource{
+					Description: fileDescription,
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Description: fileIDDescription,
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"name": {
+							Description: fileNameDescription,
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"content": {
+							Description: fileContentDescription,
+							Type:        schema.TypeString,
+							Computed:    true,
+							Sensitive:   true,
+						},
+						"content_base64": {
+							Description: fileContentBase64Description,
+							Type:        schema.TypeString,
+							Computed:    true,
+							Sensitive:   true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -176,6 +210,22 @@ func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceDat
 			data.Set("url", u.URL)
 		}
 	}
+
+	dataFiles := []interface{}{}
+	for _, f := range item.Files {
+		file := map[string]interface{}{}
+		file["name"] = f.Name
+		file["id"] = f.ID
+		data, err := client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		file["content"] = string(data)
+		file["content_base64"] = base64.StdEncoding.EncodeToString(data)
+
+		dataFiles = append(dataFiles, file)
+	}
+	data.Set("file", dataFiles)
 
 	data.Set("tags", item.Tags)
 	data.Set("category", strings.ToLower(string(item.Category)))

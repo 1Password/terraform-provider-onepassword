@@ -28,6 +28,34 @@ func TestDataSourceOnePasswordItemRead(t *testing.T) {
 	compareItemToSource(t, dataSourceData, expectedItem)
 }
 
+func TestDataSourceOnePasswordItemDocumentRead(t *testing.T) {
+	expectedItem := generateItem()
+	expectedItem.Category = "DOCUMENT"
+	expectedItem.Files = []*onepassword.File{
+		{
+			Name: "test_file",
+		},
+	}
+	expectedItem.Files[0].SetContent([]byte("test_content"))
+	meta := &testClient{
+		GetItemFunc: func(uuid string, vaultUUID string) (*onepassword.Item, error) {
+			return expectedItem, nil
+		},
+		GetFileFunc: func(file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error) {
+			return []byte("test_content"), nil
+		},
+	}
+
+	dataSourceData := generateDataSource(t, expectedItem)
+	dataSourceData.Set("uuid", expectedItem.ID)
+
+	err := dataSourceOnepasswordItemRead(context.Background(), dataSourceData, meta)
+	if err != nil {
+		t.Errorf("Unexpected error occured")
+	}
+	compareItemToSource(t, dataSourceData, expectedItem)
+}
+
 func TestDataSourceOnePasswordItemReadByTitle(t *testing.T) {
 	expectedItem := generateItem()
 	meta := &testClient{
@@ -125,6 +153,25 @@ func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item
 		if dataSourceData.Get(path) != f.Value {
 			t.Errorf("Expected field %v to be %v got %v", f.Label, f.Value, dataSourceData.Get(path))
 		}
+	}
+	if files := dataSourceData.Get("file"); files != nil && len(item.Files) != len(files.([]interface{})) {
+		got := len(files.([]interface{}))
+		t.Errorf("Expected %v files got %v", len(item.Files), got)
+	}
+	for i, file := range item.Files {
+		if dataSourceData.Get(fmt.Sprintf("file.%s", file.Name)) == nil {
+			t.Errorf("Expected file %v to be present", file.Name)
+		}
+		want, err := file.Content()
+		if err != nil {
+			t.Errorf("Unexpected error occured")
+		}
+		if dataSourceData.Get(fmt.Sprintf("file.%d.content", i)).(string) != string(want) {
+			t.Errorf("Expected file %v to have content %v, got %v", file.Name, string(want), dataSourceData.Get(fmt.Sprintf("file.%d.content", i)))
+		}
+	}
+	if len(item.Files) == 2 {
+		t.Errorf("dafuq")
 	}
 }
 
