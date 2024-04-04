@@ -39,6 +39,10 @@ func (w *Wrapper) DeleteItem(_ context.Context, item *onepassword.Item, vaultUui
 	return w.client.DeleteItem(item, vaultUuid)
 }
 
+func (w *Wrapper) GetFileContent(_ context.Context, file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error) {
+	return w.client.GetFileContent(file)
+}
+
 func Wrap(client connect.Client) *Wrapper {
 	return &Wrapper{client: client}
 }
