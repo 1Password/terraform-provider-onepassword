@@ -38,7 +38,7 @@ const (
 	sectionLabelDescription  = "The label for the section."
 	sectionFieldsDescription = "A list of custom fields in the section."
 
-	sectionFilesDescription = "A list of files in an item."
+	filesListDescription = "A list of files in an item."
 
 	fieldDescription        = "A custom field."
 	fieldIDDescription      = "A unique identifier for the field."

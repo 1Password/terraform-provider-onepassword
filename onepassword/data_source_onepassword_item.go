@@ -156,7 +156,7 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				},
 			},
 			"file": {
-				Description: sectionFilesDescription,
+				Description: filesListDescription,
 				Type:        schema.TypeList,
 				Computed:    true,
 				MinItems:    0,
