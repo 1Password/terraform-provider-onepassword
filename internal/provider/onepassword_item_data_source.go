@@ -27,7 +27,7 @@ func NewOnePasswordItemDataSource() datasource.DataSource {
 
 // OnePasswordItemDataSource defines the data source implementation.
 type OnePasswordItemDataSource struct {
-	client *http.Client
+	client onepassword.Client
 }
 
 // OnePasswordItemDataSourceModel describes the data source data model.
@@ -240,7 +240,7 @@ func (d *OnePasswordItemDataSource) Configure(ctx context.Context, req datasourc
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
+	client, ok := req.ProviderData.(onepassword.Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(
