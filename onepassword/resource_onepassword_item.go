@@ -141,12 +141,20 @@ func resourceOnepasswordItem() *schema.Resource {
 				ForceNew:    true,
 			},
 			"category": {
-				Description:  fmt.Sprintf(enumDescription, categoryDescription, categories),
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "login",
-				ValidateFunc: validation.StringInSlice(categories, true),
-				ForceNew:     true,
+				Description: fmt.Sprintf(enumDescription, categoryDescription, categories),
+				Type:        schema.TypeString,
+				Optional:    true,
+				Default:     "login",
+				ValidateFunc: func(val interface{}, key string) (warns []string, errs []error) {
+					v := val.(string)
+					f := validation.StringInSlice(categories, true)
+					warns, errs = f(v, key)
+					if v == "document" {
+						errs = append(errs, fmt.Errorf("cannot create document category, connect api do not support it"))
+					}
+					return warns, errs
+				},
+				ForceNew: true,
 			},
 			"title": {
 				Description: itemTitleDescription,
