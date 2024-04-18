@@ -5,11 +5,15 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net/http"
-
+	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -39,16 +43,165 @@ func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource
 func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Example data source",
+		MarkdownDescription: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
 
 		Attributes: map[string]schema.Attribute{
-			"configurable_attribute": schema.StringAttribute{
-				MarkdownDescription: "Example configurable attribute",
-				Optional:            true,
-			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Example identifier",
+				MarkdownDescription: "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`",
 				Computed:            true,
+			},
+			"vault": schema.StringAttribute{
+				MarkdownDescription: vaultUUIDDescription,
+				Required:            true,
+			},
+			"uuid": schema.StringAttribute{
+				MarkdownDescription: "The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.",
+				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.Expressions{
+						path.MatchRoot("name"),
+					}...),
+				},
+			},
+			"title": schema.StringAttribute{
+				MarkdownDescription: "The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.",
+				Optional:            true,
+				Computed:            true,
+			},
+			"category": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, categories),
+				Computed:            true,
+			},
+			"url": schema.StringAttribute{
+				MarkdownDescription: urlDescription,
+				Computed:            true,
+			},
+			"hostname": schema.StringAttribute{
+				MarkdownDescription: dbHostnameDescription,
+				Computed:            true,
+			},
+			"database": schema.StringAttribute{
+				MarkdownDescription: dbDatabaseDescription,
+				Computed:            true,
+			},
+			"port": schema.StringAttribute{
+				MarkdownDescription: dbPortDescription,
+				Computed:            true,
+			},
+			"type": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
+				Computed:            true,
+			},
+			"tags": schema.ListAttribute{
+				MarkdownDescription: tagsDescription,
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"username": schema.StringAttribute{
+				MarkdownDescription: usernameDescription,
+				Computed:            true,
+			},
+			"password": schema.StringAttribute{
+				MarkdownDescription: passwordDescription,
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"note_value": schema.StringAttribute{
+				MarkdownDescription: noteValueDescription,
+				Computed:            true,
+				Optional:            true,
+				Sensitive:           true,
+			},
+			//"section": schema.ListNestedAttribute{
+			//	MarkdownDescription: sectionDescription,
+			//	Computed:            true,
+			//	NestedObject: schema.NestedAttributeObject{
+			//		Attributes: map[string]schema.Attribute{
+			//			"id": schema.StringAttribute{
+			//				MarkdownDescription: sectionIDDescription,
+			//				Computed:            true,
+			//			},
+			//			"label": schema.StringAttribute{
+			//				MarkdownDescription: sectionLabelDescription,
+			//				Computed:            true,
+			//			},
+			//			"field": schema.ListNestedAttribute{
+			//				MarkdownDescription: sectionFieldsDescription,
+			//				Computed:            true,
+			//				NestedObject: schema.NestedAttributeObject{
+			//					Attributes: map[string]schema.Attribute{
+			//						"id": schema.StringAttribute{
+			//							MarkdownDescription: fieldIDDescription,
+			//							Computed:            true,
+			//						},
+			//						"label": schema.StringAttribute{
+			//							MarkdownDescription: fieldLabelDescription,
+			//							Computed:            true,
+			//						},
+			//						"purpose": schema.StringAttribute{
+			//							MarkdownDescription: fieldPurposeDescription,
+			//							Computed:            true,
+			//						},
+			//						"type": schema.StringAttribute{
+			//							MarkdownDescription: fieldTypeDescription,
+			//							Computed:            true,
+			//						},
+			//						"value": schema.StringAttribute{
+			//							MarkdownDescription: fieldValueDescription,
+			//							Computed:            true,
+			//							Sensitive:           true,
+			//						},
+			//					},
+			//				},
+			//			},
+			//		},
+			//	},
+			//},
+		},
+		Blocks: map[string]schema.Block{
+			"section": schema.ListNestedBlock{
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: sectionIDDescription,
+							Computed:            true,
+						},
+						"label": schema.StringAttribute{
+							MarkdownDescription: sectionLabelDescription,
+							Computed:            true,
+						},
+					},
+					Blocks: map[string]schema.Block{
+						"field": schema.ListNestedBlock{
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fieldIDDescription,
+										Computed:            true,
+									},
+									"label": schema.StringAttribute{
+										MarkdownDescription: fieldLabelDescription,
+										Computed:            true,
+									},
+									"purpose": schema.StringAttribute{
+										MarkdownDescription: fieldPurposeDescription,
+										Computed:            true,
+									},
+									"type": schema.StringAttribute{
+										MarkdownDescription: fieldTypeDescription,
+										Computed:            true,
+									},
+									"value": schema.StringAttribute{
+										MarkdownDescription: fieldValueDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
