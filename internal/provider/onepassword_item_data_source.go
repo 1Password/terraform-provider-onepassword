@@ -15,14 +15,14 @@ import (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ datasource.DataSource = &ExampleDataSource{}
+var _ datasource.DataSource = &OnePasswordItemDataSource{}
 
-func NewExampleDataSource() datasource.DataSource {
-	return &ExampleDataSource{}
+func NewOnePasswordItemDataSource() datasource.DataSource {
+	return &OnePasswordItemDataSource{}
 }
 
-// ExampleDataSource defines the data source implementation.
-type ExampleDataSource struct {
+// OnePasswordItemDataSource defines the data source implementation.
+type OnePasswordItemDataSource struct {
 	client *http.Client
 }
 
@@ -32,11 +32,11 @@ type ExampleDataSourceModel struct {
 	Id                    types.String `tfsdk:"id"`
 }
 
-func (d *ExampleDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_example"
+func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_item"
 }
 
-func (d *ExampleDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "Example data source",
@@ -54,7 +54,7 @@ func (d *ExampleDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 	}
 }
 
-func (d *ExampleDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *OnePasswordItemDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -74,7 +74,7 @@ func (d *ExampleDataSource) Configure(ctx context.Context, req datasource.Config
 	d.client = client
 }
 
-func (d *ExampleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data ExampleDataSourceModel
 
 	// Read Terraform configuration data into the model
