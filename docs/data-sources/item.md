@@ -34,8 +34,9 @@ data "onepassword_item" "example" {
 
 ### Read-Only
 
-- `category` (String) The category of the item. One of ["login" "password" "database"]
+- `category` (String) The category of the item. One of ["login" "password" "database" "document"]
 - `database` (String) (Only applies to the database category) The name of the database.
+- `file` (List of Object) A list of files in the section. (see [below for nested schema](#nestedatt--file))
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`
 - `password` (String, Sensitive) Password for this item.
@@ -45,6 +46,17 @@ data "onepassword_item" "example" {
 - `type` (String) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - `url` (String) The primary URL for the item.
 - `username` (String) Username for this item.
+
+<a id="nestedatt--file"></a>
+### Nested Schema for `file`
+
+Read-Only:
+
+- `content` (String)
+- `content_base64` (String)
+- `id` (String)
+- `name` (String)
+
 
 <a id="nestedatt--section"></a>
 ### Nested Schema for `section`
