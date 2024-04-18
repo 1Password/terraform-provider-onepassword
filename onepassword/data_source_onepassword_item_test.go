@@ -170,9 +170,6 @@ func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item
 			t.Errorf("Expected file %v to have content %v, got %v", file.Name, string(want), dataSourceData.Get(fmt.Sprintf("file.%d.content", i)))
 		}
 	}
-	if len(item.Files) == 2 {
-		t.Errorf("dafuq")
-	}
 }
 
 func generateDataSource(t *testing.T, item *onepassword.Item) *schema.ResourceData {
