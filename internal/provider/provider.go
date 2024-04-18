@@ -5,9 +5,9 @@ package provider
 
 import (
 	"context"
-	"net/http"
 	"os"
 
+	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -143,15 +143,22 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 		return
 	}
 
-	//	return initializeCLI(ctx, serviceAccountToken, account, opCliPath)
-	//} else if token != "" && url != "" {
-	//	return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
-	//} else {
-	//	return nil, diag.Errorf("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\" or \"account\") credentials should be set.")
-	//}
-
 	// Example client configuration for data sources and resources
-	client := http.DefaultClient
+	client, err := onepassword.NewClient(onepassword.ClientConfig{
+		ConnectHost:         connectHost,
+		ConnectToken:        connectToken,
+		ServiceAccountToken: serviceAccountToken,
+		Account:             account,
+		OpCLIPath:           opCLIPath,
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Client init failure", "Client failed to initialize.")
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
