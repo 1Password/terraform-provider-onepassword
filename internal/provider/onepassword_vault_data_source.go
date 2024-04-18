@@ -8,53 +8,73 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ datasource.DataSource = &ExampleDataSource{}
+var _ datasource.DataSource = &OnePasswordVaultDataSource{}
 
-func NewExampleDataSource() datasource.DataSource {
-	return &ExampleDataSource{}
+func NewOnePasswordVaultDataSource() datasource.DataSource {
+	return &OnePasswordVaultDataSource{}
 }
 
-// ExampleDataSource defines the data source implementation.
-type ExampleDataSource struct {
+// OnePasswordVaultDataSource defines the data source implementation.
+type OnePasswordVaultDataSource struct {
 	client *http.Client
 }
 
-// ExampleDataSourceModel describes the data source data model.
-type ExampleDataSourceModel struct {
-	ConfigurableAttribute types.String `tfsdk:"configurable_attribute"`
-	Id                    types.String `tfsdk:"id"`
+// OnePasswordVaultDataSourceModel describes the data source data model.
+type OnePasswordVaultDataSourceModel struct {
+	ID          types.String `tfsdk:"id"`
+	UUID        types.String `tfsdk:"uuid"`
+	Name        types.String `tfsdk:"name"`
+	Description types.String `tfsdk:"description"`
 }
 
-func (d *ExampleDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+func (d *OnePasswordVaultDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_example"
 }
 
-func (d *ExampleDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+func (d *OnePasswordVaultDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Example data source",
+		MarkdownDescription: "Use this data source to get details of a vault by either its name or uuid.",
 
 		Attributes: map[string]schema.Attribute{
-			"configurable_attribute": schema.StringAttribute{
-				MarkdownDescription: "Example configurable attribute",
-				Optional:            true,
-			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Example identifier",
+				MarkdownDescription: "The Terraform resource identifier for this item in the format `vaults/<vault_id>`",
+				Computed:            true,
+			},
+			"uuid": schema.StringAttribute{
+				MarkdownDescription: "The UUID of the vault to retrieve. This field will be populated with the UUID of the vault if the vault it looked up by its name.",
+				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.Expressions{
+						path.MatchRoot("name"),
+					}...),
+				},
+			},
+			"name": schema.StringAttribute{
+				MarkdownDescription: "The name of the vault to retrieve. This field will be populated with the name of the vault if the vault it looked up by its UUID.",
+				Optional:            true,
+				Computed:            true,
+			},
+			"description": schema.StringAttribute{
+				MarkdownDescription: "The description of the vault.",
 				Computed:            true,
 			},
 		},
 	}
 }
 
-func (d *ExampleDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *OnePasswordVaultDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -74,8 +94,8 @@ func (d *ExampleDataSource) Configure(ctx context.Context, req datasource.Config
 	d.client = client
 }
 
-func (d *ExampleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data ExampleDataSourceModel
+func (d *OnePasswordVaultDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data OnePasswordVaultDataSourceModel
 
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -94,7 +114,7 @@ func (d *ExampleDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	// For the purposes of this example code, hardcoding a response value to
 	// save into the Terraform state.
-	data.Id = types.StringValue("example-id")
+	data.ID = types.StringValue("example-id")
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
