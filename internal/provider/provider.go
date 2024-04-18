@@ -172,6 +172,7 @@ func (p *OnePasswordProvider) Resources(ctx context.Context) []func() resource.R
 func (p *OnePasswordProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewExampleDataSource,
+		NewOnePasswordVaultDataSource,
 	}
 }
 
