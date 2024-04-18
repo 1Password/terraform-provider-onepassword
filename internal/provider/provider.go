@@ -6,9 +6,11 @@ package provider
 import (
 	"context"
 	"net/http"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -52,15 +54,31 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 				Sensitive:           true,
+				//Validators: []validator.String{
+				//	stringvalidator.AlsoRequires(path.Expressions{
+				//		path.MatchRoot("url"),
+				//	}...),
+				//},
 			},
 			"service_account_token": schema.StringAttribute{
 				MarkdownDescription: "A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable. Provider will use the 1Password CLI if set.",
 				Optional:            true,
 				Sensitive:           true,
+				//Validators: []validator.String{
+				//	stringvalidator.AtLeastOneOf(path.Expressions{
+				//		path.MatchRoot("token"),
+				//		path.MatchRoot("account"),
+				//	}...),
+				//},
 			},
 			"account": schema.StringAttribute{
 				Description: "A valid account's sign-in address or ID to use biometrics unlock. Can also be sourced from `OP_ACCOUNT` environment variable. Provider will use the 1Password CLI if set.",
 				Optional:    true,
+				//Validators: []validator.String{
+				//	stringvalidator.ConflictsWith(path.Expressions{
+				//		path.MatchRoot("service_account_token"),
+				//	}...),
+				//},
 			},
 			"op_cli_path": schema.StringAttribute{
 				Description: "The path to the 1Password CLI binary. Can also be sourced from `OP_CLI_PATH` environment variable. Defaults to `op`.",
@@ -71,16 +89,66 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 }
 
 func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data OnePasswordProviderModel
+	var config OnePasswordProviderModel
 
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Default values to environment variables, but override
+	// with Terraform configuration value if set.
+
+	connectHost := os.Getenv("OP_CONNECT_HOST")
+	connectToken := os.Getenv("OP_CONNECT_TOKEN")
+	serviceAccountToken := os.Getenv("OP_SERVICE_ACCOUNT_TOKEN")
+	account := os.Getenv("OP_ACCOUNT")
+	opCLIPath := os.Getenv("OP_CLI_PATH")
+
+	// Configuration values are now available.
+	if !config.ConnectHost.IsNull() {
+		connectHost = config.ConnectHost.ValueString()
+	}
+	if !config.ConnectToken.IsNull() {
+		connectToken = config.ConnectToken.ValueString()
+	}
+	if !config.ServiceAccountToken.IsNull() {
+		serviceAccountToken = config.ServiceAccountToken.ValueString()
+	}
+	if !config.Account.IsNull() {
+		account = config.Account.ValueString()
+	}
+	if !config.OpCLIPath.IsNull() {
+		opCLIPath = config.OpCLIPath.ValueString()
+	}
+
+	// This is not handled by setting Required to true because Terraform does not handle
+	// multiple required attributes well. If only one is set in the provider configuration,
+	// the other one is prompted for, but Terraform then forgets the value for the one that
+	// is defined in the code. This confusing user-experience can be avoided by handling the
+	// requirement of one of the attributes manually.
+	if serviceAccountToken != "" || account != "" {
+		if connectToken != "" || connectHost != "" {
+			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"token\" and \"url\") or 1Password CLI (\"service_account_token\" or \"account\") credentials can be set. Both are set. Please unset one of them.")
+		}
+		if opCLIPath == "" {
+			resp.Diagnostics.AddAttributeError(path.Root("op_cli_path"), "CLI path missing", "Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
+		}
+		if serviceAccountToken != "" && account != "" {
+			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please unset one of them to use the provider with 1Password CLI.")
+		}
+	}
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	//	return initializeCLI(ctx, serviceAccountToken, account, opCliPath)
+	//} else if token != "" && url != "" {
+	//	return connectctx.Wrap(connect.NewClientWithUserAgent(url, token, providerUserAgent)), nil
+	//} else {
+	//	return nil, diag.Errorf("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\" or \"account\") credentials should be set.")
+	//}
 
 	// Example client configuration for data sources and resources
 	client := http.DefaultClient
