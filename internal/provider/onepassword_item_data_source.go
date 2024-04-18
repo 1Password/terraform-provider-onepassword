@@ -30,10 +30,37 @@ type OnePasswordItemDataSource struct {
 	client *http.Client
 }
 
-// ExampleDataSourceModel describes the data source data model.
-type ExampleDataSourceModel struct {
-	ConfigurableAttribute types.String `tfsdk:"configurable_attribute"`
-	Id                    types.String `tfsdk:"id"`
+// OnePasswordItemDataSourceModel describes the data source data model.
+type OnePasswordItemDataSourceModel struct {
+	ID        types.String                  `tfsdk:"id"`
+	Vault     types.String                  `tfsdk:"vault"`
+	UUID      types.String                  `tfsdk:"uuid"`
+	Title     types.String                  `tfsdk:"title"`
+	Category  types.String                  `tfsdk:"category"`
+	URL       types.String                  `tfsdk:"url"`
+	Hostname  types.String                  `tfsdk:"hostname"`
+	Database  types.String                  `tfsdk:"database"`
+	Port      types.String                  `tfsdk:"port"`
+	Type      types.String                  `tfsdk:"type"`
+	Tags      types.List                    `tfsdk:"tags"`
+	Username  types.String                  `tfsdk:"username"`
+	Password  types.String                  `tfsdk:"password"`
+	NoteValue types.String                  `tfsdk:"note_value"`
+	Section   []OnePasswordItemSectionModel `tfsdk:"section"`
+}
+
+type OnePasswordItemSectionModel struct {
+	ID    types.String                `tfsdk:"id"`
+	Label types.String                `tfsdk:"label"`
+	Field []OnePasswordItemFieldModel `tfsdk:"field"`
+}
+
+type OnePasswordItemFieldModel struct {
+	ID      types.String `tfsdk:"id"`
+	Label   types.String `tfsdk:"label"`
+	Purpose types.String `tfsdk:"purpose"`
+	Type    types.String `tfsdk:"type"`
+	Value   types.String `tfsdk:"value"`
 }
 
 func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -228,7 +255,7 @@ func (d *OnePasswordItemDataSource) Configure(ctx context.Context, req datasourc
 }
 
 func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data ExampleDataSourceModel
+	var data OnePasswordItemDataSourceModel
 
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
