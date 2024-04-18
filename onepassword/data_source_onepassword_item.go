@@ -12,6 +12,22 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+type FileSchema struct {
+	Name string
+	Id	 string
+	Content string
+	ContentBase64 string
+}
+
+func (f FileSchema) toResourceData() map[string]string {
+	return map[string]string {
+		"name": f.Name,
+		"id": f.Id,
+		"content": f.Content,
+		"content_base64": f.ContentBase64,
+	}
+}
+
 func dataSourceOnepasswordItem() *schema.Resource {
 	exactlyOneOfUUIDAndTitle := []string{"uuid", "title"}
 
@@ -211,19 +227,19 @@ func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceDat
 		}
 	}
 
-	dataFiles := []interface{}{}
+	dataFiles := []map[string]string{}
 	for _, f := range item.Files {
-		file := map[string]interface{}{}
-		file["name"] = f.Name
-		file["id"] = f.ID
+		file := FileSchema{}
+		file.Name = f.Name
+		file.Id = f.ID
 		data, err := client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		file["content"] = string(data)
-		file["content_base64"] = base64.StdEncoding.EncodeToString(data)
+		file.Content = string(data)
+		file.ContentBase64 = base64.StdEncoding.EncodeToString(data)
 
-		dataFiles = append(dataFiles, file)
+		dataFiles = append(dataFiles, file.toResourceData())
 	}
 	data.Set("file", dataFiles)
 
