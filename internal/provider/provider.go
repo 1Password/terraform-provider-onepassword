@@ -104,6 +104,9 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	serviceAccountToken := os.Getenv("OP_SERVICE_ACCOUNT_TOKEN")
 	account := os.Getenv("OP_ACCOUNT")
 	opCLIPath := os.Getenv("OP_CLI_PATH")
+	if opCLIPath == "" {
+		opCLIPath = "op"
+	}
 
 	// Configuration values are now available.
 	if !config.ConnectHost.IsNull() {
