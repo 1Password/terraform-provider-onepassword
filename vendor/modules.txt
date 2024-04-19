@@ -201,6 +201,7 @@ github.com/hashicorp/terraform-plugin-framework/provider/schema
 github.com/hashicorp/terraform-plugin-framework/providerserver
 github.com/hashicorp/terraform-plugin-framework/resource
 github.com/hashicorp/terraform-plugin-framework/resource/schema
+github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault
 github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults
 github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default
 github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier
