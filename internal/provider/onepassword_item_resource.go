@@ -49,36 +49,66 @@ func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.Met
 }
 
 func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	passwordRecipeSchema := schema.ListNestedBlock{
+	//passwordRecipeBlockSchema := schema.ListNestedBlock{
+	//	Description: passwordRecipeDescription,
+	//	Validators: []validator.List{
+	//		listvalidator.SizeAtMost(1),
+	//	},
+	//	NestedObject: schema.NestedBlockObject{
+	//		Attributes: map[string]schema.Attribute{
+	//			"length": schema.Int64Attribute{
+	//				Description: passwordLengthDescription,
+	//				Optional:    true,
+	//				Default:     int64default.StaticInt64(32),
+	//				Validators: []validator.Int64{
+	//					int64validator.Between(1, 64),
+	//				},
+	//			},
+	//			"letters": schema.BoolAttribute{
+	//				Description: passwordLettersDescription,
+	//				Optional:    true,
+	//				Default:     booldefault.StaticBool(true),
+	//			},
+	//			"digits": schema.BoolAttribute{
+	//				Description: passwordDigitsDescription,
+	//				Optional:    true,
+	//				Default:     booldefault.StaticBool(true),
+	//			},
+	//			"symbols": schema.BoolAttribute{
+	//				Description: passwordSymbolsDescription,
+	//				Optional:    true,
+	//				Default:     booldefault.StaticBool(true),
+	//			},
+	//		},
+	//	},
+	//}
+
+	passwordRecipeAttributeSchema := schema.SingleNestedAttribute{
 		Description: passwordRecipeDescription,
-		Validators: []validator.List{
-			listvalidator.SizeAtMost(1),
-		},
-		NestedObject: schema.NestedBlockObject{
-			Attributes: map[string]schema.Attribute{
-				"length": schema.Int64Attribute{
-					Description: passwordLengthDescription,
-					Optional:    true,
-					Default:     int64default.StaticInt64(32),
-					Validators: []validator.Int64{
-						int64validator.Between(1, 64),
-					},
+		Optional:    true,
+		Attributes: map[string]schema.Attribute{
+			"length": schema.Int64Attribute{
+				Description: passwordLengthDescription,
+				Optional:    true,
+				Default:     int64default.StaticInt64(32),
+				Validators: []validator.Int64{
+					int64validator.Between(1, 64),
 				},
-				"letters": schema.BoolAttribute{
-					Description: passwordLettersDescription,
-					Optional:    true,
-					Default:     booldefault.StaticBool(true),
-				},
-				"digits": schema.BoolAttribute{
-					Description: passwordDigitsDescription,
-					Optional:    true,
-					Default:     booldefault.StaticBool(true),
-				},
-				"symbols": schema.BoolAttribute{
-					Description: passwordSymbolsDescription,
-					Optional:    true,
-					Default:     booldefault.StaticBool(true),
-				},
+			},
+			"letters": schema.BoolAttribute{
+				Description: passwordLettersDescription,
+				Optional:    true,
+				Default:     booldefault.StaticBool(true),
+			},
+			"digits": schema.BoolAttribute{
+				Description: passwordDigitsDescription,
+				Optional:    true,
+				Default:     booldefault.StaticBool(true),
+			},
+			"symbols": schema.BoolAttribute{
+				Description: passwordSymbolsDescription,
+				Optional:    true,
+				Default:     booldefault.StaticBool(true),
 			},
 		},
 	}
@@ -164,6 +194,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 			//	Computed:            true,
 			//	Sensitive:           true,
 			//},
+			"password_recipe": passwordRecipeAttributeSchema,
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
@@ -214,16 +245,17 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Computed:            true,
 										Sensitive:           true,
 									},
+									"password_recipe": passwordRecipeAttributeSchema,
 								},
-								Blocks: map[string]schema.Block{
-									"password_recipe": passwordRecipeSchema,
-								},
+								//Blocks: map[string]schema.Block{
+								//	"password_recipe": passwordRecipeBlockSchema,
+								//},
 							},
 						},
 					},
 				},
 			},
-			"password_recipe": passwordRecipeSchema,
+			//"password_recipe": passwordRecipeBlockSchema,
 		},
 	}
 }
