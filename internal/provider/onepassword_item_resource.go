@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -37,11 +36,42 @@ type OnePasswordItemResource struct {
 	client *http.Client
 }
 
-// ExampleResourceModel describes the resource data model.
-type ExampleResourceModel struct {
-	ConfigurableAttribute types.String `tfsdk:"configurable_attribute"`
-	Defaulted             types.String `tfsdk:"defaulted"`
-	Id                    types.String `tfsdk:"id"`
+// OnePasswordItemResourceModel describes the resource data model.
+type OnePasswordItemResourceModel struct {
+	ID       types.String `tfsdk:"id"`
+	UUID     types.String `tfsdk:"uuid"`
+	Vault    types.String `tfsdk:"vault"`
+	Category types.String `tfsdk:"category"`
+	Title    types.String `tfsdk:"title"`
+	URL      types.String `tfsdk:"url"`
+	Hostname types.String `tfsdk:"hostname"`
+	Database types.String `tfsdk:"database"`
+	Port     types.String `tfsdk:"port"`
+	Type     types.String `tfsdk:"type"`
+	Tags     types.List   `tfsdk:"tags"`
+	Username types.String `tfsdk:"username"`
+	Password types.String `tfsdk:"password"`
+	//NoteValue types.String `tfsdk:"note_value"`
+	Section []OnePasswordItemResourceSectionModel `tfsdk:"section"`
+	Recipe  PasswordRecipeModel                   `tfsdk:"recipe"`
+}
+
+type PasswordRecipeModel struct {
+	Length  types.Int64 `tfsdk:"length"`
+	Letters types.Bool  `tfsdk:"letters"`
+	Digits  types.Bool  `tfsdk:"digits"`
+	Symbols types.Bool  `tfsdk:"symbols"`
+}
+
+type OnePasswordItemResourceSectionModel struct {
+	ID    types.String                        `tfsdk:"id"`
+	Label types.String                        `tfsdk:"label"`
+	Field []OnePasswordItemResourceFieldModel `tfsdk:"field"`
+}
+
+type OnePasswordItemResourceFieldModel struct {
+	OnePasswordItemFieldModel
+	Recipe PasswordRecipeModel `tfsdk:"recipe"`
 }
 
 func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -281,7 +311,7 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 }
 
 func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data ExampleResourceModel
+	var data OnePasswordItemResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -300,7 +330,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 
 	// For the purposes of this example code, hardcoding a response value to
 	// save into the Terraform state.
-	data.Id = types.StringValue("example-id")
+	data.ID = types.StringValue("example-id")
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -311,7 +341,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 }
 
 func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data ExampleResourceModel
+	var data OnePasswordItemResourceModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -333,7 +363,7 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 }
 
 func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data ExampleResourceModel
+	var data OnePasswordItemResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -355,7 +385,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 }
 
 func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data ExampleResourceModel
+	var data OnePasswordItemResourceModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
