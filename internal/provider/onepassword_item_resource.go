@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -33,7 +34,7 @@ func NewOnePasswordItemResource() resource.Resource {
 
 // OnePasswordItemResource defines the resource implementation.
 type OnePasswordItemResource struct {
-	client *http.Client
+	client onepassword.Client
 }
 
 // OnePasswordItemResourceModel describes the resource data model.
@@ -296,12 +297,12 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
+	client, ok := req.ProviderData.(onepassword.Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected onepassword.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
