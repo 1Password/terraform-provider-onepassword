@@ -436,11 +436,17 @@ func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.Delet
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete example, got error: %s", err))
-	//     return
-	// }
+	item, diagnostics := dataToItem(ctx, data)
+	resp.Diagnostics.Append(diagnostics...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.client.DeleteItem(ctx, item, data.Vault.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("1Password Item Delete error", fmt.Sprintf("Could not delete item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		return
+	}
 }
 
 func (r *OnePasswordItemResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
