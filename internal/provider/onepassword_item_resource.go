@@ -411,6 +411,16 @@ func (r *OnePasswordItemResource) ImportState(ctx context.Context, req resource.
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
 
+func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
+	elements := strings.Split(tfID, "/")
+
+	if len(elements) != 4 {
+		return "", ""
+	}
+
+	return elements[1], elements[3]
+}
+
 func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
 	data.ID = types.StringValue(terraformItemID(item))
 	data.UUID = types.StringValue(item.ID)
