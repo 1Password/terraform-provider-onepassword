@@ -75,7 +75,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`",
+				MarkdownDescription: terraformItemIDDescription,
 				Computed:            true,
 			},
 			"vault": schema.StringAttribute{
@@ -190,6 +190,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
+				MarkdownDescription: sectionsDescription,
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -274,7 +275,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	data.ID = types.StringValue(terraformID(item))
+	data.ID = types.StringValue(terraformItemID(item))
 	data.UUID = types.StringValue(item.ID)
 	data.Vault = types.StringValue(item.Vault.ID)
 	data.Title = types.StringValue(item.Title)
@@ -342,7 +343,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 }
 
-func terraformID(item *op.Item) string {
+func terraformItemID(item *op.Item) string {
 	return fmt.Sprintf("vaults/%s/items/%s", item.Vault.ID, item.ID)
 }
 

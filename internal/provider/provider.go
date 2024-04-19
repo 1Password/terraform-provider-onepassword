@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
@@ -155,10 +156,7 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 		OpCLIPath:           opCLIPath,
 	})
 	if err != nil {
-		resp.Diagnostics.AddError("Client init failure", "Client failed to initialize.")
-	}
-
-	if resp.Diagnostics.HasError() {
+		resp.Diagnostics.AddError("Client init failure", fmt.Sprintf("Client failed to initialize, got error: %s", err))
 		return
 	}
 
