@@ -328,11 +328,23 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create example, got error: %s", err))
-	//     return
-	// }
+	vaultUUID := data.Vault.ValueString()
+
+	item, diagnostics := dataToItem(ctx, data)
+	resp.Diagnostics.Append(diagnostics...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	createdItem, err := r.client.CreateItem(ctx, item, vaultUUID)
+	if err != nil {
+		resp.Diagnostics.AddError("1Password Item creation error", fmt.Sprintf("Error creating 1Password item, got error %s", err))
+	}
+
+	resp.Diagnostics.Append(itemToData(ctx, createdItem, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// For the purposes of this example code, hardcoding a response value to
 	// save into the Terraform state.
