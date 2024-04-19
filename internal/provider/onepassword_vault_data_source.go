@@ -6,8 +6,9 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
 
+	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -26,7 +27,7 @@ func NewOnePasswordVaultDataSource() datasource.DataSource {
 
 // OnePasswordVaultDataSource defines the data source implementation.
 type OnePasswordVaultDataSource struct {
-	client *http.Client
+	client onepassword.Client
 }
 
 // OnePasswordVaultDataSourceModel describes the data source data model.
@@ -38,7 +39,7 @@ type OnePasswordVaultDataSourceModel struct {
 }
 
 func (d *OnePasswordVaultDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_example"
+	resp.TypeName = req.ProviderTypeName + "_vault"
 }
 
 func (d *OnePasswordVaultDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -58,6 +59,7 @@ func (d *OnePasswordVaultDataSource) Schema(ctx context.Context, req datasource.
 				Validators: []validator.String{
 					stringvalidator.ExactlyOneOf(path.Expressions{
 						path.MatchRoot("name"),
+						path.MatchRoot("uuid"),
 					}...),
 				},
 			},
@@ -80,12 +82,12 @@ func (d *OnePasswordVaultDataSource) Configure(ctx context.Context, req datasour
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
+	client, ok := req.ProviderData.(onepassword.Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected onepassword.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -106,15 +108,41 @@ func (d *OnePasswordVaultDataSource) Read(ctx context.Context, req datasource.Re
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := d.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
-	//     return
-	// }
+	var vault *op.Vault
+	if data.UUID.ValueString() != "" {
+		vaultByUUID, err := d.client.GetVault(ctx, data.UUID.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read vault, got error: %s", err))
+			return
+		}
+		vault = vaultByUUID
+	} else {
+		vaultsByName, err := d.client.GetVaultsByTitle(ctx, data.Name.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read vault, got error: %s", err))
+			return
+		}
+		if len(vaultsByName) == 0 {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("No vault found with name '%s'", data.Name))
+			return
+		} else if len(vaultsByName) > 1 {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Multiple vaults found with name '%s'", data.Name))
+			return
+		}
+		fullVault, err := d.client.GetVault(ctx, vaultsByName[0].ID)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read vault, got error: %s", err))
+			return
+		}
+		vault = fullVault
+	}
 
-	// For the purposes of this example code, hardcoding a response value to
-	// save into the Terraform state.
-	data.ID = types.StringValue("example-id")
+	data = OnePasswordVaultDataSourceModel{
+		ID:          types.StringValue(vaultTerraformID(vault)),
+		UUID:        types.StringValue(vault.ID),
+		Name:        types.StringValue(vault.Name),
+		Description: types.StringValue(vault.Description),
+	}
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -122,4 +150,8 @@ func (d *OnePasswordVaultDataSource) Read(ctx context.Context, req datasource.Re
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+}
+
+func vaultTerraformID(vault *op.Vault) string {
+	return fmt.Sprintf("vaults/%s", vault.ID)
 }
