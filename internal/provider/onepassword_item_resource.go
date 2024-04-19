@@ -19,15 +19,15 @@ import (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ resource.Resource = &ExampleResource{}
-var _ resource.ResourceWithImportState = &ExampleResource{}
+var _ resource.Resource = &OnePasswordItemResource{}
+var _ resource.ResourceWithImportState = &OnePasswordItemResource{}
 
-func NewExampleResource() resource.Resource {
-	return &ExampleResource{}
+func NewOnePasswordItemResource() resource.Resource {
+	return &OnePasswordItemResource{}
 }
 
-// ExampleResource defines the resource implementation.
-type ExampleResource struct {
+// OnePasswordItemResource defines the resource implementation.
+type OnePasswordItemResource struct {
 	client *http.Client
 }
 
@@ -38,11 +38,11 @@ type ExampleResourceModel struct {
 	Id                    types.String `tfsdk:"id"`
 }
 
-func (r *ExampleResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_example"
+func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_item"
 }
 
-func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "Example resource",
@@ -69,7 +69,7 @@ func (r *ExampleResource) Schema(ctx context.Context, req resource.SchemaRequest
 	}
 }
 
-func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -89,7 +89,7 @@ func (r *ExampleResource) Configure(ctx context.Context, req resource.ConfigureR
 	r.client = client
 }
 
-func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data ExampleResourceModel
 
 	// Read Terraform plan data into the model
@@ -119,7 +119,7 @@ func (r *ExampleResource) Create(ctx context.Context, req resource.CreateRequest
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data ExampleResourceModel
 
 	// Read Terraform prior state data into the model
@@ -141,7 +141,7 @@ func (r *ExampleResource) Read(ctx context.Context, req resource.ReadRequest, re
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data ExampleResourceModel
 
 	// Read Terraform plan data into the model
@@ -163,7 +163,7 @@ func (r *ExampleResource) Update(ctx context.Context, req resource.UpdateRequest
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data ExampleResourceModel
 
 	// Read Terraform prior state data into the model
@@ -182,6 +182,6 @@ func (r *ExampleResource) Delete(ctx context.Context, req resource.DeleteRequest
 	// }
 }
 
-func (r *ExampleResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *OnePasswordItemResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }
