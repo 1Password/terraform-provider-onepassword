@@ -5,6 +5,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -399,11 +400,25 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update example, got error: %s", err))
-	//     return
-	// }
+	item, diagnostics := dataToItem(ctx, data)
+	resp.Diagnostics.Append(diagnostics...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	payload, _ := json.Marshal(item)
+	tflog.Info(ctx, "update op payload: "+string(payload))
+
+	updatedItem, err := r.client.UpdateItem(ctx, item, data.Vault.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		return
+	}
+
+	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
