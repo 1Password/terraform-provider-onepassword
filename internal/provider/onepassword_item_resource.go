@@ -8,12 +8,18 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -43,28 +49,181 @@ func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.Met
 }
 
 func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
-	resp.Schema = schema.Schema{
-		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Example resource",
-
-		Attributes: map[string]schema.Attribute{
-			"configurable_attribute": schema.StringAttribute{
-				MarkdownDescription: "Example configurable attribute",
-				Optional:            true,
-			},
-			"defaulted": schema.StringAttribute{
-				MarkdownDescription: "Example configurable attribute with default value",
-				Optional:            true,
-				Computed:            true,
-				Default:             stringdefault.StaticString("example value when not configured"),
-			},
-			"id": schema.StringAttribute{
-				Computed:            true,
-				MarkdownDescription: "Example identifier",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+	passwordRecipeSchema := schema.ListNestedBlock{
+		Description: passwordRecipeDescription,
+		Validators: []validator.List{
+			listvalidator.SizeAtMost(1),
+		},
+		NestedObject: schema.NestedBlockObject{
+			Attributes: map[string]schema.Attribute{
+				"length": schema.Int64Attribute{
+					Description: passwordLengthDescription,
+					Optional:    true,
+					Default:     int64default.StaticInt64(32),
+					Validators: []validator.Int64{
+						int64validator.Between(1, 64),
+					},
+				},
+				"letters": schema.BoolAttribute{
+					Description: passwordLettersDescription,
+					Optional:    true,
+					Default:     booldefault.StaticBool(true),
+				},
+				"digits": schema.BoolAttribute{
+					Description: passwordDigitsDescription,
+					Optional:    true,
+					Default:     booldefault.StaticBool(true),
+				},
+				"symbols": schema.BoolAttribute{
+					Description: passwordSymbolsDescription,
+					Optional:    true,
+					Default:     booldefault.StaticBool(true),
 				},
 			},
+		},
+	}
+
+	resp.Schema = schema.Schema{
+		// This description is used by the documentation generator and the language server.
+		MarkdownDescription: "A 1Password Item",
+
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: terraformItemIDDescription,
+				Computed:            true,
+			},
+			"uuid": schema.StringAttribute{
+				MarkdownDescription: itemUUIDDescription,
+				Computed:            true,
+			},
+			"vault": schema.StringAttribute{
+				MarkdownDescription: vaultUUIDDescription,
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"category": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, categories),
+				Optional:            true,
+				Default:             stringdefault.StaticString("login"),
+				Validators: []validator.String{
+					stringvalidator.OneOfCaseInsensitive(categories...),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"title": schema.StringAttribute{
+				MarkdownDescription: itemTitleDescription,
+				Optional:            true,
+			},
+			"url": schema.StringAttribute{
+				MarkdownDescription: urlDescription,
+				Optional:            true,
+			},
+			"hostname": schema.StringAttribute{
+				MarkdownDescription: dbHostnameDescription,
+				Optional:            true,
+			},
+			"database": schema.StringAttribute{
+				MarkdownDescription: dbDatabaseDescription,
+				Optional:            true,
+			},
+			"port": schema.StringAttribute{
+				MarkdownDescription: dbPortDescription,
+				Optional:            true,
+			},
+			"type": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
+				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOfCaseInsensitive(dbTypes...),
+				},
+			},
+			"tags": schema.ListAttribute{
+				MarkdownDescription: tagsDescription,
+				ElementType:         types.StringType,
+				Optional:            true,
+			},
+			"username": schema.StringAttribute{
+				MarkdownDescription: usernameDescription,
+				Optional:            true,
+			},
+			"password": schema.StringAttribute{
+				MarkdownDescription: passwordDescription,
+				Optional:            true,
+				Computed:            true,
+				Sensitive:           true,
+			},
+			// TODO: See if we want to have this attribute in the resource schema.
+			//       It exists in the data source schema.
+			//"note_value": schema.StringAttribute{
+			//	MarkdownDescription: noteValueDescription,
+			//	Optional:            true,
+			//	Computed:            true,
+			//	Sensitive:           true,
+			//},
+		},
+		Blocks: map[string]schema.Block{
+			"section": schema.ListNestedBlock{
+				MarkdownDescription: sectionsDescription,
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: sectionIDDescription,
+							Computed:            true,
+						},
+						"label": schema.StringAttribute{
+							MarkdownDescription: sectionLabelDescription,
+							Required:            true,
+						},
+					},
+					Blocks: map[string]schema.Block{
+						"field": schema.ListNestedBlock{
+							MarkdownDescription: sectionFieldsDescription,
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fieldIDDescription,
+										Optional:            true,
+										Computed:            true,
+									},
+									"label": schema.StringAttribute{
+										MarkdownDescription: fieldLabelDescription,
+										Required:            true,
+									},
+									"purpose": schema.StringAttribute{
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
+										Optional:            true,
+										Validators: []validator.String{
+											stringvalidator.OneOfCaseInsensitive(fieldPurposes...),
+										},
+									},
+									"type": schema.StringAttribute{
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+										Optional:            true,
+										Default:             stringdefault.StaticString("STRING"),
+										Validators: []validator.String{
+											stringvalidator.OneOfCaseInsensitive(fieldTypes...),
+										},
+									},
+									"value": schema.StringAttribute{
+										MarkdownDescription: fieldValueDescription,
+										Optional:            true,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+								Blocks: map[string]schema.Block{
+									"password_recipe": passwordRecipeSchema,
+								},
+							},
+						},
+					},
+				},
+			},
+			"password_recipe": passwordRecipeSchema,
 		},
 	}
 }

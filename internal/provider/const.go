@@ -1,6 +1,8 @@
 package provider
 
 const (
+	terraformItemIDDescription = "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`."
+
 	itemUUIDDescription  = "The UUID of the item. Item identifiers are unique within a specific vault."
 	vaultUUIDDescription = "The UUID of the vault the item is in."
 	categoryDescription  = "The category of the item."
