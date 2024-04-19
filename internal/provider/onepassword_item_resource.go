@@ -370,11 +370,18 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
-	//     return
-	// }
+	valutUUID, itemUUID := vaultAndItemUUID(data.ID.ValueString())
+	item, err := r.client.GetItem(ctx, itemUUID, valutUUID)
+	if err != nil {
+		resp.Diagnostics.AddError("Client error", fmt.Sprintf("Could not get item '%s' from vault '%s', got error: %s", itemUUID, valutUUID, err))
+		return
+	}
+
+	resp.Diagnostics.Append(itemToData(ctx, item, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+		//resp.Diagnostics.AddError("Data conversion error", fmt.Sprintf("Could not parse data for item '%s' from vault '%s', got error: %s", itemUUID, valutUUID, err))
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
