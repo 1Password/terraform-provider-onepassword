@@ -14,14 +14,15 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/internal/onepassword/util"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	//"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	//"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	//"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	//"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -60,7 +61,7 @@ type OnePasswordItemResourceModel struct {
 	Password types.String `tfsdk:"password"`
 	//NoteValue types.String `tfsdk:"note_value"`
 	Section []OnePasswordItemResourceSectionModel `tfsdk:"section"`
-	Recipe  PasswordRecipeModel                   `tfsdk:"recipe"`
+	//Recipe  []PasswordRecipeModel                 `tfsdk:"password_recipe"`
 }
 
 type PasswordRecipeModel struct {
@@ -77,8 +78,13 @@ type OnePasswordItemResourceSectionModel struct {
 }
 
 type OnePasswordItemResourceFieldModel struct {
-	OnePasswordItemFieldModel
-	Recipe PasswordRecipeModel `tfsdk:"recipe"`
+	//OnePasswordItemFieldModel
+	ID      types.String `tfsdk:"id"`
+	Label   types.String `tfsdk:"label"`
+	Purpose types.String `tfsdk:"purpose"`
+	Type    types.String `tfsdk:"type"`
+	Value   types.String `tfsdk:"value"`
+	//Recipe  []PasswordRecipeModel `tfsdk:"password_recipe"`
 }
 
 func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -96,6 +102,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 	//			"length": schema.Int64Attribute{
 	//				Description: passwordLengthDescription,
 	//				Optional:    true,
+	//				Computed:    true,
 	//				Default:     int64default.StaticInt64(32),
 	//				Validators: []validator.Int64{
 	//					int64validator.Between(1, 64),
@@ -104,51 +111,58 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 	//			"letters": schema.BoolAttribute{
 	//				Description: passwordLettersDescription,
 	//				Optional:    true,
+	//				Computed:    true,
 	//				Default:     booldefault.StaticBool(true),
 	//			},
 	//			"digits": schema.BoolAttribute{
 	//				Description: passwordDigitsDescription,
 	//				Optional:    true,
+	//				Computed:    true,
 	//				Default:     booldefault.StaticBool(true),
 	//			},
 	//			"symbols": schema.BoolAttribute{
 	//				Description: passwordSymbolsDescription,
 	//				Optional:    true,
+	//				Computed:    true,
 	//				Default:     booldefault.StaticBool(true),
 	//			},
 	//		},
 	//	},
 	//}
 
-	passwordRecipeAttributeSchema := schema.SingleNestedAttribute{
-		Description: passwordRecipeDescription,
-		Optional:    true,
-		Attributes: map[string]schema.Attribute{
-			"length": schema.Int64Attribute{
-				Description: passwordLengthDescription,
-				Optional:    true,
-				Default:     int64default.StaticInt64(32),
-				Validators: []validator.Int64{
-					int64validator.Between(1, 64),
-				},
-			},
-			"letters": schema.BoolAttribute{
-				Description: passwordLettersDescription,
-				Optional:    true,
-				Default:     booldefault.StaticBool(true),
-			},
-			"digits": schema.BoolAttribute{
-				Description: passwordDigitsDescription,
-				Optional:    true,
-				Default:     booldefault.StaticBool(true),
-			},
-			"symbols": schema.BoolAttribute{
-				Description: passwordSymbolsDescription,
-				Optional:    true,
-				Default:     booldefault.StaticBool(true),
-			},
-		},
-	}
+	//passwordRecipeAttributeSchema := schema.SingleNestedAttribute{
+	//	Description: passwordRecipeDescription,
+	//	Optional:    true,
+	//	Attributes: map[string]schema.Attribute{
+	//		"length": schema.Int64Attribute{
+	//			Description: passwordLengthDescription,
+	//			Optional:    true,
+	//			Computed:    true,
+	//			Default:     int64default.StaticInt64(32),
+	//			Validators: []validator.Int64{
+	//				int64validator.Between(1, 64),
+	//			},
+	//		},
+	//		"letters": schema.BoolAttribute{
+	//			Description: passwordLettersDescription,
+	//			Optional:    true,
+	//			Computed:    true,
+	//			Default:     booldefault.StaticBool(true),
+	//		},
+	//		"digits": schema.BoolAttribute{
+	//			Description: passwordDigitsDescription,
+	//			Optional:    true,
+	//			Computed:    true,
+	//			Default:     booldefault.StaticBool(true),
+	//		},
+	//		"symbols": schema.BoolAttribute{
+	//			Description: passwordSymbolsDescription,
+	//			Optional:    true,
+	//			Computed:    true,
+	//			Default:     booldefault.StaticBool(true),
+	//		},
+	//	},
+	//}
 
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
@@ -173,6 +187,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 			"category": schema.StringAttribute{
 				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, categories),
 				Optional:            true,
+				Computed:            true,
 				Default:             stringdefault.StaticString("login"),
 				Validators: []validator.String{
 					stringvalidator.OneOfCaseInsensitive(categories...),
@@ -231,7 +246,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 			//	Computed:            true,
 			//	Sensitive:           true,
 			//},
-			"password_recipe": passwordRecipeAttributeSchema,
+			//"password_recipe": passwordRecipeAttributeSchema,
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
@@ -271,6 +286,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 									"type": schema.StringAttribute{
 										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
 										Optional:            true,
+										Computed:            true,
 										Default:             stringdefault.StaticString("STRING"),
 										Validators: []validator.String{
 											stringvalidator.OneOfCaseInsensitive(fieldTypes...),
@@ -282,7 +298,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Computed:            true,
 										Sensitive:           true,
 									},
-									"password_recipe": passwordRecipeAttributeSchema,
+									//"password_recipe": passwordRecipeAttributeSchema,
 								},
 								//Blocks: map[string]schema.Block{
 								//	"password_recipe": passwordRecipeBlockSchema,
@@ -347,10 +363,6 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// For the purposes of this example code, hardcoding a response value to
-	// save into the Terraform state.
-	data.ID = types.StringValue("example-id")
-
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
 	tflog.Trace(ctx, "created a resource")
@@ -371,17 +383,17 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	valutUUID, itemUUID := vaultAndItemUUID(data.ID.ValueString())
-	item, err := r.client.GetItem(ctx, itemUUID, valutUUID)
+	vaultUUID, itemUUID := vaultAndItemUUID(data.ID.ValueString())
+	item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
 	if err != nil {
-		resp.Diagnostics.AddError("Client error", fmt.Sprintf("Could not get item '%s' from vault '%s', got error: %s", itemUUID, valutUUID, err))
+		resp.Diagnostics.AddError("Client error", fmt.Sprintf("Could not get item '%s' from vault '%s', got error: %s", itemUUID, vaultUUID, err))
 		return
 	}
 
 	resp.Diagnostics.Append(itemToData(ctx, item, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
-		//resp.Diagnostics.AddError("Data conversion error", fmt.Sprintf("Could not parse data for item '%s' from vault '%s', got error: %s", itemUUID, valutUUID, err))
+		//resp.Diagnostics.AddError("Data conversion error", fmt.Sprintf("Could not parse data for item '%s' from vault '%s', got error: %s", itemUUID, vaultUUID, err))
 	}
 
 	// Save updated data into Terraform state
@@ -470,10 +482,23 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 	data.Title = types.StringValue(item.Title)
 
 	for _, u := range item.URLs {
-		if u.Primary {
+		if u.Primary && u.URL != "" {
 			data.URL = types.StringValue(u.URL)
 		}
 	}
+
+	// backup implementation
+	//if len(item.Tags) > 0 {
+	//	tagElements := make([]attr.Value, len(item.Tags))
+	//	for i, t := range item.Tags {
+	//		tagElements[i] = types.StringValue(t)
+	//	}
+	//	tags, diagnostics := types.ListValue(types.StringType, tagElements)
+	//	if diagnostics.HasError() {
+	//		return diagnostics
+	//	}
+	//	data.Tags = tags
+	//}
 
 	tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
 	if diagnostics.HasError() {
@@ -481,11 +506,12 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 	}
 	data.Tags = tags
 
-	data.Category = types.StringValue(string(item.Category))
+	data.Category = types.StringValue(strings.ToLower(string(item.Category)))
 
 	dataSections := data.Section
 	for _, s := range item.Sections {
 		section := OnePasswordItemResourceSectionModel{}
+		posSection := -1
 		newSection := true
 
 		for i := range dataSections {
@@ -493,6 +519,7 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 			existingLabel := dataSections[i].Label.ValueString()
 			if (s.ID != "" && s.ID == existingID) || s.Label == existingLabel {
 				section = dataSections[i]
+				posSection = i
 				newSection = false
 			}
 		}
@@ -507,6 +534,7 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 		for _, f := range item.Fields {
 			if f.Section != nil && f.Section.ID == s.ID {
 				dataField := OnePasswordItemResourceFieldModel{}
+				posField := -1
 				newField := true
 
 				for i := range existingFields {
@@ -515,25 +543,28 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 
 					if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
 						dataField = existingFields[i]
+						posField = i
 						newField = false
 					}
 				}
 
-				dataField = OnePasswordItemResourceFieldModel{
-					OnePasswordItemFieldModel: OnePasswordItemFieldModel{
-						ID:      types.StringValue(f.ID),
-						Label:   types.StringValue(f.Label),
-						Purpose: types.StringValue(string(f.Purpose)),
-						Type:    types.StringValue(string(f.Type)),
-						Value:   types.StringValue(f.Value),
-					},
-				}
+				//dataField = OnePasswordItemResourceFieldModel{
+				//	//OnePasswordItemFieldModel: OnePasswordItemFieldModel{
+				//	ID:      types.StringValue(f.ID),
+				//	Label:   types.StringValue(f.Label),
+				//	Purpose: types.StringValue(string(f.Purpose)),
+				//	Type:    types.StringValue(string(f.Type)),
+				//	Value:   types.StringValue(f.Value),
+				//	//},
+				//}
 
-				//dataField.ID = types.StringValue(f.ID)
-				//dataField.Label = types.StringValue(f.Label)
-				//dataField.Purpose = types.StringValue(string(f.Purpose))
-				//dataField.Type = types.StringValue(string(f.Type))
-				//dataField.Value = types.StringValue(f.Value)
+				dataField.ID = types.StringValue(f.ID)
+				dataField.Label = types.StringValue(f.Label)
+				if f.Purpose != "" {
+					dataField.Purpose = types.StringValue(string(f.Purpose))
+				}
+				dataField.Type = types.StringValue(string(f.Type))
+				dataField.Value = types.StringValue(f.Value)
 
 				if f.Type == op.FieldTypeDate {
 					date, err := util.SecondsToYYYYMMDD(f.Value)
@@ -546,22 +577,24 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 					dataField.Value = types.StringValue(date)
 				}
 
-				if f.Recipe != nil {
-					charSets := map[string]bool{}
-					for _, s := range f.Recipe.CharacterSets {
-						charSets[strings.ToLower(s)] = true
-					}
-
-					dataField.Recipe = PasswordRecipeModel{
-						Length:  types.Int64Value(int64(f.Recipe.Length)),
-						Letters: types.BoolValue(charSets["letters"]),
-						Digits:  types.BoolValue(charSets["digits"]),
-						Symbols: types.BoolValue(charSets["symbols"]),
-					}
-				}
+				//if f.Recipe != nil {
+				//	charSets := map[string]bool{}
+				//	for _, s := range f.Recipe.CharacterSets {
+				//		charSets[strings.ToLower(s)] = true
+				//	}
+				//
+				//	dataField.Recipe = []PasswordRecipeModel{{
+				//		Length:  types.Int64Value(int64(f.Recipe.Length)),
+				//		Letters: types.BoolValue(charSets["letters"]),
+				//		Digits:  types.BoolValue(charSets["digits"]),
+				//		Symbols: types.BoolValue(charSets["symbols"]),
+				//	}}
+				//}
 
 				if newField {
 					existingFields = append(existingFields, dataField)
+				} else {
+					existingFields[posField] = dataField
 				}
 			}
 		}
@@ -569,6 +602,8 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 
 		if newSection {
 			dataSections = append(dataSections, section)
+		} else {
+			dataSections[posSection] = section
 		}
 	}
 
@@ -610,20 +645,20 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 	}
 
 	var tags []string
-	diagnostics := data.Tags.ElementsAs(ctx, tags, false)
+	diagnostics := data.Tags.ElementsAs(ctx, &tags, false)
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}
 	item.Tags = tags
 
 	password := data.Password.ValueString()
-	recipe, err := parseGeneratorRecipe(data.Recipe)
-	if err != nil {
-		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-			"Error parsing generator recipe",
-			fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
-		)}
-	}
+	//recipe, err := parseGeneratorRecipe(data.Recipe)
+	//if err != nil {
+	//	return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+	//		"Error parsing generator recipe",
+	//		fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
+	//	)}
+	//}
 
 	switch data.Category.ValueString() {
 	case "login":
@@ -643,7 +678,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Type:     "CONCEALED",
 				Value:    password,
 				Generate: password == "",
-				Recipe:   recipe,
+				//Recipe:   recipe,
 			},
 		}
 	case "password":
@@ -656,7 +691,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Type:     "CONCEALED",
 				Value:    password,
 				Generate: password == "",
-				Recipe:   recipe,
+				//Recipe:   recipe,
 			},
 		}
 	case "database":
@@ -674,7 +709,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Type:     "CONCEALED",
 				Value:    password,
 				Generate: password == "",
-				Recipe:   recipe,
+				//Recipe:   recipe,
 			},
 			{
 				ID:    "hostname",
@@ -746,17 +781,17 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Value:   fieldValue,
 			}
 
-			recipe, err := parseGeneratorRecipe(field.Recipe)
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-					"Item conversion error",
-					fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
-				)}
-			}
-
-			if recipe != nil {
-				addRecipe(f, recipe)
-			}
+			//recipe, err := parseGeneratorRecipe(field.Recipe)
+			//if err != nil {
+			//	return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+			//		"Item conversion error",
+			//		fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
+			//	)}
+			//}
+			//
+			//if recipe != nil {
+			//	addRecipe(f, recipe)
+			//}
 
 			item.Fields = append(item.Fields, f)
 		}
@@ -765,8 +800,12 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 	return item, nil
 }
 
-func parseGeneratorRecipe(recipe PasswordRecipeModel) (*op.GeneratorRecipe, error) {
-	// TODO: Make the case in which user doesn't set the recipe
+func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*op.GeneratorRecipe, error) {
+	if recipeObject == nil || len(recipeObject) == 0 {
+		return nil, nil
+	}
+
+	recipe := recipeObject[0]
 
 	parsed := &op.GeneratorRecipe{
 		Length:        32,
