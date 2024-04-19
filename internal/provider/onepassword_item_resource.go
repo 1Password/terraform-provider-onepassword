@@ -6,11 +6,14 @@ package provider
 import (
 	"context"
 	"fmt"
-	"net/http"
+	"strings"
 
+	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/internal/onepassword/util"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -406,4 +409,135 @@ func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.Delet
 
 func (r *OnePasswordItemResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
+	data.ID = types.StringValue(terraformItemID(item))
+	data.UUID = types.StringValue(item.ID)
+	data.Vault = types.StringValue(item.Vault.ID)
+	data.Title = types.StringValue(item.Title)
+
+	for _, u := range item.URLs {
+		if u.Primary {
+			data.URL = types.StringValue(u.URL)
+		}
+	}
+
+	tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
+	if diagnostics.HasError() {
+		return diagnostics
+	}
+	data.Tags = tags
+
+	data.Category = types.StringValue(string(item.Category))
+
+	dataSections := data.Section
+	for _, s := range item.Sections {
+		section := OnePasswordItemResourceSectionModel{}
+		newSection := true
+
+		for i := range dataSections {
+			existingID := dataSections[i].ID.ValueString()
+			existingLabel := dataSections[i].Label.ValueString()
+			if (s.ID != "" && s.ID == existingID) || s.Label == existingLabel {
+				section = dataSections[i]
+				newSection = false
+			}
+		}
+
+		section.ID = types.StringValue(s.ID)
+		section.Label = types.StringValue(s.Label)
+
+		var existingFields []OnePasswordItemResourceFieldModel
+		if section.Field != nil {
+			existingFields = section.Field
+		}
+		for _, f := range item.Fields {
+			if f.Section != nil && f.Section.ID == s.ID {
+				dataField := OnePasswordItemResourceFieldModel{}
+				newField := true
+
+				for i := range existingFields {
+					existingID := existingFields[i].ID.ValueString()
+					existingLabel := existingFields[i].Label.ValueString()
+
+					if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
+						dataField = existingFields[i]
+						newField = false
+					}
+				}
+
+				dataField = OnePasswordItemResourceFieldModel{
+					OnePasswordItemFieldModel: OnePasswordItemFieldModel{
+						ID:      types.StringValue(f.ID),
+						Label:   types.StringValue(f.Label),
+						Purpose: types.StringValue(string(f.Purpose)),
+						Type:    types.StringValue(string(f.Type)),
+						Value:   types.StringValue(f.Value),
+					},
+				}
+
+				//dataField.ID = types.StringValue(f.ID)
+				//dataField.Label = types.StringValue(f.Label)
+				//dataField.Purpose = types.StringValue(string(f.Purpose))
+				//dataField.Type = types.StringValue(string(f.Type))
+				//dataField.Value = types.StringValue(f.Value)
+
+				if f.Type == op.FieldTypeDate {
+					date, err := util.SecondsToYYYYMMDD(f.Value)
+					if err != nil {
+						return diag.Diagnostics{diag.NewErrorDiagnostic(
+							"Error parsing data",
+							fmt.Sprintf("Failed to parse date value, got error: %s", err),
+						)}
+					}
+					dataField.Value = types.StringValue(date)
+				}
+
+				if f.Recipe != nil {
+					charSets := map[string]bool{}
+					for _, s := range f.Recipe.CharacterSets {
+						charSets[strings.ToLower(s)] = true
+					}
+
+					dataField.Recipe = PasswordRecipeModel{
+						Length:  types.Int64Value(int64(f.Recipe.Length)),
+						Letters: types.BoolValue(charSets["letters"]),
+						Digits:  types.BoolValue(charSets["digits"]),
+						Symbols: types.BoolValue(charSets["symbols"]),
+					}
+				}
+
+				if newField {
+					existingFields = append(existingFields, dataField)
+				}
+			}
+		}
+		section.Field = existingFields
+
+		if newSection {
+			dataSections = append(dataSections, section)
+		}
+	}
+
+	data.Section = dataSections
+
+	for _, f := range item.Fields {
+		switch f.Purpose {
+		case "USERNAME":
+			data.Username = types.StringValue(f.Value)
+		case "PASSWORD":
+			data.Password = types.StringValue(f.Value)
+		// TODO: Uncomment this if we decide to include note_value attribute in the resource schema.
+		//case "NOTES":
+		//	data.NoteValue = types.StringValue(f.Value)
+		default:
+			if f.Section == nil {
+				// TODO: add rest of supported cases for fields with no sections
+				//	data.f.Label), f.Value)
+			}
+		}
+	}
+
+	return nil
 }
