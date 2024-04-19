@@ -402,6 +402,13 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 
 func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var data OnePasswordItemResourceModel
+	var existingData OnePasswordItemResourceModel
+
+	// Read Terraform state data
+	resp.Diagnostics.Append(req.State.Get(ctx, &existingData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -417,6 +424,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	item.ID = existingData.UUID.ValueString()
 
 	payload, _ := json.Marshal(item)
 	tflog.Info(ctx, "update op payload: "+string(payload))
