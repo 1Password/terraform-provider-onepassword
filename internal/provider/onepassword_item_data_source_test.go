@@ -11,8 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccItemDataSource(t *testing.T) {
-	expectedItem := generateItem()
+func TestAccItemDataSourceSections(t *testing.T) {
+	expectedItem := generateItemWithSections()
 	expectedVault := onepassword.Vault{
 		ID:          expectedItem.Vault.ID,
 		Name:        "Name of the vault",
@@ -36,11 +36,34 @@ func TestAccItemDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "url", string(expectedItem.URLs[0].URL)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.id", expectedItem.Sections[0].ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.label", expectedItem.Sections[0].Label),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.label", expectedItem.Fields[6].Label),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.value", expectedItem.Fields[6].Value),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.type", string(expectedItem.Fields[6].Type)),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.purpose", string(expectedItem.Fields[6].Purpose)),
-					//resource.TestCheckResourceAttr("data.onepassword_item.test", "username", expectedItem.Fields[0].Label),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.label", expectedItem.Fields[0].Label),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.value", expectedItem.Fields[0].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.type", string(expectedItem.Fields[0].Type)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.purpose", string(expectedItem.Fields[0].Purpose)),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemDataSourceDatabase(t *testing.T) {
+	expectedItem := generateDatabaseItem()
+	expectedVault := onepassword.Vault{
+		ID:          expectedItem.Vault.ID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "username.value", expectedItem.Fields[0].Value),
 				),
 			},
 		},
@@ -78,12 +101,11 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 	}))
 }
 
-func generateItem() *onepassword.Item {
+func generateItemWithSections() *onepassword.Item {
 	item := onepassword.Item{}
-	item.Fields = generateFields()
 	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
 	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
-	item.Category = "DATABASE"
+	item.Category = "CUSTOM"
 	item.Title = "test item"
 	item.URLs = []onepassword.ItemURL{
 		{
@@ -107,7 +129,29 @@ func generateItem() *onepassword.Item {
 	return &item
 }
 
-func generateFields() []*onepassword.ItemField {
+func generateDatabaseItem() *onepassword.Item {
+	item := onepassword.Item{}
+	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
+	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
+	item.Category = "CUSTOM"
+	item.Title = "test item"
+	item.URLs = []onepassword.ItemURL{
+		{
+			Primary: true,
+			URL:     "some_url.com",
+		},
+	}
+	section := &onepassword.ItemSection{
+		ID:    "1234",
+		Label: "Test Section",
+	}
+	item.Sections = append(item.Sections, section)
+	item.Fields = generateDatabaseFields()
+
+	return &item
+}
+
+func generateDatabaseFields() []*onepassword.ItemField {
 	fields := []*onepassword.ItemField{
 		{
 			Label: "username",

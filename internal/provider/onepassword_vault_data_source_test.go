@@ -9,7 +9,7 @@ import (
 )
 
 func TestAccVaultDataSource(t *testing.T) {
-	expectedItem := generateItem()
+	expectedItem := generateDatabaseItem()
 	expectedVault := onepassword.Vault{
 		ID:          expectedItem.Vault.ID,
 		Name:        "Name of the vault",
