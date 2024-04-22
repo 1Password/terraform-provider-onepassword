@@ -178,9 +178,7 @@ func (p *OnePasswordProvider) DataSources(ctx context.Context) []func() datasour
 }
 
 func (p *OnePasswordProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{
-		NewExampleFunction,
-	}
+	return []func() function.Function{}
 }
 
 func New(version string) func() provider.Provider {
