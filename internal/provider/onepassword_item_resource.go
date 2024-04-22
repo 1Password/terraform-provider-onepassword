@@ -755,7 +755,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
 					"Item conversion error",
-					fmt.Sprintf("Unable to generate a section id: %v", err),
+					fmt.Sprintf("Unable to generate a section ID, has error: %v", err),
 				)}
 			}
 			sectionID = sid
