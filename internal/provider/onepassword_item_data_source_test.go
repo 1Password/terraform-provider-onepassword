@@ -29,9 +29,18 @@ func TestAccItemDataSource(t *testing.T) {
 				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", string(expectedItem.Category)),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "urls", string(expectedItem.URLs[0].URL)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "url", string(expectedItem.URLs[0].URL)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.id", expectedItem.Sections[0].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.label", expectedItem.Sections[0].Label),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.label", expectedItem.Fields[6].Label),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.value", expectedItem.Fields[6].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.type", string(expectedItem.Fields[6].Type)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.purpose", string(expectedItem.Fields[6].Purpose)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "username", expectedItem.Fields[0].Label),
 				),
 			},
 		},
@@ -75,7 +84,7 @@ func generateItem() *onepassword.Item {
 	item.Fields = generateFields()
 	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
 	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
-	item.Category = "CUSTOM"
+	item.Category = "DATABASE"
 	item.Title = "test item"
 	item.URLs = []onepassword.ItemURL{
 		{
@@ -83,6 +92,19 @@ func generateItem() *onepassword.Item {
 			URL:     "some_url.com",
 		},
 	}
+	section := &onepassword.ItemSection{
+		ID:    "1234",
+		Label: "Test Section",
+	}
+	item.Sections = append(item.Sections, section)
+	item.Fields = append(item.Fields, &onepassword.ItemField{
+		ID:      "23456",
+		Type:    "STRING",
+		Label:   "Secret Information",
+		Value:   "Password123",
+		Section: section,
+	})
+
 	return &item
 }
 
