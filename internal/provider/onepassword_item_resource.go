@@ -89,38 +89,38 @@ func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.Met
 
 func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	passwordRecipeBlockSchema := schema.ListNestedBlock{
-		Description: passwordRecipeDescription,
+		MarkdownDescription: passwordRecipeDescription,
 		Validators: []validator.List{
 			listvalidator.SizeAtMost(1),
 		},
 		NestedObject: schema.NestedBlockObject{
 			Attributes: map[string]schema.Attribute{
 				"length": schema.Int64Attribute{
-					Description: passwordLengthDescription,
-					Optional:    true,
-					Computed:    true,
-					Default:     int64default.StaticInt64(32),
+					MarkdownDescription: passwordLengthDescription,
+					Optional:            true,
+					Computed:            true,
+					Default:             int64default.StaticInt64(32),
 					Validators: []validator.Int64{
 						int64validator.Between(1, 64),
 					},
 				},
 				"letters": schema.BoolAttribute{
-					Description: passwordLettersDescription,
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(true),
+					MarkdownDescription: passwordLettersDescription,
+					Optional:            true,
+					Computed:            true,
+					Default:             booldefault.StaticBool(true),
 				},
 				"digits": schema.BoolAttribute{
-					Description: passwordDigitsDescription,
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(true),
+					MarkdownDescription: passwordDigitsDescription,
+					Optional:            true,
+					Computed:            true,
+					Default:             booldefault.StaticBool(true),
 				},
 				"symbols": schema.BoolAttribute{
-					Description: passwordSymbolsDescription,
-					Optional:    true,
-					Computed:    true,
-					Default:     booldefault.StaticBool(true),
+					MarkdownDescription: passwordSymbolsDescription,
+					Optional:            true,
+					Computed:            true,
+					Default:             booldefault.StaticBool(true),
 				},
 			},
 		},
