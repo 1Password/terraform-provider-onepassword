@@ -1,7 +1,7 @@
 export MAIN_BRANCH ?= main
 
 .DEFAULT_GOAL := help
-.PHONY: test build clean test/coverage release/prepare release/tag .check_bump_type .check_git_clean help
+.PHONY: test testacc build clean test/coverage release/prepare release/tag .check_bump_type .check_git_clean help
 
 GIT_BRANCH := $(shell git symbolic-ref --short HEAD)
 WORKTREE_CLEAN := $(shell git status --porcelain 1>/dev/null 2>&1; echo $$?)
@@ -16,6 +16,9 @@ test:	## Run test suite
 
 test/coverage:	## Run test suite with coverage report
 	go test -v ./... -cover
+
+testacc: ## Run acceptance tests
+	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
 build: clean	## Build project
 	go build -o ./dist/terraform-provider-onepassword .
