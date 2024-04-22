@@ -326,8 +326,20 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			data.NoteValue = types.StringValue(f.Value)
 		default:
 			if f.Section == nil {
-				// TODO: add rest of supported cases for fields with no sections
-				//	data.f.Label), f.Value)
+				switch f.Label {
+				case "username":
+					data.Username = types.StringValue(f.Value)
+				case "password":
+					data.Password = types.StringValue(f.Value)
+				case "hostname":
+					data.Hostname = types.StringValue(f.Value)
+				case "database":
+					data.Database = types.StringValue(f.Value)
+				case "port":
+					data.Port = types.StringValue(f.Value)
+				case "type":
+					data.Type = types.StringValue(f.Value)
+				}
 			}
 		}
 	}
