@@ -1,125 +1,81 @@
 package provider
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
-
-// func TestDataSourceOnePasswordItemRead(t *testing.T) {
-// 	expectedItem := generateItem()
-// 	&testClient{
-// 		GetItemFunc: func(uuid string, vaultUUID string) (*onepassword.Item, error) {
-// 			return expectedItem, nil
-// 		},
-// 	}
-
-// 	dataSourceData := generateDataSource(t, expectedItem)
-
-// }
-
-// func generateDataSource(t *testing.T, item *onepassword.Item) *schema.ResourceData {
-// 	dataSourceData := schema.TestResourceDataRaw(t, dataSourceOnepasswordItem().Schema, nil)
-// 	dataSourceData.Set("vault", item.Vault.ID)
-// 	dataSourceData.SetId(fmt.Sprintf("vaults/%s/items/%s", item.Vault.ID, item.ID))
-// 	return dataSourceData
-// }
-
-// func generateItem() *onepassword.Item {
-// 	item := onepassword.Item{}
-// 	item.Fields = generateFields()
-// 	item.ID = "79841a98-dd4a-4c34-8be5-32dca20a7328"
-// 	item.Vault.ID = "df2e9643-45ad-4ff9-8b98-996f801afa75"
-// 	item.Category = "USERNAME"
-// 	item.Title = "test item"
-// 	item.URLs = []onepassword.ItemURL{
-// 		{
-// 			Primary: true,
-// 			URL:     "some_url.com",
-// 		},
-// 	}
-// 	return &item
-// }
-
-// func generateFields() []*onepassword.ItemField {
-// 	fields := []*onepassword.ItemField{
-// 		{
-// 			Label: "username",
-// 			Value: "test_user",
-// 		},
-// 		{
-// 			Label: "password",
-// 			Value: "test_password",
-// 		},
-// 		{
-// 			Label: "hostname",
-// 			Value: "test_host",
-// 		},
-// 		{
-// 			Label: "database",
-// 			Value: "test_database",
-// 		},
-// 		{
-// 			Label: "port",
-// 			Value: "test_port",
-// 		},
-// 		{
-// 			Label: "type",
-// 			Value: "test_type",
-// 		},
-// 	}
-// 	return fields
-// }
 
 func TestAccItemDataSource(t *testing.T) {
 	expectedItem := generateItem()
+	expectedVault := onepassword.Vault{
+		ID:          expectedItem.Vault.ID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: providerConfig + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					//testDataSourceOnePasswordItemRead(expectedItem),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedItem.Vault.ID),
-					// testDataSourceOnePasswordItemRead()
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", string(expectedItem.Category)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "urls", string(expectedItem.URLs[0].URL)),
 				),
 			},
 		},
 	})
 }
 
-func testDataSourceOnePasswordItemRead(expectedItem *onepassword.Item) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		return fmt.Errorf("some error")
+func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.Vault, t *testing.T) *httptest.Server {
+	itemBytes, err := json.Marshal(expectedItem)
+	if err != nil {
+		t.Errorf("error marshaling item for testing: %s", err)
 	}
 
-	// expectedItem := generateItem()
-	// meta := &testClient{
-	// 	GetItemFunc: func(uuid string, vaultUUID string) (*onepassword.Item, error) {
-	// 		return expectedItem, nil
-	// 	},
-	// }
+	vaultBytes, err := json.Marshal(expectedVault)
+	if err != nil {
+		t.Errorf("error marshaling vault for testing: %s", err)
+	}
 
-	// dataSourceData := generateDataSource(t, expectedItem)
-	// dataSourceData.Set("uuid", expectedItem.ID)
-
-	// err := dataSourceOnepasswordItemRead(context.Background(), dataSourceData, meta)
-	// if err != nil {
-	// 	t.Errorf("Unexpected error occured")
-	// }
-	// compareItemToSource(t, dataSourceData, expectedItem)
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items/%s", expectedItem.Vault.ID, expectedItem.ID) {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, err := w.Write(itemBytes)
+			if err != nil {
+				t.Errorf("error writing body: %s", err)
+			}
+		} else if r.URL.Path == fmt.Sprintf("/v1/vaults/%s", expectedItem.Vault.ID) {
+			t.Errorf("specific path: %s", r.URL.Path)
+			w.Header().Set("Content-Type", "application/json")
+			_, err := w.Write(vaultBytes)
+			if err != nil {
+				t.Errorf("error writing body: %s", err)
+			}
+		} else {
+			t.Errorf("not handled")
+		}
+	}))
 }
 
 func generateItem() *onepassword.Item {
 	item := onepassword.Item{}
 	item.Fields = generateFields()
-	item.ID = "79841a98-dd4a-4c34-8be5-32dca20a7328"
-	item.Vault.ID = "df2e9643-45ad-4ff9-8b98-996f801afa75"
-	item.Category = "USERNAME"
+	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
+	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
+	item.Category = "CUSTOM"
 	item.Title = "test item"
 	item.URLs = []onepassword.ItemURL{
 		{

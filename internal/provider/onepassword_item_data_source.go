@@ -212,6 +212,7 @@ func (d *OnePasswordItemDataSource) Configure(ctx context.Context, req datasourc
 func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var data OnePasswordItemDataSourceModel
 
+	tflog.Debug(ctx, fmt.Sprintf("something %v", req.Config))
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
