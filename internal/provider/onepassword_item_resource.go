@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -78,7 +75,6 @@ type OnePasswordItemResourceSectionModel struct {
 }
 
 type OnePasswordItemResourceFieldModel struct {
-	//OnePasswordItemFieldModel
 	ID      types.String          `tfsdk:"id"`
 	Label   types.String          `tfsdk:"label"`
 	Purpose types.String          `tfsdk:"purpose"`
@@ -637,7 +633,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Purpose:  "PASSWORD",
 				Type:     "CONCEALED",
 				Value:    password,
-				Generate: password == "",
+				Generate: password == "" && recipe != nil,
 				Recipe:   recipe,
 			},
 		}
@@ -650,7 +646,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Purpose:  "PASSWORD",
 				Type:     "CONCEALED",
 				Value:    password,
-				Generate: password == "",
+				Generate: password == "" && recipe != nil,
 				Recipe:   recipe,
 			},
 		}
@@ -668,7 +664,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Label:    "password",
 				Type:     "CONCEALED",
 				Value:    password,
-				Generate: password == "",
+				Generate: password == "" && recipe != nil,
 				Recipe:   recipe,
 			},
 			{
