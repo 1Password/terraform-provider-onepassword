@@ -130,40 +130,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 		},
 	}
 
-	//passwordRecipeAttributeSchema := schema.SingleNestedAttribute{
-	//	Description: passwordRecipeDescription,
-	//	Optional:    true,
-	//	Attributes: map[string]schema.Attribute{
-	//		"length": schema.Int64Attribute{
-	//			Description: passwordLengthDescription,
-	//			Optional:    true,
-	//			Computed:    true,
-	//			Default:     int64default.StaticInt64(32),
-	//			Validators: []validator.Int64{
-	//				int64validator.Between(1, 64),
-	//			},
-	//		},
-	//		"letters": schema.BoolAttribute{
-	//			Description: passwordLettersDescription,
-	//			Optional:    true,
-	//			Computed:    true,
-	//			Default:     booldefault.StaticBool(true),
-	//		},
-	//		"digits": schema.BoolAttribute{
-	//			Description: passwordDigitsDescription,
-	//			Optional:    true,
-	//			Computed:    true,
-	//			Default:     booldefault.StaticBool(true),
-	//		},
-	//		"symbols": schema.BoolAttribute{
-	//			Description: passwordSymbolsDescription,
-	//			Optional:    true,
-	//			Computed:    true,
-	//			Default:     booldefault.StaticBool(true),
-	//		},
-	//	},
-	//}
-
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "A 1Password Item",
@@ -246,7 +212,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 			//	Computed:            true,
 			//	Sensitive:           true,
 			//},
-			//"password_recipe": passwordRecipeAttributeSchema,
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
@@ -298,7 +263,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Computed:            true,
 										Sensitive:           true,
 									},
-									//"password_recipe": passwordRecipeAttributeSchema,
 								},
 								Blocks: map[string]schema.Block{
 									"password_recipe": passwordRecipeBlockSchema,
@@ -393,7 +357,6 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 	resp.Diagnostics.Append(itemToData(ctx, item, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
-		//resp.Diagnostics.AddError("Data conversion error", fmt.Sprintf("Could not parse data for item '%s' from vault '%s', got error: %s", itemUUID, vaultUUID, err))
 	}
 
 	// Save updated data into Terraform state
@@ -495,19 +458,6 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 		}
 	}
 
-	// backup implementation
-	//if len(item.Tags) > 0 {
-	//	tagElements := make([]attr.Value, len(item.Tags))
-	//	for i, t := range item.Tags {
-	//		tagElements[i] = types.StringValue(t)
-	//	}
-	//	tags, diagnostics := types.ListValue(types.StringType, tagElements)
-	//	if diagnostics.HasError() {
-	//		return diagnostics
-	//	}
-	//	data.Tags = tags
-	//}
-
 	tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
 	if diagnostics.HasError() {
 		return diagnostics
@@ -555,16 +505,6 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 						newField = false
 					}
 				}
-
-				//dataField = OnePasswordItemResourceFieldModel{
-				//	//OnePasswordItemFieldModel: OnePasswordItemFieldModel{
-				//	ID:      types.StringValue(f.ID),
-				//	Label:   types.StringValue(f.Label),
-				//	Purpose: types.StringValue(string(f.Purpose)),
-				//	Type:    types.StringValue(string(f.Type)),
-				//	Value:   types.StringValue(f.Value),
-				//	//},
-				//}
 
 				dataField.ID = types.StringValue(f.ID)
 				dataField.Label = types.StringValue(f.Label)

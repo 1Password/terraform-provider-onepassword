@@ -142,51 +142,6 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Optional:            true,
 				Sensitive:           true,
 			},
-			//"section": schema.ListNestedAttribute{
-			//	MarkdownDescription: sectionDescription,
-			//	Computed:            true,
-			//	NestedObject: schema.NestedAttributeObject{
-			//		Attributes: map[string]schema.Attribute{
-			//			"id": schema.StringAttribute{
-			//				MarkdownDescription: sectionIDDescription,
-			//				Computed:            true,
-			//			},
-			//			"label": schema.StringAttribute{
-			//				MarkdownDescription: sectionLabelDescription,
-			//				Computed:            true,
-			//			},
-			//			"field": schema.ListNestedAttribute{
-			//				MarkdownDescription: sectionFieldsDescription,
-			//				Computed:            true,
-			//				NestedObject: schema.NestedAttributeObject{
-			//					Attributes: map[string]schema.Attribute{
-			//						"id": schema.StringAttribute{
-			//							MarkdownDescription: fieldIDDescription,
-			//							Computed:            true,
-			//						},
-			//						"label": schema.StringAttribute{
-			//							MarkdownDescription: fieldLabelDescription,
-			//							Computed:            true,
-			//						},
-			//						"purpose": schema.StringAttribute{
-			//							MarkdownDescription: fieldPurposeDescription,
-			//							Computed:            true,
-			//						},
-			//						"type": schema.StringAttribute{
-			//							MarkdownDescription: fieldTypeDescription,
-			//							Computed:            true,
-			//						},
-			//						"value": schema.StringAttribute{
-			//							MarkdownDescription: fieldValueDescription,
-			//							Computed:            true,
-			//							Sensitive:           true,
-			//						},
-			//					},
-			//				},
-			//			},
-			//		},
-			//	},
-			//},
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
