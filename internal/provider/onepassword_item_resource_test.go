@@ -43,10 +43,20 @@ package provider
 // 	})
 // }
 
-// func testAccExampleResourceConfig(configurableAttribute string) string {
+// func testAccDataBaseResourceConfig(configurableAttribute string) string {
 // 	return fmt.Sprintf(`
-// resource "scaffolding_example" "test" {
-//   configurable_attribute = %[1]q
-// }
+// 	resource "onepassword_item" "demo-database" {
+// 		vault = data.onepassword_vault.acceptance-tests.uuid
+
+// 		title = "Demo TF Resource - Database"
+// 		category = "database"
+
+// 		type = "MySQL"
+// 		hostname = "http://my.fancydomain.com"
+// 		port = "3000"
+// 		database = "badass"
+// 		username = "theboss"
+// 		password_recipe {}
+// 	}
 // `, configurableAttribute)
 // }
