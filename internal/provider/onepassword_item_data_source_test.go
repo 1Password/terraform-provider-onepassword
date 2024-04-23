@@ -34,6 +34,7 @@ func TestAccItemDataSourceSections(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", string(expectedItem.Category)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "url", string(expectedItem.URLs[0].URL)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "tags.0", string(expectedItem.Tags[0])),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.id", expectedItem.Sections[0].ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.label", expectedItem.Sections[0].Label),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.label", expectedItem.Fields[0].Label),
@@ -63,7 +64,20 @@ func TestAccItemDataSourceDatabase(t *testing.T) {
 			{
 				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "username.value", expectedItem.Fields[0].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", string(expectedItem.Category)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "url", string(expectedItem.URLs[0].URL)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "tags.0", string(expectedItem.Tags[0])),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "username", expectedItem.Fields[0].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "password", expectedItem.Fields[1].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "hostname", expectedItem.Fields[2].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "database", expectedItem.Fields[3].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "port", expectedItem.Fields[4].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "type", expectedItem.Fields[5].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "note_value", expectedItem.Fields[6].Value),
 				),
 			},
 		},
@@ -101,7 +115,7 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 	}))
 }
 
-func generateItemWithSections() *onepassword.Item {
+func generateBaseItem() onepassword.Item {
 	item := onepassword.Item{}
 	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
 	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
@@ -113,6 +127,15 @@ func generateItemWithSections() *onepassword.Item {
 			URL:     "some_url.com",
 		},
 	}
+	item.Tags = []string{
+		"tag1",
+	}
+
+	return item
+}
+
+func generateItemWithSections() *onepassword.Item {
+	item := generateBaseItem()
 	section := &onepassword.ItemSection{
 		ID:    "1234",
 		Label: "Test Section",
@@ -130,22 +153,7 @@ func generateItemWithSections() *onepassword.Item {
 }
 
 func generateDatabaseItem() *onepassword.Item {
-	item := onepassword.Item{}
-	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
-	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
-	item.Category = "CUSTOM"
-	item.Title = "test item"
-	item.URLs = []onepassword.ItemURL{
-		{
-			Primary: true,
-			URL:     "some_url.com",
-		},
-	}
-	section := &onepassword.ItemSection{
-		ID:    "1234",
-		Label: "Test Section",
-	}
-	item.Sections = append(item.Sections, section)
+	item := generateBaseItem()
 	item.Fields = generateDatabaseFields()
 
 	return &item
@@ -176,6 +184,11 @@ func generateDatabaseFields() []*onepassword.ItemField {
 		{
 			Label: "type",
 			Value: "test_type",
+		},
+		{
+			Label:   "notes",
+			Value:   "note_value",
+			Purpose: "NOTES",
 		},
 	}
 	return fields
