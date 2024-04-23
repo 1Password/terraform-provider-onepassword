@@ -58,8 +58,7 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 			} else {
 				t.Errorf("Unexpected request: %s Consider adding this endpoint to the test server", r.URL.String())
 			}
-		}
-		if r.Method == http.MethodPost {
+		} else if r.Method == http.MethodPost {
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items", expectedItem.Vault.ID) {
 				itemToReturn := convertBodyToItem(r, t)
 				itemToReturn.Fields = []*onepassword.ItemField{
@@ -83,6 +82,8 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 			}
 		} else if r.Method == http.MethodDelete {
 			w.WriteHeader(http.StatusNoContent)
+		} else {
+			t.Errorf("Method not supported: %s", r.Method)
 		}
 	}))
 }
