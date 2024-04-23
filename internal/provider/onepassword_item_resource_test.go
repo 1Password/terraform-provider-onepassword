@@ -8,18 +8,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccExampleResource(t *testing.T) {
-	expectedItem := generateDatabaseItem()
+func TestAccItemResource(t *testing.T) {
+	expectedItem := generateSimpleDatabaseItem()
 	expectedVault := onepassword.Vault{
 		ID:          expectedItem.Vault.ID,
-		Name:        "Name of the vault",
-		Description: "This vault will be retrieved",
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
 	}
 
 	testServer := setupTestServer(expectedItem, expectedVault, t)
 	defer testServer.Close()
 
-	resource.Test(t, resource.TestCase{
+	resource.UnitTest(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{

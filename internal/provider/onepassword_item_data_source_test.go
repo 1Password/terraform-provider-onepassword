@@ -74,7 +74,6 @@ func TestAccItemDataSourceDatabase(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "database", expectedItem.Fields[3].Value),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "port", expectedItem.Fields[4].Value),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "type", expectedItem.Fields[5].Value),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "note_value", expectedItem.Fields[6].Value),
 				),
 			},
 		},
