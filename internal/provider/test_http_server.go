@@ -22,8 +22,14 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 		t.Errorf("error marshaling vault for testing: %s", err)
 	}
 
+	itemListBytes, err := json.Marshal([]onepassword.Item{*expectedItem})
+	if err != nil {
+		t.Errorf("error marshaling itemlist for testing: %s", err)
+	}
+
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items/%s", expectedItem.Vault.ID, expectedItem.ID) {
+			// Mock returning an item specified by uuid
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
 			_, err := w.Write(itemBytes)
@@ -31,13 +37,21 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 				t.Errorf("error writing body: %s", err)
 			}
 		} else if r.URL.Path == fmt.Sprintf("/v1/vaults/%s", expectedItem.Vault.ID) {
+			// Mock returning a vault specified by uuid
 			w.Header().Set("Content-Type", "application/json")
 			_, err := w.Write(vaultBytes)
 			if err != nil {
 				t.Errorf("error writing body: %s", err)
 			}
+		} else if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items", expectedItem.Vault.ID) {
+			// Mock returning a list of items for a vault specified by uuid
+			w.Header().Set("Content-Type", "application/json")
+			_, err := w.Write(itemListBytes)
+			if err != nil {
+				t.Errorf("error writing body: %s", err)
+			}
 		} else {
-			t.Errorf("not handled")
+			t.Errorf("Unexpected request: %s Consider adding this endpoint to the test server", r.URL.String())
 		}
 	}))
 }

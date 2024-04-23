@@ -41,6 +41,7 @@ func generateItemWithSections() *onepassword.Item {
 
 func generateDatabaseItem() *onepassword.Item {
 	item := generateBaseItem()
+	item.Category = "DATABASE"
 	item.Fields = generateDatabaseFields()
 
 	return &item
@@ -70,7 +71,7 @@ func generateDatabaseFields() []*onepassword.ItemField {
 		},
 		{
 			Label: "type",
-			Value: "test_type",
+			Value: "mysql",
 		},
 		{
 			Label:   "notes",
