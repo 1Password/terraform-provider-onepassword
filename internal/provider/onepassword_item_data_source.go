@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
@@ -246,7 +247,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 	data.Tags = tags
 
-	data.Category = types.StringValue(string(item.Category))
+	data.Category = types.StringValue(strings.ToLower(string(item.Category)))
 
 	for _, s := range item.Sections {
 		section := OnePasswordItemSectionModel{
