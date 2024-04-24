@@ -490,7 +490,9 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 			return diagnostics
 		}
 
-		data.Tags = tags
+		if item.Tags != nil || dataTags == nil {
+			data.Tags = tags
+		}
 	}
 
 	data.Category = setStringValue(strings.ToLower(string(item.Category)))
