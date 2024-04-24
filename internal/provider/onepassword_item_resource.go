@@ -518,7 +518,12 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 					}
 				}
 
-				dataField.ID = setStringValue(f.ID)
+				fieldID := f.ID
+				if f.Type == op.FieldTypeOTP && !strings.HasPrefix(dataField.ID.ValueString(), OTPFieldIDPrefix) {
+					fieldID = strings.TrimPrefix(fieldID, OTPFieldIDPrefix)
+				}
+
+				dataField.ID = setStringValue(fieldID)
 				dataField.Label = setStringValue(f.Label)
 				dataField.Purpose = setStringValue(string(f.Purpose))
 				dataField.Type = setStringValue(string(f.Type))
@@ -731,6 +736,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 
 		sectionFields := section.Field
 		for _, field := range sectionFields {
+			fieldID := field.ID.ValueString()
 			fieldType := op.ItemFieldType(field.Type.ValueString())
 			fieldValue := field.Value.ValueString()
 			if fieldType == op.FieldTypeDate {
@@ -740,11 +746,15 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 						fmt.Sprintf("Invalid date value provided '%s'. Should be in YYYY-MM-DD format", fieldValue),
 					)}
 				}
+			} else if fieldType == op.FieldTypeOTP {
+				if fieldID != "" && !strings.HasPrefix(fieldID, OTPFieldIDPrefix) {
+					fieldID = OTPFieldIDPrefix + fieldID
+				}
 			}
 
 			f := &op.ItemField{
 				Section: s,
-				ID:      field.ID.ValueString(),
+				ID:      fieldID,
 				Type:    fieldType,
 				Purpose: op.ItemFieldPurpose(field.Purpose.ValueString()),
 				Label:   field.Label.ValueString(),

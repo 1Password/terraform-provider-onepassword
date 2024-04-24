@@ -39,6 +39,8 @@ const (
 	passwordSymbolsDescription = "Use symbols [!@.-_*] when generating the password."
 
 	enumDescription = "%s One of %q"
+
+	OTPFieldIDPrefix = "TOTP_"
 )
 
 var (
