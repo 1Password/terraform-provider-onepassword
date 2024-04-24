@@ -6,17 +6,7 @@ func generateBaseItem() onepassword.Item {
 	item := onepassword.Item{}
 	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
 	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
-	item.Category = "LOGIN"
 	item.Title = "test item"
-	item.URLs = []onepassword.ItemURL{
-		{
-			Primary: true,
-			URL:     "some_url.com",
-		},
-	}
-	item.Tags = []string{
-		"tag1",
-	}
 
 	return item
 }
@@ -47,13 +37,11 @@ func generateDatabaseItem() *onepassword.Item {
 	return &item
 }
 
-func generateSimpleDatabaseItem() *onepassword.Item {
-	item := onepassword.Item{}
-	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
-	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
-	item.Title = "test item"
-	item.Category = "DATABASE"
-	item.Fields = generateDatabaseFields()
+func generatePasswordItem() *onepassword.Item {
+	item := generateBaseItem()
+	item.Category = "PASSWORD"
+	item.Fields = generatePasswordFields()
+
 	return &item
 }
 
@@ -82,6 +70,20 @@ func generateDatabaseFields() []*onepassword.ItemField {
 		{
 			Label: "type",
 			Value: "mysql",
+		},
+	}
+	return fields
+}
+
+func generatePasswordFields() []*onepassword.ItemField {
+	fields := []*onepassword.ItemField{
+		{
+			Label: "username",
+			Value: "test_user",
+		},
+		{
+			Label: "password",
+			Value: "test_password",
 		},
 	}
 	return fields
