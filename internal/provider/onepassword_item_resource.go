@@ -443,14 +443,14 @@ func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
 }
 
 func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
-	data.ID = types.StringValue(terraformItemID(item))
-	data.UUID = types.StringValue(item.ID)
-	data.Vault = types.StringValue(item.Vault.ID)
-	data.Title = types.StringValue(item.Title)
+	data.ID = setStringValue(itemTerraformID(item))
+	data.UUID = setStringValue(item.ID)
+	data.Vault = setStringValue(item.Vault.ID)
+	data.Title = setStringValue(item.Title)
 
 	for _, u := range item.URLs {
-		if u.Primary && u.URL != "" {
-			data.URL = types.StringValue(u.URL)
+		if u.Primary {
+			data.URL = setStringValue(u.URL)
 		}
 	}
 
@@ -460,7 +460,7 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 	}
 	data.Tags = tags
 
-	data.Category = types.StringValue(strings.ToLower(string(item.Category)))
+	data.Category = setStringValue(strings.ToLower(string(item.Category)))
 
 	dataSections := data.Section
 	for _, s := range item.Sections {
@@ -478,8 +478,8 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 			}
 		}
 
-		section.ID = types.StringValue(s.ID)
-		section.Label = types.StringValue(s.Label)
+		section.ID = setStringValue(s.ID)
+		section.Label = setStringValue(s.Label)
 
 		var existingFields []OnePasswordItemResourceFieldModel
 		if section.Field != nil {
@@ -502,13 +502,11 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 					}
 				}
 
-				dataField.ID = types.StringValue(f.ID)
-				dataField.Label = types.StringValue(f.Label)
-				if f.Purpose != "" {
-					dataField.Purpose = types.StringValue(string(f.Purpose))
-				}
-				dataField.Type = types.StringValue(string(f.Type))
-				dataField.Value = types.StringValue(f.Value)
+				dataField.ID = setStringValue(f.ID)
+				dataField.Label = setStringValue(f.Label)
+				dataField.Purpose = setStringValue(string(f.Purpose))
+				dataField.Type = setStringValue(string(f.Type))
+				dataField.Value = setStringValue(f.Value)
 
 				if f.Type == op.FieldTypeDate {
 					date, err := util.SecondsToYYYYMMDD(f.Value)
@@ -518,7 +516,7 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 							fmt.Sprintf("Failed to parse date value, got error: %s", err),
 						)}
 					}
-					dataField.Value = types.StringValue(date)
+					dataField.Value = setStringValue(date)
 				}
 
 				if f.Recipe != nil {
@@ -556,27 +554,27 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 	for _, f := range item.Fields {
 		switch f.Purpose {
 		case "USERNAME":
-			data.Username = types.StringValue(f.Value)
+			data.Username = setStringValue(f.Value)
 		case "PASSWORD":
-			data.Password = types.StringValue(f.Value)
+			data.Password = setStringValue(f.Value)
 		// TODO: Uncomment this if we decide to include note_value attribute in the resource schema.
 		//case "NOTES":
-		//	data.NoteValue = types.StringValue(f.Value)
+		//	data.NoteValue = setStringValue(f.Value)
 		default:
 			if f.Section == nil {
 				switch f.Label {
 				case "username":
-					data.Username = types.StringValue(f.Value)
+					data.Username = setStringValue(f.Value)
 				case "password":
-					data.Password = types.StringValue(f.Value)
+					data.Password = setStringValue(f.Value)
 				case "hostname":
-					data.Hostname = types.StringValue(f.Value)
+					data.Hostname = setStringValue(f.Value)
 				case "database":
-					data.Database = types.StringValue(f.Value)
+					data.Database = setStringValue(f.Value)
 				case "port":
-					data.Port = types.StringValue(f.Value)
+					data.Port = setStringValue(f.Value)
 				case "type":
-					data.Type = types.StringValue(f.Value)
+					data.Type = setStringValue(f.Value)
 				}
 			}
 		}
