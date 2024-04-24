@@ -603,7 +603,7 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 					data.Username = setStringValue(f.Value)
 				case "password":
 					data.Password = setStringValue(f.Value)
-				case "hostname":
+				case "hostname", "server":
 					data.Hostname = setStringValue(f.Value)
 				case "database":
 					data.Database = setStringValue(f.Value)

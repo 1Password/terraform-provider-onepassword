@@ -132,13 +132,13 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 			"password": schema.StringAttribute{
 				MarkdownDescription: passwordDescription,
 				Computed:            true,
-				Sensitive:           true,
+				//Sensitive:           true,
 			},
 			"note_value": schema.StringAttribute{
 				MarkdownDescription: noteValueDescription,
 				Computed:            true,
 				Optional:            true,
-				Sensitive:           true,
+				//Sensitive:           true,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -178,7 +178,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 									"value": schema.StringAttribute{
 										MarkdownDescription: fieldValueDescription,
 										Computed:            true,
-										Sensitive:           true,
+										//Sensitive:           true,
 									},
 								},
 							},
@@ -285,7 +285,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.Username = types.StringValue(f.Value)
 				case "password":
 					data.Password = types.StringValue(f.Value)
-				case "hostname":
+				case "hostname", "server":
 					data.Hostname = types.StringValue(f.Value)
 				case "database":
 					data.Database = types.StringValue(f.Value)
