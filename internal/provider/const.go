@@ -1,5 +1,11 @@
 package provider
 
+import (
+	"strings"
+
+	op "github.com/1Password/connect-sdk-go/onepassword"
+)
+
 const (
 	terraformItemIDDescription = "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`."
 
@@ -44,8 +50,29 @@ const (
 )
 
 var (
-	categories    = []string{"login", "password", "database"}
-	dbTypes       = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
-	fieldPurposes = []string{"USERNAME", "PASSWORD", "NOTES"}
-	fieldTypes    = []string{"STRING", "EMAIL", "CONCEALED", "URL", "OTP", "DATE", "MONTH_YEAR", "MENU", "PHONE"}
+	dbTypes = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
+
+	categories = []string{
+		strings.ToLower(string(op.Login)),
+		strings.ToLower(string(op.Password)),
+		strings.ToLower(string(op.Database)),
+	}
+
+	fieldPurposes = []string{
+		string(op.FieldPurposeUsername),
+		string(op.FieldPurposePassword),
+		string(op.FieldPurposeNotes),
+	}
+
+	fieldTypes = []string{
+		string(op.FieldTypeString),
+		string(op.FieldTypeConcealed),
+		string(op.FieldTypeEmail),
+		string(op.FieldTypeURL),
+		string(op.FieldTypeOTP),
+		string(op.FieldTypeDate),
+		string(op.FieldTypeMonthYear),
+		string(op.FieldTypeMenu),
+		string(op.FieldTypePhone),
+	}
 )
