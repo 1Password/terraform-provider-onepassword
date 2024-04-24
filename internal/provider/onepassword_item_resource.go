@@ -374,18 +374,35 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 }
 
 func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data OnePasswordItemResourceModel
+	var stateData, planData OnePasswordItemResourceModel
 
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
+	// Read Terraform state data into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &planData)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if planData.Recipe != nil {
+		planData.Password = stateData.Password
+	}
+
+	for i, s := range planData.Section {
+		for j, f := range s.Field {
+			if f.Recipe != nil {
+				planData.Section[i].Field[j].Value = stateData.Section[i].Field[j].Value
+			}
+		}
+	}
+
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, diagnostics := dataToItem(ctx, data)
+	item, diagnostics := dataToItem(ctx, planData)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -394,19 +411,19 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	payload, _ := json.Marshal(item)
 	tflog.Info(ctx, "update op payload: "+string(payload))
 
-	updatedItem, err := r.client.UpdateItem(ctx, item, data.Vault.ValueString())
+	updatedItem, err := r.client.UpdateItem(ctx, item, planData.Vault.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", planData.UUID.ValueString(), planData.Vault.ValueString(), err))
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &data)...)
+	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &planData)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &planData)...)
 }
 
 func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -652,7 +669,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Purpose:  "PASSWORD",
 				Type:     "CONCEALED",
 				Value:    password,
-				Generate: password == "" && recipe != nil,
+				Generate: password == "",
 				Recipe:   recipe,
 			},
 		}
@@ -665,7 +682,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Purpose:  "PASSWORD",
 				Type:     "CONCEALED",
 				Value:    password,
-				Generate: password == "" && recipe != nil,
+				Generate: password == "",
 				Recipe:   recipe,
 			},
 		}
@@ -683,7 +700,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Label:    "password",
 				Type:     "CONCEALED",
 				Value:    password,
-				Generate: password == "" && recipe != nil,
+				Generate: password == "",
 				Recipe:   recipe,
 			},
 			{
