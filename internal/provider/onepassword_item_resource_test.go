@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
@@ -69,5 +70,5 @@ resource "onepassword_item" "test-database" {
   database = "%s"
   port = "%s"
   type = "%s"
-}`, expectedItem.Vault.ID, expectedItem.Title, expectedItem.Category, expectedItem.Fields[0].Value, expectedItem.Fields[2].Value, expectedItem.Fields[3].Value, expectedItem.Fields[4].Value, expectedItem.Fields[5].Value)
+}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[2].Value, expectedItem.Fields[3].Value, expectedItem.Fields[4].Value, expectedItem.Fields[5].Value)
 }

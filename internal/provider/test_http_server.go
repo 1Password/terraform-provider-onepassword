@@ -30,8 +30,6 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 	}
 
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		t.Errorf("the url %s and the method: %s", r.URL.String(), r.Method)
 		if r.Method == http.MethodGet {
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items/%s", expectedItem.Vault.ID, expectedItem.ID) {
 				// Mock returning an item specified by uuid

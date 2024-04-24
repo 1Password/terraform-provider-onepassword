@@ -6,7 +6,7 @@ func generateBaseItem() onepassword.Item {
 	item := onepassword.Item{}
 	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
 	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
-	item.Category = "database"
+	item.Category = "LOGIN"
 	item.Title = "test item"
 	item.URLs = []onepassword.ItemURL{
 		{
@@ -41,7 +41,7 @@ func generateItemWithSections() *onepassword.Item {
 
 func generateDatabaseItem() *onepassword.Item {
 	item := generateBaseItem()
-	item.Category = "database"
+	item.Category = "DATABASE"
 	item.Fields = generateDatabaseFields()
 
 	return &item
@@ -52,7 +52,7 @@ func generateSimpleDatabaseItem() *onepassword.Item {
 	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
 	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
 	item.Title = "test item"
-	item.Category = "database"
+	item.Category = "DATABASE"
 	item.Fields = generateDatabaseFields()
 	return &item
 }

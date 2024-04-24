@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
@@ -29,7 +30,7 @@ func TestAccItemDataSourceSections(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", string(expectedItem.Category)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "url", string(expectedItem.URLs[0].URL)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "tags.0", string(expectedItem.Tags[0])),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.id", expectedItem.Sections[0].ID),
@@ -65,7 +66,7 @@ func TestAccItemDataSourceDatabase(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", string(expectedItem.Category)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "url", string(expectedItem.URLs[0].URL)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "tags.0", string(expectedItem.Tags[0])),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "username", expectedItem.Fields[0].Value),
