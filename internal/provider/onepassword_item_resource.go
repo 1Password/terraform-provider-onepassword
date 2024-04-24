@@ -590,11 +590,11 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 
 	for _, f := range item.Fields {
 		switch f.Purpose {
-		case "USERNAME":
+		case op.FieldPurposeUsername:
 			data.Username = setStringValue(f.Value)
-		case "PASSWORD":
+		case op.FieldPurposePassword:
 			data.Password = setStringValue(f.Value)
-		case "NOTES":
+		case op.FieldPurposeNotes:
 			data.NoteValue = setStringValue(f.Value)
 		default:
 			if f.Section == nil {
@@ -657,15 +657,15 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:      "username",
 				Label:   "username",
-				Purpose: "USERNAME",
-				Type:    "STRING",
+				Purpose: op.FieldPurposeUsername,
+				Type:    op.FieldTypeString,
 				Value:   data.Username.ValueString(),
 			},
 			{
 				ID:       "password",
 				Label:    "password",
-				Purpose:  "PASSWORD",
-				Type:     "CONCEALED",
+				Purpose:  op.FieldPurposePassword,
+				Type:     op.FieldTypeConcealed,
 				Value:    password,
 				Generate: password == "",
 				Recipe:   recipe,
@@ -673,8 +673,8 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:      "notesPlain",
 				Label:   "notesPlain",
-				Type:    "STRING",
-				Purpose: "NOTES",
+				Type:    op.FieldTypeString,
+				Purpose: op.FieldPurposeNotes,
 				Value:   data.NoteValue.ValueString(),
 			},
 		}
@@ -684,8 +684,8 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:       "password",
 				Label:    "password",
-				Purpose:  "PASSWORD",
-				Type:     "CONCEALED",
+				Purpose:  op.FieldPurposePassword,
+				Type:     op.FieldTypeConcealed,
 				Value:    password,
 				Generate: password == "",
 				Recipe:   recipe,
@@ -693,8 +693,8 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:      "notesPlain",
 				Label:   "notesPlain",
-				Type:    "STRING",
-				Purpose: "NOTES",
+				Type:    op.FieldTypeString,
+				Purpose: op.FieldPurposeNotes,
 				Value:   data.NoteValue.ValueString(),
 			},
 		}
@@ -704,13 +704,13 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:    "username",
 				Label: "username",
-				Type:  "STRING",
+				Type:  op.FieldTypeString,
 				Value: data.Username.ValueString(),
 			},
 			{
 				ID:       "password",
 				Label:    "password",
-				Type:     "CONCEALED",
+				Type:     op.FieldTypeConcealed,
 				Value:    password,
 				Generate: password == "",
 				Recipe:   recipe,
@@ -718,32 +718,32 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:    "hostname",
 				Label: "hostname",
-				Type:  "STRING",
+				Type:  op.FieldTypeString,
 				Value: data.Hostname.ValueString(),
 			},
 			{
 				ID:    "database",
 				Label: "database",
-				Type:  "STRING",
+				Type:  op.FieldTypeString,
 				Value: data.Database.ValueString(),
 			},
 			{
 				ID:    "port",
 				Label: "port",
-				Type:  "STRING",
+				Type:  op.FieldTypeString,
 				Value: data.Port.ValueString(),
 			},
 			{
 				ID:    "database_type",
 				Label: "type",
-				Type:  "MENU",
+				Type:  op.FieldTypeMenu,
 				Value: data.Type.ValueString(),
 			},
 			{
 				ID:      "notesPlain",
 				Label:   "notesPlain",
-				Type:    "STRING",
-				Purpose: "NOTES",
+				Type:    op.FieldTypeString,
+				Purpose: op.FieldPurposeNotes,
 				Value:   data.NoteValue.ValueString(),
 			},
 		}

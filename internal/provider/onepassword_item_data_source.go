@@ -272,11 +272,11 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 
 	for _, f := range item.Fields {
 		switch f.Purpose {
-		case "USERNAME":
+		case op.FieldPurposeUsername:
 			data.Username = types.StringValue(f.Value)
-		case "PASSWORD":
+		case op.FieldPurposePassword:
 			data.Password = types.StringValue(f.Value)
-		case "NOTES":
+		case op.FieldPurposeNotes:
 			data.NoteValue = types.StringValue(f.Value)
 		default:
 			if f.Section == nil {
