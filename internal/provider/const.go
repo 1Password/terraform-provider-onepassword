@@ -47,5 +47,5 @@ var (
 	categories    = []string{"login", "password", "database"}
 	dbTypes       = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
 	fieldPurposes = []string{"USERNAME", "PASSWORD", "NOTES"}
-	fieldTypes    = []string{"STRING", "EMAIL", "CONCEALED", "URL", "OTP", "DATE", "MONTH_YEAR", "MENU"}
+	fieldTypes    = []string{"STRING", "EMAIL", "CONCEALED", "URL", "OTP", "DATE", "MONTH_YEAR", "MENU", "PHONE"}
 )
