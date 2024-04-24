@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
@@ -458,11 +460,21 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 		}
 	}
 
-	tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
+	var dataTags []string
+	diagnostics := data.Tags.ElementsAs(ctx, &dataTags, false)
 	if diagnostics.HasError() {
 		return diagnostics
 	}
-	data.Tags = tags
+
+	sort.Strings(dataTags)
+	if !reflect.DeepEqual(dataTags, item.Tags) {
+		tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
+		if diagnostics.HasError() {
+			return diagnostics
+		}
+
+		data.Tags = tags
+	}
 
 	data.Category = setStringValue(strings.ToLower(string(item.Category)))
 
