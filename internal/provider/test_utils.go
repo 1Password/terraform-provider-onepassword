@@ -26,12 +26,14 @@ func generateItemWithSections() *onepassword.Item {
 		Section: section,
 	})
 
+	item.Category = onepassword.Login
+
 	return &item
 }
 
 func generateDatabaseItem() *onepassword.Item {
 	item := generateBaseItem()
-	item.Category = "DATABASE"
+	item.Category = onepassword.Database
 	item.Fields = generateDatabaseFields()
 
 	return &item
@@ -39,8 +41,22 @@ func generateDatabaseItem() *onepassword.Item {
 
 func generatePasswordItem() *onepassword.Item {
 	item := generateBaseItem()
-	item.Category = "PASSWORD"
+	item.Category = onepassword.Password
 	item.Fields = generatePasswordFields()
+
+	return &item
+}
+
+func generateLoginItem() *onepassword.Item {
+	item := generateBaseItem()
+	item.Category = onepassword.Login
+	item.Fields = generateLoginFields()
+	item.URLs = []onepassword.ItemURL{
+		{
+			Primary: true,
+			URL:     "some_url.com",
+		},
+	}
 
 	return &item
 }
@@ -76,6 +92,20 @@ func generateDatabaseFields() []*onepassword.ItemField {
 }
 
 func generatePasswordFields() []*onepassword.ItemField {
+	fields := []*onepassword.ItemField{
+		{
+			Label: "username",
+			Value: "test_user",
+		},
+		{
+			Label: "password",
+			Value: "test_password",
+		},
+	}
+	return fields
+}
+
+func generateLoginFields() []*onepassword.ItemField {
 	fields := []*onepassword.ItemField{
 		{
 			Label: "username",
