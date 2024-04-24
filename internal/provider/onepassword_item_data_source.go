@@ -229,7 +229,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		return
 	}
 
-	data.ID = types.StringValue(terraformItemID(item))
+	data.ID = types.StringValue(itemTerraformID(item))
 	data.UUID = types.StringValue(item.ID)
 	data.Vault = types.StringValue(item.Vault.ID)
 	data.Title = types.StringValue(item.Title)
@@ -307,10 +307,6 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	if resp.Diagnostics.HasError() {
 		return
 	}
-}
-
-func terraformItemID(item *op.Item) string {
-	return fmt.Sprintf("vaults/%s/items/%s", item.Vault.ID, item.ID)
 }
 
 func getItemForDataSource(ctx context.Context, client onepassword.Client, data OnePasswordItemDataSourceModel) (*op.Item, error) {

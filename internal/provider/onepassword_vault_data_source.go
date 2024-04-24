@@ -148,7 +148,3 @@ func (d *OnePasswordVaultDataSource) Read(ctx context.Context, req datasource.Re
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
-
-func vaultTerraformID(vault *op.Vault) string {
-	return fmt.Sprintf("vaults/%s", vault.ID)
-}
