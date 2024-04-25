@@ -207,6 +207,9 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 				Computed:            true,
 				Sensitive:           true,
+				PlanModifiers: []planmodifier.String{
+					ValueModifier(),
+				},
 			},
 			"note_value": schema.StringAttribute{
 				MarkdownDescription: noteValueDescription,
@@ -269,6 +272,9 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Optional:            true,
 										Computed:            true,
 										Sensitive:           true,
+										PlanModifiers: []planmodifier.String{
+											ValueModifier(),
+										},
 									},
 								},
 								Blocks: map[string]schema.Block{
@@ -371,35 +377,17 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 }
 
 func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var stateData, planData OnePasswordItemResourceModel
-
-	// Read Terraform state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &stateData)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
+	var data OnePasswordItemResourceModel
 
 	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &planData)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
-	}
-
-	if planData.Recipe != nil {
-		planData.Password = stateData.Password
-	}
-
-	for i, s := range planData.Section {
-		for j, f := range s.Field {
-			if f.Recipe != nil {
-				planData.Section[i].Field[j].Value = stateData.Section[i].Field[j].Value
-			}
-		}
 	}
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, diagnostics := dataToItem(ctx, planData)
+	item, diagnostics := dataToItem(ctx, data)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -408,19 +396,19 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	payload, _ := json.Marshal(item)
 	tflog.Info(ctx, "update op payload: "+string(payload))
 
-	updatedItem, err := r.client.UpdateItem(ctx, item, planData.Vault.ValueString())
+	updatedItem, err := r.client.UpdateItem(ctx, item, data.Vault.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", planData.UUID.ValueString(), planData.Vault.ValueString(), err))
+		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &planData)...)
+	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &planData)...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
