@@ -130,7 +130,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "A 1Password Item",
+		MarkdownDescription: "A 1Password Item.",
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

@@ -14,7 +14,7 @@ Use this data source to get details of an item by its vault uuid and either the 
 
 ```terraform
 data "onepassword_item" "example" {
-  vault = var.demo_vault
+  vault = data.onepassword_vault.example.uuid
   uuid  = onepassword_item.demo_sections.uuid
 }
 ```
