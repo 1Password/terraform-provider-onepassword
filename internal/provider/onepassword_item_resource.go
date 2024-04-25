@@ -735,6 +735,17 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Value:   data.NoteValue.ValueString(),
 			},
 		}
+	case "secure_note":
+		item.Category = op.SecureNote
+		item.Fields = []*op.ItemField{
+			{
+				ID:      "notesPlain",
+				Label:   "notesPlain",
+				Type:    op.FieldTypeString,
+				Purpose: op.FieldPurposeNotes,
+				Value:   data.NoteValue.ValueString(),
+			},
+		}
 	}
 
 	sections := data.Section
