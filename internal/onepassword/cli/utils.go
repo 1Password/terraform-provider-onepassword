@@ -62,14 +62,14 @@ func passwordField(item *onepassword.Item) *onepassword.ItemField {
 
 func passwordRecipe(item *onepassword.Item) string {
 	if pf := passwordField(item); pf != nil {
-		return passwordRecipeToString(pf.Recipe)
+		return passwordRecipeToString(pf.Recipe, pf.Generate)
 	}
 	return ""
 }
 
-func passwordRecipeToString(recipe *onepassword.GeneratorRecipe) string {
+func passwordRecipeToString(recipe *onepassword.GeneratorRecipe, shouldGenerate bool) string {
 	str := ""
-	if recipe != nil {
+	if shouldGenerate && recipe != nil {
 		str += strings.Join(recipe.CharacterSets, ",")
 		if recipe.Length > 0 {
 			if str == "" {

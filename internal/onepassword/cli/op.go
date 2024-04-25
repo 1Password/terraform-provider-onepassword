@@ -172,7 +172,13 @@ func (op *OP) update(ctx context.Context, item *onepassword.Item, vaultUuid stri
 	}
 
 	var res *onepassword.Item
-	err = op.execJson(ctx, &res, payload, p("item"), p("edit"), p(item.ID), f("vault", vaultUuid))
+	args := []opArg{p("item"), p("edit"), p(item.ID), f("vault", vaultUuid)}
+	recipe := passwordRecipe(item)
+	if recipe != "" {
+		args = append(args, f("generate-password", recipe))
+	}
+
+	err = op.execJson(ctx, &res, payload, args...)
 	if err != nil {
 		return nil, err
 	}
