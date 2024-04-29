@@ -96,6 +96,32 @@ func dataSourceOnepasswordItem() *schema.Resource {
 				Optional:    true,
 				Sensitive:   true,
 			},
+			"files": {
+				Description: "Files",
+				Type:        schema.TypeList,
+				Computed:    true,
+				MinItems:    0,
+				Elem: &schema.Resource{
+					Description: "File",
+					Schema: map[string]*schema.Schema{
+						"id": {
+							Description: fieldIDDescription,
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"content": {
+							Description: "File contents",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+						"name": {
+							Description: "File name",
+							Type:        schema.TypeString,
+							Computed:    true,
+						},
+					},
+				},
+			},
 			"section": {
 				Description: sectionsDescription,
 				Type:        schema.TypeList,
@@ -222,6 +248,23 @@ func dataSourceOnepasswordItemRead(ctx context.Context, data *schema.ResourceDat
 			}
 		}
 	}
+
+	files := []interface{}{}
+
+	for _, f := range item.Files {
+		bytes, err := client.GetFileContent(ctx, f)
+		if err != nil {
+			return diag.FromErr(err)
+		}
+		fileItem := map[string]interface{}{}
+		fileItem["id"] = f.ID
+		fileItem["name"] = f.Name
+		fileItem["content"] = string(bytes)
+
+		files = append(files, fileItem)
+	}
+
+	data.Set("files", files)
 
 	return nil
 }

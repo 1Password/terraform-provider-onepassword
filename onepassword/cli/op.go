@@ -196,6 +196,21 @@ func (op *OP) delete(ctx context.Context, item *onepassword.Item, vaultUuid stri
 	return nil, op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
 }
 
+func (op *OP) GetFileContent(ctx context.Context, file *onepassword.File) ([]byte, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
+
+	path := file.ContentPath
+	path = strings.ReplaceAll(path, "/v1/vaults/", "op://")
+	path = strings.ReplaceAll(path, "/items/", "/")
+	path = strings.ReplaceAll(path, "/files/", "/")
+	path = strings.ReplaceAll(path, "/content", "")
+
+	return op.execRaw(ctx, nil, p("read"), p(path))
+}
+
 func (op *OP) execJson(ctx context.Context, dst any, stdin []byte, args ...opArg) error {
 	result, err := op.execRaw(ctx, stdin, args...)
 	if err != nil {

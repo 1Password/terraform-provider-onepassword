@@ -134,4 +134,5 @@ type Client interface {
 	CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error)
 	UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error)
 	DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error
+	GetFileContent(ctx context.Context, file *onepassword.File) ([]byte, error)
 }
