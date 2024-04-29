@@ -16,14 +16,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 }
 
 func testAccProviderConfig(url string) string {
-	return fmt.Sprintf(`terraform {
-		required_providers {
-		  onepassword = {
-			source  = "1Password/onepassword"
-			version = "~> 1.3.0"
-		  }
-		}
-	  }
+	return fmt.Sprintf(`
 	  # Configure the connection details for the Inventory service
 	  provider "onepassword" {
 		url = "%s"

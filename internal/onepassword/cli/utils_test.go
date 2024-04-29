@@ -80,7 +80,7 @@ func TestPasswordRecipeExtraction(t *testing.T) {
 			item: &onepassword.Item{
 				Fields: []*onepassword.ItemField{
 					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
-					{ID: "password", Purpose: onepassword.FieldPurposePassword, Recipe: &onepassword.GeneratorRecipe{
+					{ID: "password", Purpose: onepassword.FieldPurposePassword, Generate: true, Recipe: &onepassword.GeneratorRecipe{
 						Length: 30,
 					}},
 				},
@@ -141,7 +141,7 @@ func TestPasswordRecipeToString(t *testing.T) {
 
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
-			actualString := passwordRecipeToString(test.recipe)
+			actualString := passwordRecipeToString(test.recipe, test.recipe != nil)
 			if actualString != test.expectedString {
 				t.Errorf("Unexpected password recipe string. Expected \"%s\", but got \"%s\"", test.expectedString, actualString)
 			}

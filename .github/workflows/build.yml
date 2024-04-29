@@ -19,3 +19,6 @@ jobs:
 
     - name: Test
       run: go test -v ./... -cover
+      env:
+        TF_ACC: "1"
+      timeout-minutes: 10
