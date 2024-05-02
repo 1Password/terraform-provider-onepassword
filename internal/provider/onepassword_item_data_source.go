@@ -8,53 +8,189 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ datasource.DataSource = &ExampleDataSource{}
+var _ datasource.DataSource = &OnePasswordItemDataSource{}
 
-func NewExampleDataSource() datasource.DataSource {
-	return &ExampleDataSource{}
+func NewOnePasswordItemDataSource() datasource.DataSource {
+	return &OnePasswordItemDataSource{}
 }
 
-// ExampleDataSource defines the data source implementation.
-type ExampleDataSource struct {
-	client *http.Client
+// OnePasswordItemDataSource defines the data source implementation.
+type OnePasswordItemDataSource struct {
+	client onepassword.Client
 }
 
-// ExampleDataSourceModel describes the data source data model.
-type ExampleDataSourceModel struct {
-	ConfigurableAttribute types.String `tfsdk:"configurable_attribute"`
-	Id                    types.String `tfsdk:"id"`
+// OnePasswordItemDataSourceModel describes the data source data model.
+type OnePasswordItemDataSourceModel struct {
+	ID        types.String                  `tfsdk:"id"`
+	Vault     types.String                  `tfsdk:"vault"`
+	UUID      types.String                  `tfsdk:"uuid"`
+	Title     types.String                  `tfsdk:"title"`
+	Category  types.String                  `tfsdk:"category"`
+	URL       types.String                  `tfsdk:"url"`
+	Hostname  types.String                  `tfsdk:"hostname"`
+	Database  types.String                  `tfsdk:"database"`
+	Port      types.String                  `tfsdk:"port"`
+	Type      types.String                  `tfsdk:"type"`
+	Tags      types.List                    `tfsdk:"tags"`
+	Username  types.String                  `tfsdk:"username"`
+	Password  types.String                  `tfsdk:"password"`
+	NoteValue types.String                  `tfsdk:"note_value"`
+	Section   []OnePasswordItemSectionModel `tfsdk:"section"`
 }
 
-func (d *ExampleDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_example"
+type OnePasswordItemSectionModel struct {
+	ID    types.String                `tfsdk:"id"`
+	Label types.String                `tfsdk:"label"`
+	Field []OnePasswordItemFieldModel `tfsdk:"field"`
 }
 
-func (d *ExampleDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+type OnePasswordItemFieldModel struct {
+	ID      types.String `tfsdk:"id"`
+	Label   types.String `tfsdk:"label"`
+	Purpose types.String `tfsdk:"purpose"`
+	Type    types.String `tfsdk:"type"`
+	Value   types.String `tfsdk:"value"`
+}
+
+func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_item"
+}
+
+func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Example data source",
+		MarkdownDescription: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
 
 		Attributes: map[string]schema.Attribute{
-			"configurable_attribute": schema.StringAttribute{
-				MarkdownDescription: "Example configurable attribute",
-				Optional:            true,
-			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "Example identifier",
+				MarkdownDescription: terraformItemIDDescription,
 				Computed:            true,
+			},
+			"vault": schema.StringAttribute{
+				MarkdownDescription: vaultUUIDDescription,
+				Required:            true,
+			},
+			"uuid": schema.StringAttribute{
+				MarkdownDescription: "The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.",
+				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.Expressions{
+						path.MatchRoot("title"),
+						path.MatchRoot("uuid"),
+					}...),
+				},
+			},
+			"title": schema.StringAttribute{
+				MarkdownDescription: "The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.",
+				Optional:            true,
+				Computed:            true,
+			},
+			"category": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, categories),
+				Computed:            true,
+			},
+			"url": schema.StringAttribute{
+				MarkdownDescription: urlDescription,
+				Computed:            true,
+			},
+			"hostname": schema.StringAttribute{
+				MarkdownDescription: dbHostnameDescription,
+				Computed:            true,
+			},
+			"database": schema.StringAttribute{
+				MarkdownDescription: dbDatabaseDescription,
+				Computed:            true,
+			},
+			"port": schema.StringAttribute{
+				MarkdownDescription: dbPortDescription,
+				Computed:            true,
+			},
+			"type": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
+				Computed:            true,
+			},
+			"tags": schema.ListAttribute{
+				MarkdownDescription: tagsDescription,
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
+			"username": schema.StringAttribute{
+				MarkdownDescription: usernameDescription,
+				Computed:            true,
+			},
+			"password": schema.StringAttribute{
+				MarkdownDescription: passwordDescription,
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"note_value": schema.StringAttribute{
+				MarkdownDescription: noteValueDescription,
+				Computed:            true,
+				Optional:            true,
+				Sensitive:           true,
+			},
+		},
+		Blocks: map[string]schema.Block{
+			"section": schema.ListNestedBlock{
+				MarkdownDescription: sectionsDescription,
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: sectionIDDescription,
+							Computed:            true,
+						},
+						"label": schema.StringAttribute{
+							MarkdownDescription: sectionLabelDescription,
+							Computed:            true,
+						},
+					},
+					Blocks: map[string]schema.Block{
+						"field": schema.ListNestedBlock{
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fieldIDDescription,
+										Computed:            true,
+									},
+									"label": schema.StringAttribute{
+										MarkdownDescription: fieldLabelDescription,
+										Computed:            true,
+									},
+									"purpose": schema.StringAttribute{
+										MarkdownDescription: fieldPurposeDescription,
+										Computed:            true,
+									},
+									"type": schema.StringAttribute{
+										MarkdownDescription: fieldTypeDescription,
+										Computed:            true,
+									},
+									"value": schema.StringAttribute{
+										MarkdownDescription: fieldValueDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
 }
 
-func (d *ExampleDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *OnePasswordItemDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -74,8 +210,8 @@ func (d *ExampleDataSource) Configure(ctx context.Context, req datasource.Config
 	d.client = client
 }
 
-func (d *ExampleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data ExampleDataSourceModel
+func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data OnePasswordItemDataSourceModel
 
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -94,7 +230,7 @@ func (d *ExampleDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	// For the purposes of this example code, hardcoding a response value to
 	// save into the Terraform state.
-	data.Id = types.StringValue("example-id")
+	data.ID = types.StringValue("example-id")
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
