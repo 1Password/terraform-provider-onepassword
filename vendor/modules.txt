@@ -2,6 +2,13 @@
 ## explicit; go 1.20
 github.com/1Password/connect-sdk-go/connect
 github.com/1Password/connect-sdk-go/onepassword
+# github.com/BurntSushi/toml v1.2.1
+## explicit; go 1.16
+github.com/BurntSushi/toml
+github.com/BurntSushi/toml/internal
+# github.com/Kunde21/markdownfmt/v3 v3.1.0
+## explicit; go 1.18
+github.com/Kunde21/markdownfmt/v3/markdown
 # github.com/Masterminds/goutils v1.1.1
 ## explicit
 github.com/Masterminds/goutils
@@ -11,7 +18,7 @@ github.com/Masterminds/semver/v3
 # github.com/Masterminds/sprig/v3 v3.2.3
 ## explicit; go 1.13
 github.com/Masterminds/sprig/v3
-# github.com/ProtonMail/go-crypto v1.1.0-alpha.0
+# github.com/ProtonMail/go-crypto v1.1.0-alpha.2
 ## explicit; go 1.17
 github.com/ProtonMail/go-crypto/bitcurves
 github.com/ProtonMail/go-crypto/brainpool
@@ -47,6 +54,9 @@ github.com/armon/go-radix
 # github.com/bgentry/speakeasy v0.1.0
 ## explicit
 github.com/bgentry/speakeasy
+# github.com/bmatcuk/doublestar/v4 v4.6.1
+## explicit; go 1.16
+github.com/bmatcuk/doublestar/v4
 # github.com/cloudflare/circl v1.3.7
 ## explicit; go 1.19
 github.com/cloudflare/circl/dh/x25519
@@ -78,6 +88,9 @@ github.com/google/go-cmp/cmp/internal/value
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
+# github.com/hashicorp/cli v1.1.6
+## explicit; go 1.20
+github.com/hashicorp/cli
 # github.com/hashicorp/errwrap v1.1.0
 ## explicit
 github.com/hashicorp/errwrap
@@ -114,7 +127,7 @@ github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.6.0
 ## explicit
 github.com/hashicorp/go-version
-# github.com/hashicorp/hc-install v0.6.3
+# github.com/hashicorp/hc-install v0.6.4
 ## explicit; go 1.18
 github.com/hashicorp/hc-install
 github.com/hashicorp/hc-install/checkpoint
@@ -145,14 +158,57 @@ github.com/hashicorp/terraform-exec/tfexec
 # github.com/hashicorp/terraform-json v0.21.0
 ## explicit; go 1.18
 github.com/hashicorp/terraform-json
-# github.com/hashicorp/terraform-plugin-docs v0.16.0
-## explicit; go 1.19
+# github.com/hashicorp/terraform-plugin-docs v0.19.2
+## explicit; go 1.21
 github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs
+github.com/hashicorp/terraform-plugin-docs/cmd/tfplugindocs/build
+github.com/hashicorp/terraform-plugin-docs/internal/check
 github.com/hashicorp/terraform-plugin-docs/internal/cmd
+github.com/hashicorp/terraform-plugin-docs/internal/functionmd
 github.com/hashicorp/terraform-plugin-docs/internal/mdplain
 github.com/hashicorp/terraform-plugin-docs/internal/provider
+github.com/hashicorp/terraform-plugin-docs/internal/schemamd
 github.com/hashicorp/terraform-plugin-docs/internal/tmplfuncs
-github.com/hashicorp/terraform-plugin-docs/schemamd
+# github.com/hashicorp/terraform-plugin-framework v1.8.0
+## explicit; go 1.21
+github.com/hashicorp/terraform-plugin-framework/attr
+github.com/hashicorp/terraform-plugin-framework/attr/xattr
+github.com/hashicorp/terraform-plugin-framework/datasource
+github.com/hashicorp/terraform-plugin-framework/datasource/schema
+github.com/hashicorp/terraform-plugin-framework/diag
+github.com/hashicorp/terraform-plugin-framework/function
+github.com/hashicorp/terraform-plugin-framework/internal/fromproto5
+github.com/hashicorp/terraform-plugin-framework/internal/fromproto6
+github.com/hashicorp/terraform-plugin-framework/internal/fromtftypes
+github.com/hashicorp/terraform-plugin-framework/internal/fwfunction
+github.com/hashicorp/terraform-plugin-framework/internal/fwschema
+github.com/hashicorp/terraform-plugin-framework/internal/fwschema/fwxschema
+github.com/hashicorp/terraform-plugin-framework/internal/fwschemadata
+github.com/hashicorp/terraform-plugin-framework/internal/fwserver
+github.com/hashicorp/terraform-plugin-framework/internal/fwtype
+github.com/hashicorp/terraform-plugin-framework/internal/logging
+github.com/hashicorp/terraform-plugin-framework/internal/privatestate
+github.com/hashicorp/terraform-plugin-framework/internal/proto5server
+github.com/hashicorp/terraform-plugin-framework/internal/proto6server
+github.com/hashicorp/terraform-plugin-framework/internal/reflect
+github.com/hashicorp/terraform-plugin-framework/internal/toproto5
+github.com/hashicorp/terraform-plugin-framework/internal/toproto6
+github.com/hashicorp/terraform-plugin-framework/internal/totftypes
+github.com/hashicorp/terraform-plugin-framework/path
+github.com/hashicorp/terraform-plugin-framework/provider
+github.com/hashicorp/terraform-plugin-framework/provider/metaschema
+github.com/hashicorp/terraform-plugin-framework/provider/schema
+github.com/hashicorp/terraform-plugin-framework/providerserver
+github.com/hashicorp/terraform-plugin-framework/resource
+github.com/hashicorp/terraform-plugin-framework/resource/schema
+github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults
+github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier
+github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault
+github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier
+github.com/hashicorp/terraform-plugin-framework/schema/validator
+github.com/hashicorp/terraform-plugin-framework/tfsdk
+github.com/hashicorp/terraform-plugin-framework/types
+github.com/hashicorp/terraform-plugin-framework/types/basetypes
 # github.com/hashicorp/terraform-plugin-go v0.22.2
 ## explicit; go 1.21
 github.com/hashicorp/terraform-plugin-go/internal/logging
@@ -198,6 +254,23 @@ github.com/hashicorp/terraform-plugin-sdk/v2/internal/tfdiags
 github.com/hashicorp/terraform-plugin-sdk/v2/meta
 github.com/hashicorp/terraform-plugin-sdk/v2/plugin
 github.com/hashicorp/terraform-plugin-sdk/v2/terraform
+# github.com/hashicorp/terraform-plugin-testing v1.7.0
+## explicit; go 1.21
+github.com/hashicorp/terraform-plugin-testing/config
+github.com/hashicorp/terraform-plugin-testing/helper/resource
+github.com/hashicorp/terraform-plugin-testing/internal/addrs
+github.com/hashicorp/terraform-plugin-testing/internal/configs/configschema
+github.com/hashicorp/terraform-plugin-testing/internal/configs/hcl2shim
+github.com/hashicorp/terraform-plugin-testing/internal/logging
+github.com/hashicorp/terraform-plugin-testing/internal/plugintest
+github.com/hashicorp/terraform-plugin-testing/internal/teststep
+github.com/hashicorp/terraform-plugin-testing/internal/tfdiags
+github.com/hashicorp/terraform-plugin-testing/knownvalue
+github.com/hashicorp/terraform-plugin-testing/plancheck
+github.com/hashicorp/terraform-plugin-testing/statecheck
+github.com/hashicorp/terraform-plugin-testing/terraform
+github.com/hashicorp/terraform-plugin-testing/tfjsonpath
+github.com/hashicorp/terraform-plugin-testing/tfversion
 # github.com/hashicorp/terraform-registry-address v0.2.3
 ## explicit; go 1.19
 github.com/hashicorp/terraform-registry-address
@@ -219,9 +292,9 @@ github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.20
 ## explicit; go 1.15
 github.com/mattn/go-isatty
-# github.com/mitchellh/cli v1.1.5
-## explicit; go 1.11
-github.com/mitchellh/cli
+# github.com/mattn/go-runewidth v0.0.9
+## explicit; go 1.9
+github.com/mattn/go-runewidth
 # github.com/mitchellh/copystructure v1.2.0
 ## explicit; go 1.15
 github.com/mitchellh/copystructure
@@ -253,9 +326,6 @@ github.com/pkg/errors
 github.com/posener/complete
 github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
-# github.com/russross/blackfriday v1.6.0
-## explicit; go 1.13
-github.com/russross/blackfriday
 # github.com/shopspring/decimal v1.3.1
 ## explicit; go 1.13
 github.com/shopspring/decimal
@@ -299,6 +369,20 @@ github.com/vmihailenco/msgpack/v5/msgpcode
 github.com/vmihailenco/tagparser/v2
 github.com/vmihailenco/tagparser/v2/internal
 github.com/vmihailenco/tagparser/v2/internal/parser
+# github.com/yuin/goldmark v1.7.1
+## explicit; go 1.19
+github.com/yuin/goldmark
+github.com/yuin/goldmark/ast
+github.com/yuin/goldmark/extension
+github.com/yuin/goldmark/extension/ast
+github.com/yuin/goldmark/parser
+github.com/yuin/goldmark/renderer
+github.com/yuin/goldmark/renderer/html
+github.com/yuin/goldmark/text
+github.com/yuin/goldmark/util
+# github.com/yuin/goldmark-meta v1.1.0
+## explicit; go 1.17
+github.com/yuin/goldmark-meta
 # github.com/zclconf/go-cty v1.14.4
 ## explicit; go 1.18
 github.com/zclconf/go-cty/cty
@@ -309,6 +393,9 @@ github.com/zclconf/go-cty/cty/function/stdlib
 github.com/zclconf/go-cty/cty/gocty
 github.com/zclconf/go-cty/cty/json
 github.com/zclconf/go-cty/cty/set
+# go.abhg.dev/goldmark/frontmatter v0.2.0
+## explicit; go 1.20
+go.abhg.dev/goldmark/frontmatter
 # go.uber.org/atomic v1.11.0
 ## explicit; go 1.18
 go.uber.org/atomic
@@ -495,3 +582,9 @@ google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/timestamppb
+# gopkg.in/yaml.v2 v2.3.0
+## explicit
+gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
+gopkg.in/yaml.v3
