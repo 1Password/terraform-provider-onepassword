@@ -5,14 +5,18 @@ package provider
 
 import (
 	"context"
-	"net/http"
+	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
@@ -71,19 +75,78 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 }
 
 func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data OnePasswordProviderModel
+	var config OnePasswordProviderModel
 
-	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Default values to environment variables, but override
+	// with Terraform configuration value if set.
+
+	connectHost := os.Getenv("OP_CONNECT_HOST")
+	connectToken := os.Getenv("OP_CONNECT_TOKEN")
+	serviceAccountToken := os.Getenv("OP_SERVICE_ACCOUNT_TOKEN")
+	account := os.Getenv("OP_ACCOUNT")
+	opCLIPath := os.Getenv("OP_CLI_PATH")
+	if opCLIPath == "" {
+		opCLIPath = "op"
+	}
+
+	// Configuration values are now available.
+	if !config.ConnectHost.IsNull() {
+		connectHost = config.ConnectHost.ValueString()
+	}
+	if !config.ConnectToken.IsNull() {
+		connectToken = config.ConnectToken.ValueString()
+	}
+	if !config.ServiceAccountToken.IsNull() {
+		serviceAccountToken = config.ServiceAccountToken.ValueString()
+	}
+	if !config.Account.IsNull() {
+		account = config.Account.ValueString()
+	}
+	if !config.OpCLIPath.IsNull() {
+		opCLIPath = config.OpCLIPath.ValueString()
+	}
+
+	// This is not handled by setting Required to true because Terraform does not handle
+	// multiple required attributes well. If only one is set in the provider configuration,
+	// the other one is prompted for, but Terraform then forgets the value for the one that
+	// is defined in the code. This confusing user-experience can be avoided by handling the
+	// requirement of one of the attributes manually.
+	//
+	// TODO: Investigate if wrapping this as a (framework) validator can be a better fit.
+	if serviceAccountToken != "" || account != "" {
+		if connectToken != "" || connectHost != "" {
+			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"token\" and \"url\") or 1Password CLI (\"service_account_token\" or \"account\") credentials can be set. Both are set. Please unset one of them.")
+		}
+		if opCLIPath == "" {
+			resp.Diagnostics.AddAttributeError(path.Root("op_cli_path"), "CLI path missing", "Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
+		}
+		if serviceAccountToken != "" && account != "" {
+			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please unset one of them to use the provider with 1Password CLI.")
+		}
+	}
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
-
 	// Example client configuration for data sources and resources
-	client := http.DefaultClient
+	client, err := onepassword.NewClient(onepassword.ClientConfig{
+		ConnectHost:         connectHost,
+		ConnectToken:        connectToken,
+		ServiceAccountToken: serviceAccountToken,
+		Account:             account,
+		OpCLIPath:           opCLIPath,
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("Client init failure", fmt.Sprintf("Client failed to initialize, got error: %s", err))
+		return
+	}
+
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
