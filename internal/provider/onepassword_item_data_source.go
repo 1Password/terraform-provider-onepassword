@@ -5,8 +5,9 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net/http"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -15,6 +16,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -196,12 +200,12 @@ func (d *OnePasswordItemDataSource) Configure(ctx context.Context, req datasourc
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
+	client, ok := req.ProviderData.(onepassword.Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected onepassword.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -222,20 +226,102 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := d.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
-	//     return
-	// }
+	item, err := getItemForDataSource(ctx, d.client, data)
+	if err != nil {
+		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read item, got error: %s", err))
+		return
+	}
 
-	// For the purposes of this example code, hardcoding a response value to
-	// save into the Terraform state.
-	data.ID = types.StringValue("example-id")
+	data.ID = types.StringValue(itemTerraformID(item))
+	data.UUID = types.StringValue(item.ID)
+	data.Vault = types.StringValue(item.Vault.ID)
+	data.Title = types.StringValue(item.Title)
+
+	for _, u := range item.URLs {
+		if u.Primary {
+			data.URL = types.StringValue(u.URL)
+		}
+	}
+
+	tags, diag := types.ListValueFrom(ctx, types.StringType, item.Tags)
+	resp.Diagnostics.Append(diag...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Tags = tags
+
+	data.Category = types.StringValue(strings.ToLower(string(item.Category)))
+
+	for _, s := range item.Sections {
+		section := OnePasswordItemSectionModel{
+			ID:    types.StringValue(s.ID),
+			Label: types.StringValue(s.Label),
+		}
+
+		for _, f := range item.Fields {
+			if f.Section != nil && f.Section.ID == s.ID {
+				section.Field = append(section.Field, OnePasswordItemFieldModel{
+					ID:      types.StringValue(f.ID),
+					Label:   types.StringValue(f.Label),
+					Purpose: types.StringValue(string(f.Purpose)),
+					Type:    types.StringValue(string(f.Type)),
+					Value:   types.StringValue(f.Value),
+				})
+			}
+		}
+
+		data.Section = append(data.Section, section)
+	}
+
+	for _, f := range item.Fields {
+		switch f.Purpose {
+		case op.FieldPurposeUsername:
+			data.Username = types.StringValue(f.Value)
+		case op.FieldPurposePassword:
+			data.Password = types.StringValue(f.Value)
+		case op.FieldPurposeNotes:
+			data.NoteValue = types.StringValue(f.Value)
+		default:
+			if f.Section == nil {
+				switch f.Label {
+				case "username":
+					data.Username = types.StringValue(f.Value)
+				case "password":
+					data.Password = types.StringValue(f.Value)
+				case "hostname", "server":
+					data.Hostname = types.StringValue(f.Value)
+				case "database":
+					data.Database = types.StringValue(f.Value)
+				case "port":
+					data.Port = types.StringValue(f.Value)
+				case "type":
+					data.Type = types.StringValue(f.Value)
+				}
+			}
+		}
+	}
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
-	tflog.Trace(ctx, "read a data source")
+	tflog.Trace(ctx, "read an item data source")
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+func getItemForDataSource(ctx context.Context, client onepassword.Client, data OnePasswordItemDataSourceModel) (*op.Item, error) {
+	vaultUUID := data.Vault.ValueString()
+	itemTitle := data.Title.ValueString()
+	itemUUID := data.UUID.ValueString()
+
+	if itemTitle != "" {
+		return client.GetItemByTitle(ctx, itemTitle, vaultUUID)
+	}
+	if itemUUID != "" {
+		return client.GetItem(ctx, itemUUID, vaultUUID)
+	}
+	return nil, errors.New("uuid or title must be set")
 }
