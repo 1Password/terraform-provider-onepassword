@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -26,6 +27,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+
+	"github.com/hashicorp/go-uuid"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
@@ -552,4 +555,239 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 	}
 
 	return nil
+}
+
+func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Item, diag.Diagnostics) {
+	item := &op.Item{
+		ID: data.UUID.ValueString(),
+		Vault: op.ItemVault{
+			ID: data.Vault.ValueString(),
+		},
+		Title: data.Title.ValueString(),
+		URLs: []op.ItemURL{
+			{
+				Primary: true,
+				URL:     data.URL.ValueString(),
+			},
+		},
+	}
+
+	var tags []string
+	diagnostics := data.Tags.ElementsAs(ctx, &tags, false)
+	if diagnostics.HasError() {
+		return nil, diagnostics
+	}
+	item.Tags = tags
+
+	password := data.Password.ValueString()
+	recipe, err := parseGeneratorRecipe(data.Recipe)
+	if err != nil {
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+			"Error parsing generator recipe",
+			fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
+		)}
+	}
+
+	switch data.Category.ValueString() {
+	case "login":
+		item.Category = op.Login
+		item.Fields = []*op.ItemField{
+			{
+				ID:      "username",
+				Label:   "username",
+				Purpose: op.FieldPurposeUsername,
+				Type:    op.FieldTypeString,
+				Value:   data.Username.ValueString(),
+			},
+			{
+				ID:       "password",
+				Label:    "password",
+				Purpose:  op.FieldPurposePassword,
+				Type:     op.FieldTypeConcealed,
+				Value:    password,
+				Generate: password == "",
+				Recipe:   recipe,
+			},
+		}
+	case "password":
+		item.Category = op.Password
+		item.Fields = []*op.ItemField{
+			{
+				ID:       "password",
+				Label:    "password",
+				Purpose:  op.FieldPurposePassword,
+				Type:     op.FieldTypeConcealed,
+				Value:    password,
+				Generate: password == "",
+				Recipe:   recipe,
+			},
+		}
+	case "database":
+		item.Category = op.Database
+		item.Fields = []*op.ItemField{
+			{
+				ID:    "username",
+				Label: "username",
+				Type:  op.FieldTypeString,
+				Value: data.Username.ValueString(),
+			},
+			{
+				ID:       "password",
+				Label:    "password",
+				Type:     op.FieldTypeConcealed,
+				Value:    password,
+				Generate: password == "",
+				Recipe:   recipe,
+			},
+			{
+				ID:    "hostname",
+				Label: "hostname",
+				Type:  op.FieldTypeString,
+				Value: data.Hostname.ValueString(),
+			},
+			{
+				ID:    "database",
+				Label: "database",
+				Type:  op.FieldTypeString,
+				Value: data.Database.ValueString(),
+			},
+			{
+				ID:    "port",
+				Label: "port",
+				Type:  op.FieldTypeString,
+				Value: data.Port.ValueString(),
+			},
+			{
+				ID:    "database_type",
+				Label: "type",
+				Type:  op.FieldTypeMenu,
+				Value: data.Type.ValueString(),
+			},
+		}
+	}
+
+	sections := data.Section
+
+	for _, section := range sections {
+		sectionID := section.ID.ValueString()
+		if sectionID == "" {
+			sid, err := uuid.GenerateUUID()
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+					"Item conversion error",
+					fmt.Sprintf("Unable to generate a section ID, has error: %v", err),
+				)}
+			}
+			sectionID = sid
+		}
+
+		s := &op.ItemSection{
+			ID:    sectionID,
+			Label: section.Label.ValueString(),
+		}
+		item.Sections = append(item.Sections, s)
+
+		sectionFields := section.Field
+		for _, field := range sectionFields {
+			fieldID := field.ID.ValueString()
+			fieldType := op.ItemFieldType(field.Type.ValueString())
+			fieldValue := field.Value.ValueString()
+			if fieldType == op.FieldTypeDate {
+				if !util.IsValidDateFormat(fieldValue) {
+					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+						"Item conversion error",
+						fmt.Sprintf("Invalid date value provided '%s'. Should be in YYYY-MM-DD format", fieldValue),
+					)}
+				}
+			}
+
+			f := &op.ItemField{
+				Section: s,
+				ID:      fieldID,
+				Type:    fieldType,
+				Purpose: op.ItemFieldPurpose(field.Purpose.ValueString()),
+				Label:   field.Label.ValueString(),
+				Value:   fieldValue,
+			}
+
+			recipe, err := parseGeneratorRecipe(field.Recipe)
+			if err != nil {
+				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+					"Item conversion error",
+					fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
+				)}
+			}
+
+			if recipe != nil {
+				addRecipe(f, recipe)
+			}
+
+			item.Fields = append(item.Fields, f)
+		}
+	}
+
+	return item, nil
+}
+
+func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*op.GeneratorRecipe, error) {
+	if recipeObject == nil || len(recipeObject) == 0 {
+		return nil, nil
+	}
+
+	recipe := recipeObject[0]
+
+	parsed := &op.GeneratorRecipe{
+		Length:        32,
+		CharacterSets: []string{},
+	}
+
+	length := recipe.Length.ValueInt64()
+	if length > 64 {
+		return nil, fmt.Errorf("password_recipe.length must be an integer between 1 and 64")
+	}
+
+	if length > 0 {
+		parsed.Length = int(length)
+	}
+
+	if recipe.Letters.ValueBool() {
+		parsed.CharacterSets = append(parsed.CharacterSets, "LETTERS")
+	}
+	if recipe.Digits.ValueBool() {
+		parsed.CharacterSets = append(parsed.CharacterSets, "DIGITS")
+	}
+	if recipe.Symbols.ValueBool() {
+		parsed.CharacterSets = append(parsed.CharacterSets, "SYMBOLS")
+	}
+
+	return parsed, nil
+}
+
+func addRecipe(f *op.ItemField, r *op.GeneratorRecipe) {
+	f.Recipe = r
+
+	// Check to see if the current value adheres to the recipe
+
+	var recipeLetters, recipeDigits, recipeSymbols bool
+	hasLetters, _ := regexp.MatchString("[a-zA-Z]", f.Value)
+	hasDigits, _ := regexp.MatchString("[0-9]", f.Value)
+	hasSymbols, _ := regexp.MatchString("[^a-zA-Z0-9]", f.Value)
+
+	for _, s := range r.CharacterSets {
+		switch s {
+		case "LETTERS":
+			recipeLetters = true
+		case "DIGITS":
+			recipeDigits = true
+		case "SYMBOLS":
+			recipeSymbols = true
+		}
+	}
+
+	if hasLetters != recipeLetters ||
+		hasDigits != recipeDigits ||
+		hasSymbols != recipeSymbols ||
+		len(f.Value) != r.Length {
+		f.Generate = true
+	}
 }
