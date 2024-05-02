@@ -5,8 +5,8 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"net/http"
 	"reflect"
 	"regexp"
 	"sort"
@@ -296,12 +296,12 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 		return
 	}
 
-	client, ok := req.ProviderData.(*http.Client)
+	client, ok := req.ProviderData.(onepassword.Client)
 
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
-			fmt.Sprintf("Expected *http.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected onepassword.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
@@ -322,15 +322,21 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create example, got error: %s", err))
-	//     return
-	// }
+	item, diagnostics := dataToItem(ctx, data)
+	resp.Diagnostics.Append(diagnostics...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	// For the purposes of this example code, hardcoding a response value to
-	// save into the Terraform state.
-	data.ID = types.StringValue("example-id")
+	createdItem, err := r.client.CreateItem(ctx, item, item.Vault.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("1Password Item create error", fmt.Sprintf("Error creating 1Password item, got error %s", err))
+	}
+
+	resp.Diagnostics.Append(itemToData(ctx, createdItem, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -352,11 +358,17 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read example, got error: %s", err))
-	//     return
-	// }
+	vaultUUID, itemUUID := vaultAndItemUUID(data.ID.ValueString())
+	item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
+	if err != nil {
+		resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not get item '%s' from vault '%s', got error: %s", itemUUID, vaultUUID, err))
+		return
+	}
+
+	resp.Diagnostics.Append(itemToData(ctx, item, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -367,18 +379,31 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update example, got error: %s", err))
-	//     return
-	// }
+	item, diagnostics := dataToItem(ctx, data)
+	resp.Diagnostics.Append(diagnostics...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	payload, _ := json.Marshal(item)
+	tflog.Info(ctx, "update op payload: "+string(payload))
+
+	updatedItem, err := r.client.UpdateItem(ctx, item, data.Vault.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		return
+	}
+
+	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &data)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
@@ -396,11 +421,17 @@ func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.Delet
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	// httpResp, err := r.client.Do(httpReq)
-	// if err != nil {
-	//     resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to delete example, got error: %s", err))
-	//     return
-	// }
+	item, diagnostics := dataToItem(ctx, data)
+	resp.Diagnostics.Append(diagnostics...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.client.DeleteItem(ctx, item, data.Vault.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError("1Password Item delete error", fmt.Sprintf("Could not delete item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		return
+	}
 }
 
 func (r *OnePasswordItemResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
