@@ -61,6 +61,25 @@ func generateLoginItem() *onepassword.Item {
 	return &item
 }
 
+func generateSecureNoteItem() *onepassword.Item {
+	item := generateBaseItem()
+	item.Category = onepassword.SecureNote
+	item.Fields = []*onepassword.ItemField{
+		{
+			ID:      "notesPlain",
+			Label:   "notesPlain",
+			Purpose: onepassword.FieldPurposeNotes,
+			Value: `Lorem 
+ipsum 
+from 
+notes
+`,
+		},
+	}
+
+	return &item
+}
+
 func generateDatabaseFields() []*onepassword.ItemField {
 	fields := []*onepassword.ItemField{
 		{

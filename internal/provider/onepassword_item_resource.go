@@ -47,21 +47,22 @@ type OnePasswordItemResource struct {
 
 // OnePasswordItemResourceModel describes the resource data model.
 type OnePasswordItemResourceModel struct {
-	ID       types.String                          `tfsdk:"id"`
-	UUID     types.String                          `tfsdk:"uuid"`
-	Vault    types.String                          `tfsdk:"vault"`
-	Category types.String                          `tfsdk:"category"`
-	Title    types.String                          `tfsdk:"title"`
-	URL      types.String                          `tfsdk:"url"`
-	Hostname types.String                          `tfsdk:"hostname"`
-	Database types.String                          `tfsdk:"database"`
-	Port     types.String                          `tfsdk:"port"`
-	Type     types.String                          `tfsdk:"type"`
-	Tags     types.List                            `tfsdk:"tags"`
-	Username types.String                          `tfsdk:"username"`
-	Password types.String                          `tfsdk:"password"`
-	Section  []OnePasswordItemResourceSectionModel `tfsdk:"section"`
-	Recipe   []PasswordRecipeModel                 `tfsdk:"password_recipe"`
+	ID        types.String                          `tfsdk:"id"`
+	UUID      types.String                          `tfsdk:"uuid"`
+	Vault     types.String                          `tfsdk:"vault"`
+	Category  types.String                          `tfsdk:"category"`
+	Title     types.String                          `tfsdk:"title"`
+	URL       types.String                          `tfsdk:"url"`
+	Hostname  types.String                          `tfsdk:"hostname"`
+	Database  types.String                          `tfsdk:"database"`
+	Port      types.String                          `tfsdk:"port"`
+	Type      types.String                          `tfsdk:"type"`
+	Tags      types.List                            `tfsdk:"tags"`
+	Username  types.String                          `tfsdk:"username"`
+	Password  types.String                          `tfsdk:"password"`
+	NoteValue types.String                          `tfsdk:"note_value"`
+	Section   []OnePasswordItemResourceSectionModel `tfsdk:"section"`
+	Recipe    []PasswordRecipeModel                 `tfsdk:"password_recipe"`
 }
 
 type PasswordRecipeModel struct {
@@ -212,6 +213,11 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				PlanModifiers: []planmodifier.String{
 					ValueModifier(),
 				},
+			},
+			"note_value": schema.StringAttribute{
+				MarkdownDescription: noteValueDescription,
+				Optional:            true,
+				Sensitive:           true,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -572,6 +578,8 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 			data.Username = setStringValue(f.Value)
 		case op.FieldPurposePassword:
 			data.Password = setStringValue(f.Value)
+		case op.FieldPurposeNotes:
+			data.NoteValue = setStringValue(f.Value)
 		default:
 			if f.Section == nil {
 				switch f.Label {
@@ -646,6 +654,13 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Generate: password == "",
 				Recipe:   recipe,
 			},
+			{
+				ID:      "notesPlain",
+				Label:   "notesPlain",
+				Type:    op.FieldTypeString,
+				Purpose: op.FieldPurposeNotes,
+				Value:   data.NoteValue.ValueString(),
+			},
 		}
 	case "password":
 		item.Category = op.Password
@@ -658,6 +673,13 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Value:    password,
 				Generate: password == "",
 				Recipe:   recipe,
+			},
+			{
+				ID:      "notesPlain",
+				Label:   "notesPlain",
+				Type:    op.FieldTypeString,
+				Purpose: op.FieldPurposeNotes,
+				Value:   data.NoteValue.ValueString(),
 			},
 		}
 	case "database":
@@ -700,6 +722,24 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Label: "type",
 				Type:  op.FieldTypeMenu,
 				Value: data.Type.ValueString(),
+			},
+			{
+				ID:      "notesPlain",
+				Label:   "notesPlain",
+				Type:    op.FieldTypeString,
+				Purpose: op.FieldPurposeNotes,
+				Value:   data.NoteValue.ValueString(),
+			},
+		}
+	case "secure_note":
+		item.Category = op.SecureNote
+		item.Fields = []*op.ItemField{
+			{
+				ID:      "notesPlain",
+				Label:   "notesPlain",
+				Type:    op.FieldTypeString,
+				Purpose: op.FieldPurposeNotes,
+				Value:   data.NoteValue.ValueString(),
 			},
 		}
 	}

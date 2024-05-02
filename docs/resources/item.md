@@ -66,9 +66,10 @@ resource "onepassword_item" "demo_db" {
 
 ### Optional
 
-- `category` (String) The category of the item. One of ["login" "password" "database"]
+- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note"]
 - `database` (String) (Only applies to the database category) The name of the database.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
+- `note_value` (String, Sensitive) Secure Note value.
 - `password` (String, Sensitive) Password for this item.
 - `password_recipe` (Block List) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedblock--password_recipe))
 - `port` (String) (Only applies to the database category) The port the database is listening on.

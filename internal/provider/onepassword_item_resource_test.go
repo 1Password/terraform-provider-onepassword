@@ -98,6 +98,33 @@ func TestAccItemResourceLogin(t *testing.T) {
 	})
 }
 
+func TestAccItemResourceSecureNote(t *testing.T) {
+	expectedItem := generateSecureNoteItem()
+	expectedVault := op.Vault{
+		ID:          expectedItem.Vault.ID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccSecureNoteResourceConfig(expectedItem),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// verify local values
+					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "note_value", expectedItem.Fields[0].Value),
+				),
+			},
+		},
+	})
+}
+
 func TestAccItemResourceWithSections(t *testing.T) {
 	expectedItem := generateItemWithSections()
 	expectedVault := op.Vault{
@@ -176,6 +203,22 @@ resource "onepassword_item" "test-database" {
   password_recipe {}
   url = "%s"
 }`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.URLs[0].URL)
+}
+
+func testAccSecureNoteResourceConfig(expectedItem *op.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-secure-note" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  note_value = <<EOT
+%s
+EOT
+}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), strings.TrimSuffix(expectedItem.Fields[0].Value, "\n"))
 }
 
 func testAccResourceWithSectionsConfig(expectedItem *op.Item) string {

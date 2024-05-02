@@ -54,6 +54,7 @@ var (
 		strings.ToLower(string(op.Login)),
 		strings.ToLower(string(op.Password)),
 		strings.ToLower(string(op.Database)),
+		strings.ToLower(string(op.SecureNote)),
 	}
 
 	fieldPurposes = []string{
