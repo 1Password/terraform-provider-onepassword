@@ -203,6 +203,9 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 				Computed:            true,
 				Sensitive:           true,
+				PlanModifiers: []planmodifier.String{
+					ValueModifier(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -260,6 +263,9 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Optional:            true,
 										Computed:            true,
 										Sensitive:           true,
+										PlanModifiers: []planmodifier.String{
+											ValueModifier(),
+										},
 									},
 								},
 								Blocks: map[string]schema.Block{
