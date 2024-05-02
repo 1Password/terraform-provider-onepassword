@@ -142,6 +142,9 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
+				Validators: []validator.String{
+					validateOTP(),
+				},
 			},
 			"uuid": schema.StringAttribute{
 				MarkdownDescription: itemUUIDDescription,
