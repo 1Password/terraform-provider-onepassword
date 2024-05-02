@@ -153,7 +153,7 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 
 func (p *OnePasswordProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewExampleResource,
+		NewOnePasswordItemResource,
 	}
 }
 
