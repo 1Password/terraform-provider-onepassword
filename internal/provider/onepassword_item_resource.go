@@ -7,10 +7,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
+	"sort"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -23,7 +27,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
+	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/onepassword/util"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -396,4 +402,154 @@ func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.Delet
 
 func (r *OnePasswordItemResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+}
+
+func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
+	data.ID = setStringValue(itemTerraformID(item))
+	data.UUID = setStringValue(item.ID)
+	data.Vault = setStringValue(item.Vault.ID)
+	data.Title = setStringValue(item.Title)
+
+	for _, u := range item.URLs {
+		if u.Primary {
+			data.URL = setStringValue(u.URL)
+		}
+	}
+
+	var dataTags []string
+	diagnostics := data.Tags.ElementsAs(ctx, &dataTags, false)
+	if diagnostics.HasError() {
+		return diagnostics
+	}
+
+	sort.Strings(dataTags)
+	if !reflect.DeepEqual(dataTags, item.Tags) {
+		tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
+		if diagnostics.HasError() {
+			return diagnostics
+		}
+
+		if item.Tags != nil || dataTags == nil {
+			data.Tags = tags
+		}
+	}
+
+	data.Category = setStringValue(strings.ToLower(string(item.Category)))
+
+	dataSections := data.Section
+	for _, s := range item.Sections {
+		section := OnePasswordItemResourceSectionModel{}
+		posSection := -1
+		newSection := true
+
+		for i := range dataSections {
+			existingID := dataSections[i].ID.ValueString()
+			existingLabel := dataSections[i].Label.ValueString()
+			if (s.ID != "" && s.ID == existingID) || s.Label == existingLabel {
+				section = dataSections[i]
+				posSection = i
+				newSection = false
+			}
+		}
+
+		section.ID = setStringValue(s.ID)
+		section.Label = setStringValue(s.Label)
+
+		var existingFields []OnePasswordItemResourceFieldModel
+		if section.Field != nil {
+			existingFields = section.Field
+		}
+		for _, f := range item.Fields {
+			if f.Section != nil && f.Section.ID == s.ID {
+				dataField := OnePasswordItemResourceFieldModel{}
+				posField := -1
+				newField := true
+
+				for i := range existingFields {
+					existingID := existingFields[i].ID.ValueString()
+					existingLabel := existingFields[i].Label.ValueString()
+
+					if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
+						dataField = existingFields[i]
+						posField = i
+						newField = false
+					}
+				}
+
+				dataField.ID = setStringValue(f.ID)
+				dataField.Label = setStringValue(f.Label)
+				dataField.Purpose = setStringValue(string(f.Purpose))
+				dataField.Type = setStringValue(string(f.Type))
+				dataField.Value = setStringValue(f.Value)
+
+				if f.Type == op.FieldTypeDate {
+					date, err := util.SecondsToYYYYMMDD(f.Value)
+					if err != nil {
+						return diag.Diagnostics{diag.NewErrorDiagnostic(
+							"Error parsing data",
+							fmt.Sprintf("Failed to parse date value, got error: %s", err),
+						)}
+					}
+					dataField.Value = setStringValue(date)
+				}
+
+				if f.Recipe != nil {
+					charSets := map[string]bool{}
+					for _, s := range f.Recipe.CharacterSets {
+						charSets[strings.ToLower(s)] = true
+					}
+
+					dataField.Recipe = []PasswordRecipeModel{{
+						Length:  types.Int64Value(int64(f.Recipe.Length)),
+						Letters: types.BoolValue(charSets["letters"]),
+						Digits:  types.BoolValue(charSets["digits"]),
+						Symbols: types.BoolValue(charSets["symbols"]),
+					}}
+				}
+
+				if newField {
+					existingFields = append(existingFields, dataField)
+				} else {
+					existingFields[posField] = dataField
+				}
+			}
+		}
+		section.Field = existingFields
+
+		if newSection {
+			dataSections = append(dataSections, section)
+		} else {
+			dataSections[posSection] = section
+		}
+	}
+
+	data.Section = dataSections
+
+	for _, f := range item.Fields {
+		switch f.Purpose {
+		case op.FieldPurposeUsername:
+			data.Username = setStringValue(f.Value)
+		case op.FieldPurposePassword:
+			data.Password = setStringValue(f.Value)
+		default:
+			if f.Section == nil {
+				switch f.Label {
+				case "username":
+					data.Username = setStringValue(f.Value)
+				case "password":
+					data.Password = setStringValue(f.Value)
+				case "hostname", "server":
+					data.Hostname = setStringValue(f.Value)
+				case "database":
+					data.Database = setStringValue(f.Value)
+				case "port":
+					data.Port = setStringValue(f.Value)
+				case "type":
+					data.Type = setStringValue(f.Value)
+				}
+			}
+		}
+	}
+
+	return nil
 }
