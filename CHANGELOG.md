@@ -12,6 +12,28 @@
 
 ---
 
+[//]: # (START/v2.0.0)
+# v2.0.0
+
+## Features
+ * Added support for `Secure Note` items. {#149}
+ * Added `note_value` attribute representing a 1Password Item's `notes` field. {#57}
+
+## Fixes
+ * The data handling is more robust, making it less prone to errors and inconsistencies. {#157,#146}
+ * CLI and Connect clients now have a more consistent behavior.
+ * Fields of type `OTP` are better handled when user provides a custom ID for them. Terraform will throw an error if the custom ID doesn't have the `TOTP_` prefix, which is required for this field type.
+ * The values that are generated will only show in the plan to be recomputed when the recipe is changed or the value is explicitly set.
+ * When fetching Database items from 1Password, the `server` field (previously known as `hostname`) will populate the Terraform `hostname` attribute. This ensures that the data from new Database items is mapped as expected. {#76}
+ * Vault description is now fetched when getting a vault from 1Password by name and the provider was configured to use the CLI client.
+ * Generated values (using a recipe) are now regenerated when the recipe is changed.
+ * Tag ordering mismatch between Terraform state and 1Password no longer causes a change if the tags are the same. The mismatch can be caused by 1Password storing the tags in alphabetical order. {#155}
+
+## Security
+ * Migration to Terraform Provider Framework addressed an issue in the terraform-plugin-sdk where it is possible that sensitive data pulled from 1Password items can be shown in plaintext when a user runs `terraform plan`. This only affects the sensitive data pulled from custom sections within 1Password items that aren’t marked as sensitive in the terraform plan. This also applies to third-party providers that don’t treat the data as sensitive. {#167}
+
+---
+
 [//]: # (START/v1.4.3)
 # v1.4.3
 
