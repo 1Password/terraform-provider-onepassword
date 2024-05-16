@@ -95,6 +95,31 @@ func compareItemToSource(t *testing.T, dataSourceData *schema.ResourceData, item
 	}
 	compareStringSlice(t, getTags(dataSourceData), item.Tags)
 
+	for _, section := range item.Sections {
+		t.Errorf("Missing Implementation for %s", section.Label)
+		//keyedSection := dataSourceData.Get(fmt.Sprintf("keyed_sections.%s", section.Label)).(map[string]interface{})
+		//dataSourceData.GetRawState()
+		//if keyedSection == nil {
+		//	t.Errorf("Expected keyed section %v to exist", section.Label)
+		//}
+		//if keyedSection["id"] != section.ID {
+		//	t.Errorf("Expected keyed section %v to have id %v got %v", section.Label, section.ID, keyedSection["id"])
+		//}
+		//
+		//for _, field := range item.Fields {
+		//	if field.Section != nil && field.Section.ID == section.ID {
+		//		keyedField := dataSourceData.Get(fmt.Sprintf("keyed_sections.%s.keyed_fields.%s", section.Label, field.Label)).(map[string]interface{})
+		//
+		//		if keyedField == nil {
+		//			t.Errorf("Expected keyed field %v to exist", field.Label)
+		//		}
+		//		if keyedField["id"] != field.ID {
+		//			t.Errorf("Expected keyed field %v to have id %v got %v", field.Label, field.ID, keyedField["id"])
+		//		}
+		//	}
+		//}
+	}
+
 	for _, f := range item.Fields {
 		path := f.Label
 		if f.Section != nil {
@@ -136,8 +161,10 @@ func generateDataSource(t *testing.T, item *onepassword.Item) *schema.ResourceDa
 }
 
 func generateItem() *onepassword.Item {
+	fields, sections := generateFields()
 	item := onepassword.Item{}
-	item.Fields = generateFields()
+	item.Sections = sections
+	item.Fields = fields
 	item.ID = "79841a98-dd4a-4c34-8be5-32dca20a7328"
 	item.Vault.ID = "df2e9643-45ad-4ff9-8b98-996f801afa75"
 	item.Category = "USERNAME"
@@ -151,34 +178,56 @@ func generateItem() *onepassword.Item {
 	return &item
 }
 
-func generateFields() []*onepassword.ItemField {
-	fields := []*onepassword.ItemField{
+func generateFields() ([]*onepassword.ItemField, []*onepassword.ItemSection) {
+	sections := []*onepassword.ItemSection{
 		{
-			Label: "username",
-			Value: "test_user",
+			ID:    "r9d6nt77oacycnjhp3tm3ihjka",
+			Label: "Section 1",
+			//Label: "", // seems to be the default section name
 		},
 		{
-			Label: "password",
-			Value: "test_password",
-		},
-		{
-			Label: "hostname",
-			Value: "test_host",
-		},
-		{
-			Label: "database",
-			Value: "test_database",
-		},
-		{
-			Label: "port",
-			Value: "test_port",
-		},
-		{
-			Label: "type",
-			Value: "test_type",
+			ID:    "hbvbe4469kak5njjuthnhszcae",
+			Label: "Section 2",
 		},
 	}
-	return fields
+
+	// TODO: this is confusing, based on the JSON payload, fields live inside of sections there is only
+	// payload.details.sections and inside of that there is a payload.details.sections.fields
+	fields := []*onepassword.ItemField{
+		{
+			Label:   "username",
+			Value:   "test_user",
+			Section: sections[0],
+		},
+		{
+			Label:   "password",
+			Value:   "test_password",
+			Section: sections[0],
+		},
+		{
+			Label:   "hostname",
+			Value:   "test_host",
+			Section: sections[0],
+		},
+		{
+			Label:   "database",
+			Value:   "test_database",
+			Section: sections[0],
+		},
+		{
+			Label:   "port",
+			Value:   "test_port",
+			Section: sections[0],
+			//Section: nil, TODO: why is Section a pointer when there HAVE to be a section for the field?
+		},
+		{
+			Label:   "type",
+			Value:   "test_type",
+			Section: sections[1],
+		},
+	}
+
+	return fields, sections
 }
 
 func compareStringSlice(t *testing.T, actual, expected []string) {
