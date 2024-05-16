@@ -66,7 +66,7 @@ resource "onepassword_item" "demo_db" {
 
 ### Optional
 
-- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note"]
+- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document"]
 - `database` (String) (Only applies to the database category) The name of the database.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `note_value` (String, Sensitive) Secure Note value.
