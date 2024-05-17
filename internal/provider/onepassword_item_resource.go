@@ -29,7 +29,7 @@ import (
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
-	"github.com/1Password/terraform-provider-onepassword/onepassword/util"
+	"github.com/1Password/terraform-provider-onepassword/internal/onepassword/util"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
