@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"testing"
@@ -132,6 +133,50 @@ func TestAccItemPasswordDatabase(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "username", expectedItem.Fields[0].Value),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "password", expectedItem.Fields[1].Value),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemDocument(t *testing.T) {
+	expectedItem := generateDocumentItem()
+	expectedVault := op.Vault{
+		ID:          expectedItem.Vault.ID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	first_content, err := expectedItem.Files[0].Content()
+	if err != nil {
+		t.Fatalf("Error getting content of first file: %v", err)
+	}
+
+	second_content, err := expectedItem.Files[1].Content()
+	if err != nil {
+		t.Fatalf("Error getting content of second file: %v", err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "file.0.id", expectedItem.Files[0].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "file.0.name", expectedItem.Files[0].Name),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "file.0.content", string(first_content)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "file.1.id", expectedItem.Files[1].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "file.1.name", expectedItem.Files[1].Name),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "file.1.content_base64", base64.StdEncoding.EncodeToString(second_content)),
 				),
 			},
 		},

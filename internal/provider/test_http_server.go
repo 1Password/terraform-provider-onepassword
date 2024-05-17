@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
@@ -16,6 +18,16 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 	itemBytes, err := json.Marshal(expectedItem)
 	if err != nil {
 		t.Errorf("error marshaling item for testing: %s", err)
+	}
+
+	files := expectedItem.Files
+	var fileBytes [][]byte
+	for _, file := range files {
+		c, err := file.Content()
+		if err != nil {
+			t.Errorf("error getting file content: %s", err)
+		}
+		fileBytes = append(fileBytes, c)
 	}
 
 	vaultBytes, err := json.Marshal(expectedVault)
@@ -50,6 +62,20 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 				// Mock returning a list of items for a vault specified by uuid
 				w.Header().Set("Content-Type", "application/json")
 				_, err := w.Write(itemListBytes)
+				if err != nil {
+					t.Errorf("error writing body: %s", err)
+				}
+			} else if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", expectedItem.Vault.ID, expectedItem.ID, files[0].ID) ||
+				r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", expectedItem.Vault.ID, expectedItem.ID, files[1].ID) {
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("1Password-Connect-Version", "1.3.0") // must be >= 1.3.0
+				i := slices.IndexFunc(files, func(f *onepassword.File) bool {
+					return f.ID == strings.Split(r.URL.Path, "/")[7]
+				})
+				if i == -1 {
+					t.Errorf("file not found")
+				}
+				_, err := w.Write(fileBytes[i])
 				if err != nil {
 					t.Errorf("error writing body: %s", err)
 				}

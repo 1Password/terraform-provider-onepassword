@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -47,6 +48,14 @@ type OnePasswordItemDataSourceModel struct {
 	Password  types.String                  `tfsdk:"password"`
 	NoteValue types.String                  `tfsdk:"note_value"`
 	Section   []OnePasswordItemSectionModel `tfsdk:"section"`
+	File      []OnePasswordItemFileModel    `tfsdk:"file"`
+}
+
+type OnePasswordItemFileModel struct {
+	ID            types.String `tfsdk:"id"`
+	Name          types.String `tfsdk:"name"`
+	Content       types.String `tfsdk:"content"`
+	ContentBase64 types.String `tfsdk:"content_base64"`
 }
 
 type OnePasswordItemSectionModel struct {
@@ -187,6 +196,31 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 					},
 				},
 			},
+			"file": schema.ListNestedBlock{
+				MarkdownDescription: filesDescription,
+				NestedObject: schema.NestedBlockObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: fileIDDescription,
+							Computed:            true,
+						},
+						"name": schema.StringAttribute{
+							MarkdownDescription: fileNameDescription,
+							Computed:            true,
+						},
+						"content": schema.StringAttribute{
+							MarkdownDescription: fileContentDescription,
+							Computed:            true,
+							Sensitive:           true,
+						},
+						"content_base64": schema.StringAttribute{
+							MarkdownDescription: fileContentBase64Description,
+							Computed:            true,
+							Sensitive:           true,
+						},
+					},
+				},
+			},
 		},
 	}
 }
@@ -298,6 +332,19 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 	}
 
+	for _, f := range item.Files {
+		content, err := d.client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+		}
+		file := OnePasswordItemFileModel{
+			ID:            types.StringValue(f.ID),
+			Name:          types.StringValue(f.Name),
+			Content:       types.StringValue(string(content)),
+			ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+		}
+		data.File = append(data.File, file)
+	}
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
 	tflog.Trace(ctx, "read an item data source")

@@ -167,6 +167,8 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Default:             stringdefault.StaticString("login"),
 				Validators: []validator.String{
 					stringvalidator.OneOfCaseInsensitive(categories...),
+					// connect api does not support creating document category
+					stringvalidator.NoneOf("document"),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
