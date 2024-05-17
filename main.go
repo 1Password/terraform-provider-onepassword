@@ -34,14 +34,6 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers like delve")
 	flag.Parse()
 
-	// Provider SDK v2 code
-	//plugin.Serve(&plugin.ServeOpts{
-	//	ProviderFunc: onepassword.Provider,
-	//	ProviderAddr: "1Password/onepassword",
-	//	Debug:        debug,
-	//})
-
-	// Provider framework code
 	opts := providerserver.ServeOpts{
 		Address: "registry.terraform.io/1password/onepassword",
 		Debug:   debug,
