@@ -171,13 +171,7 @@ func TestAccItemResourceDocument(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccDocumentResourceConfig(expectedItem),
-				// ConfigPlanChecks: resource.ConfigPlanChecks{
-				// 	PreApply: []plancheck.PlanCheck{
-
-				// 		plancheck.ExpectUnknownOutputValue("test"),
-				// 	},
-				// },
+				Config:      testAccProviderConfig(testServer.URL) + testAccDocumentResourceConfig(expectedItem),
 				ExpectError: regexp.MustCompile("Invalid Attribute Value Match"),
 			},
 		},
