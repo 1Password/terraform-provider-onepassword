@@ -35,6 +35,7 @@ data "onepassword_item" "example" {
 ### Read-Only
 
 - `category` (String) The category of the item. One of ["login" "password" "database" "secure_note"]
+- `credential` (String, Sensitive) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
