@@ -337,6 +337,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	createdItem, err := r.client.CreateItem(ctx, item, item.Vault.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("1Password Item create error", fmt.Sprintf("Error creating 1Password item, got error %s", err))
+		return
 	}
 
 	resp.Diagnostics.Append(itemToData(ctx, createdItem, &data)...)
