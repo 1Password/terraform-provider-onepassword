@@ -14,7 +14,7 @@ Use this data source to get details of a vault by either its name or uuid.
 
 ```terraform
 data "onepassword_vault" "example" {
-  name = var.demo_vault
+  name = "your-vault-name"
 }
 ```
 

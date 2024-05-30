@@ -1,3 +1,3 @@
 data "onepassword_vault" "example" {
-  name = var.demo_vault
+  name = "your-vault-name"
 }
