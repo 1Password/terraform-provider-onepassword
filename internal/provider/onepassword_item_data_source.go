@@ -32,21 +32,23 @@ type OnePasswordItemDataSource struct {
 
 // OnePasswordItemDataSourceModel describes the data source data model.
 type OnePasswordItemDataSourceModel struct {
-	ID        types.String                  `tfsdk:"id"`
-	Vault     types.String                  `tfsdk:"vault"`
-	UUID      types.String                  `tfsdk:"uuid"`
-	Title     types.String                  `tfsdk:"title"`
-	Category  types.String                  `tfsdk:"category"`
-	URL       types.String                  `tfsdk:"url"`
-	Hostname  types.String                  `tfsdk:"hostname"`
-	Database  types.String                  `tfsdk:"database"`
-	Port      types.String                  `tfsdk:"port"`
-	Type      types.String                  `tfsdk:"type"`
-	Tags      types.List                    `tfsdk:"tags"`
-	Username  types.String                  `tfsdk:"username"`
-	Password  types.String                  `tfsdk:"password"`
-	NoteValue types.String                  `tfsdk:"note_value"`
-	Section   []OnePasswordItemSectionModel `tfsdk:"section"`
+	ID         types.String                  `tfsdk:"id"`
+	Vault      types.String                  `tfsdk:"vault"`
+	UUID       types.String                  `tfsdk:"uuid"`
+	Title      types.String                  `tfsdk:"title"`
+	Category   types.String                  `tfsdk:"category"`
+	URL        types.String                  `tfsdk:"url"`
+	Hostname   types.String                  `tfsdk:"hostname"`
+	Database   types.String                  `tfsdk:"database"`
+	Port       types.String                  `tfsdk:"port"`
+	Type       types.String                  `tfsdk:"type"`
+	Tags       types.List                    `tfsdk:"tags"`
+	Username   types.String                  `tfsdk:"username"`
+	Password   types.String                  `tfsdk:"password"`
+	NoteValue  types.String                  `tfsdk:"note_value"`
+	PublicKey  types.String                  `tfsdk:"public_key"`
+	PrivateKey types.String                  `tfsdk:"private_key"`
+	Section    []OnePasswordItemSectionModel `tfsdk:"section"`
 }
 
 type OnePasswordItemSectionModel struct {
@@ -139,6 +141,15 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				MarkdownDescription: noteValueDescription,
 				Computed:            true,
 				Optional:            true,
+				Sensitive:           true,
+			},
+			"public_key": schema.StringAttribute{
+				MarkdownDescription: publicKeyDescription,
+				Computed:            true,
+			},
+			"private_key": schema.StringAttribute{
+				MarkdownDescription: privateKeyDescription,
+				Computed:            true,
 				Sensitive:           true,
 			},
 		},
@@ -293,6 +304,10 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.Port = types.StringValue(f.Value)
 				case "type":
 					data.Type = types.StringValue(f.Value)
+				case "public key":
+					data.PublicKey = types.StringValue(f.Value)
+				case "private key":
+					data.PrivateKey = types.StringValue(f.Value)
 				}
 			}
 		}
