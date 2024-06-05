@@ -105,6 +105,30 @@ func generateDocumentItem() *onepassword.Item {
 	return &item
 }
 
+func generateLoginItemWithFiles() *onepassword.Item {
+	item := generateItemWithSections()
+	item.Category = onepassword.Login
+	section := item.Sections[0]
+	item.Files = []*onepassword.File{
+		{
+			ID:          "ascii",
+			Name:        "ascii",
+			Section:     section,
+			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "ascii"),
+		},
+		{
+			ID:          "binary",
+			Name:        "binary",
+			Section:     section,
+			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "binary"),
+		},
+	}
+	item.Files[0].SetContent([]byte("ascii"))
+	item.Files[1].SetContent([]byte{0xDE, 0xAD, 0xBE, 0xEF})
+
+	return item
+}
+
 func generateDatabaseFields() []*onepassword.ItemField {
 	fields := []*onepassword.ItemField{
 		{

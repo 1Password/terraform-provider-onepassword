@@ -54,7 +54,7 @@ Read-Only:
 
 - `content` (String, Sensitive) The content of the file.
 - `content_base64` (String, Sensitive) The content of the file in base64 encoding. (Use this for binary files.)
-- `id` (String) A UUID for the file.
+- `id` (String) The UUID for the file.
 - `name` (String) The name of the file.
 
 
@@ -64,6 +64,7 @@ Read-Only:
 Read-Only:
 
 - `field` (Block List) (see [below for nested schema](#nestedblock--section--field))
+- `file` (Block List) A list of files attached to the section. (see [below for nested schema](#nestedblock--section--file))
 - `id` (String) A unique identifier for the section.
 - `label` (String) The label for the section.
 
@@ -77,3 +78,14 @@ Read-Only:
 - `purpose` (String) Purpose indicates this is a special field: a username, password, or notes field.
 - `type` (String) The type of value stored in the field.
 - `value` (String, Sensitive) The value of the field.
+
+
+<a id="nestedblock--section--file"></a>
+### Nested Schema for `section.file`
+
+Read-Only:
+
+- `content` (String, Sensitive) The content of the file.
+- `content_base64` (String, Sensitive) The content of the file in base64 encoding. (Use this for binary files.)
+- `id` (String) The UUID for the file.
+- `name` (String) The name of the file.

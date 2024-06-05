@@ -180,10 +180,11 @@ func TestAccItemResourceDocument(t *testing.T) {
 
 func testAccDataBaseResourceConfig(expectedItem *op.Item) string {
 	return fmt.Sprintf(`
-	data "onepassword_vault" "acceptance-tests" {
-		uuid = "%s"
-	}
-	resource "onepassword_item" "test-database" {
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-database" {
   vault = data.onepassword_vault.acceptance-tests.uuid
   title = "%s"
   category = "%s"

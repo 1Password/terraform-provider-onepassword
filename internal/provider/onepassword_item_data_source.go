@@ -62,6 +62,7 @@ type OnePasswordItemSectionModel struct {
 	ID    types.String                `tfsdk:"id"`
 	Label types.String                `tfsdk:"label"`
 	Field []OnePasswordItemFieldModel `tfsdk:"field"`
+	File  []OnePasswordItemFileModel  `tfsdk:"file"`
 }
 
 type OnePasswordItemFieldModel struct {
@@ -107,7 +108,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 			},
 			"category": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, categories),
+				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, dataSourceCategories),
 				Computed:            true,
 			},
 			"url": schema.StringAttribute{
@@ -187,6 +188,31 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 									},
 									"value": schema.StringAttribute{
 										MarkdownDescription: fieldValueDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+						"file": schema.ListNestedBlock{
+							MarkdownDescription: sectionFilesDescription,
+							NestedObject: schema.NestedBlockObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fileIDDescription,
+										Computed:            true,
+									},
+									"name": schema.StringAttribute{
+										MarkdownDescription: fileNameDescription,
+										Computed:            true,
+									},
+									"content": schema.StringAttribute{
+										MarkdownDescription: fileContentDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+									"content_base64": schema.StringAttribute{
+										MarkdownDescription: fileContentBase64Description,
 										Computed:            true,
 										Sensitive:           true,
 									},
@@ -301,6 +327,26 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			}
 		}
 
+		for _, f := range item.Files {
+			if f.Section != nil && f.Section.ID == s.ID {
+				content, err := f.Content()
+				if err != nil {
+					// content has not yet been loaded, fetch it
+					content, err = d.client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
+				}
+				if err != nil {
+					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+				}
+				file := OnePasswordItemFileModel{
+					ID:            types.StringValue(f.ID),
+					Name:          types.StringValue(f.Name),
+					Content:       types.StringValue(string(content)),
+					ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+				}
+				section.File = append(section.File, file)
+			}
+		}
+
 		data.Section = append(data.Section, section)
 	}
 
@@ -333,17 +379,23 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	for _, f := range item.Files {
-		content, err := d.client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
-		if err != nil {
-			resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+		if f.Section == nil {
+			content, err := f.Content()
+			if err != nil {
+				// content has not yet been loaded, fetch it
+				content, err = d.client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
+			}
+			if err != nil {
+				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+			}
+			file := OnePasswordItemFileModel{
+				ID:            types.StringValue(f.ID),
+				Name:          types.StringValue(f.Name),
+				Content:       types.StringValue(string(content)),
+				ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+			}
+			data.File = append(data.File, file)
 		}
-		file := OnePasswordItemFileModel{
-			ID:            types.StringValue(f.ID),
-			Name:          types.StringValue(f.Name),
-			Content:       types.StringValue(string(content)),
-			ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
-		}
-		data.File = append(data.File, file)
 	}
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log

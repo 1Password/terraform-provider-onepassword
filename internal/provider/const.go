@@ -29,10 +29,11 @@ const (
 	sectionIDDescription     = "A unique identifier for the section."
 	sectionLabelDescription  = "The label for the section."
 	sectionFieldsDescription = "A list of custom fields in the section."
+	sectionFilesDescription  = "A list of files attached to the section."
 
 	filesDescription             = "A list of files attached to the item."
 	fileDescription              = "A file attached to the item."
-	fileIDDescription            = "A UUID for the file."
+	fileIDDescription            = "The UUID of the file."
 	fileNameDescription          = "The name of the file."
 	fileContentDescription       = "The content of the file."
 	fileContentBase64Description = "The content of the file in base64 encoding. (Use this for binary files.)"
@@ -64,8 +65,8 @@ var (
 		strings.ToLower(string(op.Password)),
 		strings.ToLower(string(op.Database)),
 		strings.ToLower(string(op.SecureNote)),
-		strings.ToLower(string(op.Document)),
 	}
+	dataSourceCategories = append(categories, strings.ToLower(string(op.Document)))
 
 	fieldPurposes = []string{
 		string(op.FieldPurposeUsername),
