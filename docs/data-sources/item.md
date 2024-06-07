@@ -54,7 +54,7 @@ Read-Only:
 
 - `content` (String, Sensitive) The content of the file.
 - `content_base64` (String, Sensitive) The content of the file in base64 encoding. (Use this for binary files.)
-- `id` (String) The UUID for the file.
+- `id` (String) The UUID of the file.
 - `name` (String) The name of the file.
 
 
@@ -87,5 +87,5 @@ Read-Only:
 
 - `content` (String, Sensitive) The content of the file.
 - `content_base64` (String, Sensitive) The content of the file in base64 encoding. (Use this for binary files.)
-- `id` (String) The UUID for the file.
+- `id` (String) The UUID of the file.
 - `name` (String) The name of the file.
