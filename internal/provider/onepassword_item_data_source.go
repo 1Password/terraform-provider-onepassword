@@ -78,6 +78,29 @@ func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource
 }
 
 func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	fileNestedObjectSchema := schema.NestedBlockObject{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: fileIDDescription,
+				Computed:            true,
+			},
+			"name": schema.StringAttribute{
+				MarkdownDescription: fileNameDescription,
+				Computed:            true,
+			},
+			"content": schema.StringAttribute{
+				MarkdownDescription: fileContentDescription,
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"content_base64": schema.StringAttribute{
+				MarkdownDescription: fileContentBase64Description,
+				Computed:            true,
+				Sensitive:           true,
+			},
+		},
+	}
+
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
@@ -196,56 +219,14 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 						},
 						"file": schema.ListNestedBlock{
 							MarkdownDescription: sectionFilesDescription,
-							NestedObject: schema.NestedBlockObject{
-								Attributes: map[string]schema.Attribute{
-									"id": schema.StringAttribute{
-										MarkdownDescription: fileIDDescription,
-										Computed:            true,
-									},
-									"name": schema.StringAttribute{
-										MarkdownDescription: fileNameDescription,
-										Computed:            true,
-									},
-									"content": schema.StringAttribute{
-										MarkdownDescription: fileContentDescription,
-										Computed:            true,
-										Sensitive:           true,
-									},
-									"content_base64": schema.StringAttribute{
-										MarkdownDescription: fileContentBase64Description,
-										Computed:            true,
-										Sensitive:           true,
-									},
-								},
-							},
+							NestedObject:        fileNestedObjectSchema,
 						},
 					},
 				},
 			},
 			"file": schema.ListNestedBlock{
 				MarkdownDescription: filesDescription,
-				NestedObject: schema.NestedBlockObject{
-					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{
-							MarkdownDescription: fileIDDescription,
-							Computed:            true,
-						},
-						"name": schema.StringAttribute{
-							MarkdownDescription: fileNameDescription,
-							Computed:            true,
-						},
-						"content": schema.StringAttribute{
-							MarkdownDescription: fileContentDescription,
-							Computed:            true,
-							Sensitive:           true,
-						},
-						"content_base64": schema.StringAttribute{
-							MarkdownDescription: fileContentBase64Description,
-							Computed:            true,
-							Sensitive:           true,
-						},
-					},
-				},
+				NestedObject:        fileNestedObjectSchema,
 			},
 		},
 	}
