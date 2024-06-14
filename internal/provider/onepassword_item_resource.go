@@ -213,6 +213,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 				Computed:            true,
 				Sensitive:           true,
+				//Default:             stringdefault.StaticString(""),
 				PlanModifiers: []planmodifier.String{
 					ValueModifier(),
 				},
@@ -601,6 +602,10 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 				}
 			}
 		}
+	}
+
+	if item.Category == op.SecureNote && data.Password.IsUnknown() {
+		data.Password = types.StringNull()
 	}
 
 	return nil

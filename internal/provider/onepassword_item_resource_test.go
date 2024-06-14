@@ -119,6 +119,7 @@ func TestAccItemResourceSecureNote(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "title", expectedItem.Title),
 					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "category", strings.ToLower(string(expectedItem.Category))),
 					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "note_value", expectedItem.Fields[0].Value),
+					resource.TestCheckNoResourceAttr("onepassword_item.test-secure-note", "password"),
 				),
 			},
 		},

@@ -59,11 +59,13 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 		} else if r.Method == http.MethodPost {
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items", expectedItem.Vault.ID) {
 				itemToReturn := convertBodyToItem(r, t)
-				itemField := onepassword.ItemField{
-					Label: "password",
-					Value: "somepassword",
+				if itemToReturn.Category != onepassword.SecureNote {
+					itemField := onepassword.ItemField{
+						Label: "password",
+						Value: "somepassword",
+					}
+					itemToReturn.Fields = append(itemToReturn.Fields, &itemField)
 				}
-				itemToReturn.Fields = append(itemToReturn.Fields, &itemField)
 
 				itemToReturn.ID = expectedItem.ID
 				itemBytes, err := json.Marshal(itemToReturn)
