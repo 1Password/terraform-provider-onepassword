@@ -2,19 +2,37 @@ terraform {
   required_providers {
     onepassword = {
       source  = "1Password/onepassword"
-      version = "~> 1.3.0"
+      version = "~> 2.0.0"
     }
   }
 }
 
-provider "onepassword" {
-  url = "http://localhost:8080"
+data "onepassword_vault" "demo_vault" {
+  name = var.demo_vault
+}
+
+resource "onepassword_item" "demo_login" {
+  vault = data.onepassword_vault.demo_vault.uuid
+
+  title    = "Demo Terraform Login Item"
+  category = "login"
+  username = "test@example.com"
+
+  tags = ["Terraform", "Automation"]
+
+  password_recipe {
+    length  = 32
+    digits  = false
+    symbols = false
+  }
+
+  note_value = "An item created with the 1Password Terraform provider"
 }
 
 resource "onepassword_item" "demo_password" {
-  vault = var.demo_vault
+  vault = data.onepassword_vault.demo_vault.uuid
 
-  title    = "Demo Password Recipe"
+  title    = "Demo Terraform Password Item"
   category = "password"
 
   password_recipe {
@@ -33,20 +51,12 @@ resource "onepassword_item" "demo_password" {
   }
 }
 
-resource "onepassword_item" "demo_login" {
-  vault = var.demo_vault
-
-  title    = "Demo Terraform Login"
-  category = "login"
-  username = "test@example.com"
-}
-
 resource "onepassword_item" "demo_db" {
-  vault    = var.demo_vault
+  vault    = data.onepassword_vault.demo_vault.uuid
   category = "database"
   type     = "mysql"
 
-  title    = "Demo TF Database"
+  title    = "Demo Terraform Database Item"
   username = "root"
 
   database = "Example MySQL Instance"
@@ -54,8 +64,20 @@ resource "onepassword_item" "demo_db" {
   port     = 3306
 }
 
+resource "onepassword_item" "demo_secure_note" {
+  vault = data.onepassword_vault.demo_vault.uuid
+
+  title    = "Demo Terraform Secure Note Item"
+  category = "secure_note"
+
+  note_value = <<EOT
+  Welcome to the Terraform world! 🤩
+  This was an item created with the 1Password Terraform provider.
+  EOT
+}
+
 resource "onepassword_item" "demo_sections" {
-  vault = var.demo_vault
+  vault = data.onepassword_vault.demo_vault.uuid
 
   title    = "Demo Terraform Item with Sections"
   category = "login"
@@ -105,6 +127,6 @@ resource "onepassword_item" "demo_sections" {
 # Example of a Data Source Item with multiple sections and fields.
 # Uncomment it once the item above has been created to see an example of a Data Source
 # data "onepassword_item" "example" {
-#   vault = var.demo_vault
+#   vault = data.onepassword_vault.demo_vault.uuid
 #   uuid  = onepassword_item.demo_sections.uuid
 # }
