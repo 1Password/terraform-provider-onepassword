@@ -69,7 +69,10 @@ var (
 		strings.ToLower(string(op.Database)),
 		strings.ToLower(string(op.SecureNote)),
 	}
-	dataSourceCategories = append(categories, strings.ToLower(string(op.Document)))
+	dataSourceCategories = append(categories,
+		strings.ToLower(string(op.Document)),
+		strings.ToLower(string(op.SSHKey)),
+	)
 
 	fieldPurposes = []string{
 		string(op.FieldPurposeUsername),
