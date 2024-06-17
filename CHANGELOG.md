@@ -12,6 +12,22 @@
 
 ---
 
+[//]: # (START/v2.1.0)
+# v2.1.0
+
+## Features
+  * Add support for Document Item category in item data source. {#171}
+  * Add support for getting file attachments of an item in item data source. {#171}
+  * Add support for getting an API Credential item's credential value in item data source. {#151}
+  * Add support for SSH Key Item category in item data source. {#158}
+
+## Fixes
+ * Set password to null if not set. {#173}
+ * Throw a better error message when item creation fails. {#174}
+ * Improve examples and documentation. {#174}
+
+---
+
 [//]: # (START/v2.0.0)
 # v2.0.0
 
