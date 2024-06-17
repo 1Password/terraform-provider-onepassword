@@ -169,11 +169,11 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 										Computed:            true,
 									},
 									"purpose": schema.StringAttribute{
-										MarkdownDescription: fieldPurposeDescription,
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
 										Computed:            true,
 									},
 									"type": schema.StringAttribute{
-										MarkdownDescription: fieldTypeDescription,
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
 										Computed:            true,
 									},
 									"value": schema.StringAttribute{
