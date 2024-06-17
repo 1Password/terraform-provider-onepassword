@@ -82,7 +82,6 @@ resource "onepassword_item" "demo_db" {
 
 ### Read-Only
 
-- `credential` (String, Sensitive) API credential for this item.
 - `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - `uuid` (String) The UUID of the item. Item identifiers are unique within a specific vault.
 
