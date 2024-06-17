@@ -34,7 +34,7 @@ data "onepassword_item" "example" {
 
 ### Read-Only
 
-- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document"]
+- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key"]
 - `credential` (String, Sensitive) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
 - `file` (Block List) A list of files attached to the item. (see [below for nested schema](#nestedblock--file))
@@ -42,6 +42,8 @@ data "onepassword_item" "example" {
 - `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - `password` (String, Sensitive) Password for this item.
 - `port` (String) (Only applies to the database category) The port the database is listening on.
+- `private_key` (String, Sensitive) SSH Private Key for this item.
+- `public_key` (String) SSH Public Key for this item.
 - `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
 - `type` (String) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]

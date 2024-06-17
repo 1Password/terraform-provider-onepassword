@@ -48,6 +48,8 @@ type OnePasswordItemDataSourceModel struct {
 	Password   types.String                  `tfsdk:"password"`
 	NoteValue  types.String                  `tfsdk:"note_value"`
 	Credential types.String                  `tfsdk:"credential"`
+	PublicKey  types.String                  `tfsdk:"public_key"`
+	PrivateKey types.String                  `tfsdk:"private_key"`
 	Section    []OnePasswordItemSectionModel `tfsdk:"section"`
 	File       []OnePasswordItemFileModel    `tfsdk:"file"`
 }
@@ -178,6 +180,15 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				MarkdownDescription: noteValueDescription,
 				Computed:            true,
 				Optional:            true,
+				Sensitive:           true,
+			},
+			"public_key": schema.StringAttribute{
+				MarkdownDescription: publicKeyDescription,
+				Computed:            true,
+			},
+			"private_key": schema.StringAttribute{
+				MarkdownDescription: privateKeyDescription,
+				Computed:            true,
 				Sensitive:           true,
 			},
 		},
@@ -360,6 +371,10 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.Port = types.StringValue(f.Value)
 				case "type":
 					data.Type = types.StringValue(f.Value)
+				case "public key":
+					data.PublicKey = types.StringValue(f.Value)
+				case "private key":
+					data.PrivateKey = types.StringValue(f.Value)
 				}
 			}
 

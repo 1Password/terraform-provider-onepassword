@@ -19,6 +19,8 @@ const (
 	passwordDescription   = "Password for this item."
 	credentialDescription = "API credential for this item."
 	noteValueDescription  = "Secure Note value."
+	publicKeyDescription  = "SSH Public Key for this item."
+	privateKeyDescription = "SSH Private Key for this item."
 
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
@@ -67,7 +69,10 @@ var (
 		strings.ToLower(string(op.Database)),
 		strings.ToLower(string(op.SecureNote)),
 	}
-	dataSourceCategories = append(categories, strings.ToLower(string(op.Document)))
+	dataSourceCategories = append(categories,
+		strings.ToLower(string(op.Document)),
+		strings.ToLower(string(op.SSHKey)),
+	)
 
 	fieldPurposes = []string{
 		string(op.FieldPurposeUsername),

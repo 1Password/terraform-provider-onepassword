@@ -1,9 +1,15 @@
 package provider
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
+	"golang.org/x/crypto/ssh"
 )
 
 func generateBaseItem() onepassword.Item {
@@ -61,6 +67,14 @@ func generateLoginItem() *onepassword.Item {
 			URL:     "some_url.com",
 		},
 	}
+
+	return &item
+}
+
+func generateSSHKeyItem() *onepassword.Item {
+	item := generateBaseItem()
+	item.Category = onepassword.SSHKey
+	item.Fields = generateSSHKeyFields()
 
 	return &item
 }
@@ -182,6 +196,32 @@ func generateLoginFields() []*onepassword.ItemField {
 		{
 			Label: "password",
 			Value: "test_password",
+		},
+	}
+	return fields
+}
+
+func generateSSHKeyFields() []*onepassword.ItemField {
+	bitSize := 2048
+	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	if err != nil {
+		panic(err)
+	}
+	privateKeyPem := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	publicRSAKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		panic(err)
+	}
+	publicKey := "ssh-rsa " + base64.StdEncoding.EncodeToString(publicRSAKey.Marshal())
+
+	fields := []*onepassword.ItemField{
+		{
+			Label: "private key",
+			Value: string(pem.EncodeToMemory(privateKeyPem)),
+		},
+		{
+			Label: "public key",
+			Value: publicKey,
 		},
 	}
 	return fields
