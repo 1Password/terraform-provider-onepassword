@@ -35,6 +35,7 @@ data "onepassword_item" "example" {
 ### Read-Only
 
 - `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document"]
+- `credential` (String, Sensitive) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
 - `file` (Block List) A list of files attached to the item. (see [below for nested schema](#nestedblock--file))
 - `hostname` (String) (Only applies to the database category) The address where the database can be found

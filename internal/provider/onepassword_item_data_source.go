@@ -33,22 +33,23 @@ type OnePasswordItemDataSource struct {
 
 // OnePasswordItemDataSourceModel describes the data source data model.
 type OnePasswordItemDataSourceModel struct {
-	ID        types.String                  `tfsdk:"id"`
-	Vault     types.String                  `tfsdk:"vault"`
-	UUID      types.String                  `tfsdk:"uuid"`
-	Title     types.String                  `tfsdk:"title"`
-	Category  types.String                  `tfsdk:"category"`
-	URL       types.String                  `tfsdk:"url"`
-	Hostname  types.String                  `tfsdk:"hostname"`
-	Database  types.String                  `tfsdk:"database"`
-	Port      types.String                  `tfsdk:"port"`
-	Type      types.String                  `tfsdk:"type"`
-	Tags      types.List                    `tfsdk:"tags"`
-	Username  types.String                  `tfsdk:"username"`
-	Password  types.String                  `tfsdk:"password"`
-	NoteValue types.String                  `tfsdk:"note_value"`
-	Section   []OnePasswordItemSectionModel `tfsdk:"section"`
-	File      []OnePasswordItemFileModel    `tfsdk:"file"`
+	ID         types.String                  `tfsdk:"id"`
+	Vault      types.String                  `tfsdk:"vault"`
+	UUID       types.String                  `tfsdk:"uuid"`
+	Title      types.String                  `tfsdk:"title"`
+	Category   types.String                  `tfsdk:"category"`
+	URL        types.String                  `tfsdk:"url"`
+	Hostname   types.String                  `tfsdk:"hostname"`
+	Database   types.String                  `tfsdk:"database"`
+	Port       types.String                  `tfsdk:"port"`
+	Type       types.String                  `tfsdk:"type"`
+	Tags       types.List                    `tfsdk:"tags"`
+	Username   types.String                  `tfsdk:"username"`
+	Password   types.String                  `tfsdk:"password"`
+	NoteValue  types.String                  `tfsdk:"note_value"`
+	Credential types.String                  `tfsdk:"credential"`
+	Section    []OnePasswordItemSectionModel `tfsdk:"section"`
+	File       []OnePasswordItemFileModel    `tfsdk:"file"`
 }
 
 type OnePasswordItemFileModel struct {
@@ -165,6 +166,11 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 			},
 			"password": schema.StringAttribute{
 				MarkdownDescription: passwordDescription,
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"credential": schema.StringAttribute{
+				MarkdownDescription: credentialDescription,
 				Computed:            true,
 				Sensitive:           true,
 			},
@@ -355,6 +361,10 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 				case "type":
 					data.Type = types.StringValue(f.Value)
 				}
+			}
+
+			if f.ID == "credential" && item.Category == "API_CREDENTIAL" {
+				data.Credential = types.StringValue(f.Value)
 			}
 		}
 	}
