@@ -39,6 +39,10 @@ func (c *Client) DeleteItem(_ context.Context, item *onepassword.Item, vaultUuid
 	return c.connectClient.DeleteItem(item, vaultUuid)
 }
 
+func (w *Client) GetFileContent(_ context.Context, file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error) {
+	return w.connectClient.GetFileContent(file)
+}
+
 func NewClient(connectHost, connectToken, providerUserAgent string) *Client {
 	return &Client{connectClient: connect.NewClientWithUserAgent(connectHost, connectToken, providerUserAgent)}
 }
