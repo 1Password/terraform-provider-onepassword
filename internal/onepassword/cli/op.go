@@ -208,6 +208,20 @@ func (op *OP) delete(ctx context.Context, item *onepassword.Item, vaultUuid stri
 	return nil, op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
 }
 
+func (op *OP) GetFileContent(ctx context.Context, file *onepassword.File, itemUuid, vaultUuid string) ([]byte, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
+	ref := fmt.Sprintf("op://%s/%s/%s", vaultUuid, itemUuid, file.ID)
+	tflog.Debug(ctx, "reading file content from: "+ref)
+	res, err := op.execRaw(ctx, nil, p("read"), p(ref))
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 func (op *OP) execJson(ctx context.Context, dst any, stdin []byte, args ...opArg) error {
 	result, err := op.execRaw(ctx, stdin, args...)
 	if err != nil {

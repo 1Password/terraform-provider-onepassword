@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -119,6 +120,7 @@ func TestAccItemResourceSecureNote(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "title", expectedItem.Title),
 					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "category", strings.ToLower(string(expectedItem.Category))),
 					resource.TestCheckResourceAttr("onepassword_item.test-secure-note", "note_value", expectedItem.Fields[0].Value),
+					resource.TestCheckNoResourceAttr("onepassword_item.test-secure-note", "password"),
 				),
 			},
 		},
@@ -155,12 +157,34 @@ func TestAccItemResourceWithSections(t *testing.T) {
 	})
 }
 
+func TestAccItemResourceDocument(t *testing.T) {
+	expectedItem := generateDocumentItem()
+	expectedVault := op.Vault{
+		ID:          expectedItem.Vault.ID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProviderConfig(testServer.URL) + testAccDocumentResourceConfig(expectedItem),
+				ExpectError: regexp.MustCompile("Invalid Attribute Value Match"),
+			},
+		},
+	})
+}
+
 func testAccDataBaseResourceConfig(expectedItem *op.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
 	uuid = "%s"
-}	
+}
 resource "onepassword_item" "test-database" {
   vault = data.onepassword_vault.acceptance-tests.uuid
   title = "%s"
@@ -179,7 +203,7 @@ func testAccPasswordResourceConfig(expectedItem *op.Item) string {
 
 data "onepassword_vault" "acceptance-tests" {
 	uuid = "%s"
-}	
+}
 resource "onepassword_item" "test-database" {
   vault = data.onepassword_vault.acceptance-tests.uuid
   title = "%s"
@@ -219,6 +243,19 @@ resource "onepassword_item" "test-secure-note" {
 %s
 EOT
 }`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), strings.TrimSuffix(expectedItem.Fields[0].Value, "\n"))
+}
+
+func testAccDocumentResourceConfig(expectedItem *op.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-document" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)))
 }
 
 func testAccResourceWithSectionsConfig(expectedItem *op.Item) string {

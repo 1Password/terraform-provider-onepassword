@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"strings"
@@ -48,12 +49,21 @@ type OnePasswordItemDataSourceModel struct {
 	NoteValue  types.String                  `tfsdk:"note_value"`
 	Credential types.String                  `tfsdk:"credential"`
 	Section    []OnePasswordItemSectionModel `tfsdk:"section"`
+	File       []OnePasswordItemFileModel    `tfsdk:"file"`
+}
+
+type OnePasswordItemFileModel struct {
+	ID            types.String `tfsdk:"id"`
+	Name          types.String `tfsdk:"name"`
+	Content       types.String `tfsdk:"content"`
+	ContentBase64 types.String `tfsdk:"content_base64"`
 }
 
 type OnePasswordItemSectionModel struct {
 	ID    types.String                `tfsdk:"id"`
 	Label types.String                `tfsdk:"label"`
 	Field []OnePasswordItemFieldModel `tfsdk:"field"`
+	File  []OnePasswordItemFileModel  `tfsdk:"file"`
 }
 
 type OnePasswordItemFieldModel struct {
@@ -69,6 +79,29 @@ func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource
 }
 
 func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
+	fileNestedObjectSchema := schema.NestedBlockObject{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: fileIDDescription,
+				Computed:            true,
+			},
+			"name": schema.StringAttribute{
+				MarkdownDescription: fileNameDescription,
+				Computed:            true,
+			},
+			"content": schema.StringAttribute{
+				MarkdownDescription: fileContentDescription,
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"content_base64": schema.StringAttribute{
+				MarkdownDescription: fileContentBase64Description,
+				Computed:            true,
+				Sensitive:           true,
+			},
+		},
+	}
+
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
@@ -99,7 +132,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 			},
 			"category": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, categories),
+				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, dataSourceCategories),
 				Computed:            true,
 			},
 			"url": schema.StringAttribute{
@@ -175,11 +208,11 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 										Computed:            true,
 									},
 									"purpose": schema.StringAttribute{
-										MarkdownDescription: fieldPurposeDescription,
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
 										Computed:            true,
 									},
 									"type": schema.StringAttribute{
-										MarkdownDescription: fieldTypeDescription,
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
 										Computed:            true,
 									},
 									"value": schema.StringAttribute{
@@ -190,8 +223,16 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 								},
 							},
 						},
+						"file": schema.ListNestedBlock{
+							MarkdownDescription: sectionFilesDescription,
+							NestedObject:        fileNestedObjectSchema,
+						},
 					},
 				},
+			},
+			"file": schema.ListNestedBlock{
+				MarkdownDescription: filesDescription,
+				NestedObject:        fileNestedObjectSchema,
 			},
 		},
 	}
@@ -273,6 +314,26 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			}
 		}
 
+		for _, f := range item.Files {
+			if f.Section != nil && f.Section.ID == s.ID {
+				content, err := f.Content()
+				if err != nil {
+					// content has not yet been loaded, fetch it
+					content, err = d.client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
+				}
+				if err != nil {
+					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+				}
+				file := OnePasswordItemFileModel{
+					ID:            types.StringValue(f.ID),
+					Name:          types.StringValue(f.Name),
+					Content:       types.StringValue(string(content)),
+					ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+				}
+				section.File = append(section.File, file)
+			}
+		}
+
 		data.Section = append(data.Section, section)
 	}
 
@@ -308,6 +369,25 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 	}
 
+	for _, f := range item.Files {
+		if f.Section == nil {
+			content, err := f.Content()
+			if err != nil {
+				// content has not yet been loaded, fetch it
+				content, err = d.client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
+			}
+			if err != nil {
+				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+			}
+			file := OnePasswordItemFileModel{
+				ID:            types.StringValue(f.ID),
+				Name:          types.StringValue(f.Name),
+				Content:       types.StringValue(string(content)),
+				ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+			}
+			data.File = append(data.File, file)
+		}
+	}
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
 	tflog.Trace(ctx, "read an item data source")
