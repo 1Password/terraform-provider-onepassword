@@ -17,6 +17,7 @@ const (
 	tagsDescription       = "An array of strings of the tags assigned to the item."
 	usernameDescription   = "Username for this item."
 	passwordDescription   = "Password for this item."
+	credentialDescription = "API credential for this item."
 	noteValueDescription  = "Secure Note value."
 	publicKeyDescription  = "SSH Public Key for this item."
 	privateKeyDescription = "SSH Private Key for this item."
@@ -31,6 +32,14 @@ const (
 	sectionIDDescription     = "A unique identifier for the section."
 	sectionLabelDescription  = "The label for the section."
 	sectionFieldsDescription = "A list of custom fields in the section."
+	sectionFilesDescription  = "A list of files attached to the section."
+
+	filesDescription             = "A list of files attached to the item."
+	fileDescription              = "A file attached to the item."
+	fileIDDescription            = "The UUID of the file."
+	fileNameDescription          = "The name of the file."
+	fileContentDescription       = "The content of the file."
+	fileContentBase64Description = "The content of the file in base64 encoding. (Use this for binary files.)"
 
 	fieldDescription        = "A custom field."
 	fieldIDDescription      = "A unique identifier for the field."
@@ -60,6 +69,7 @@ var (
 		strings.ToLower(string(op.Database)),
 		strings.ToLower(string(op.SecureNote)),
 	}
+	dataSourceCategories = append(categories, strings.ToLower(string(op.Document)))
 
 	fieldPurposes = []string{
 		string(op.FieldPurposeUsername),

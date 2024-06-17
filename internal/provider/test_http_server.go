@@ -6,6 +6,9 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
@@ -16,6 +19,16 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 	itemBytes, err := json.Marshal(expectedItem)
 	if err != nil {
 		t.Errorf("error marshaling item for testing: %s", err)
+	}
+
+	files := expectedItem.Files
+	var fileBytes [][]byte
+	for _, file := range files {
+		c, err := file.Content()
+		if err != nil {
+			t.Errorf("error getting file content: %s", err)
+		}
+		fileBytes = append(fileBytes, c)
 	}
 
 	vaultBytes, err := json.Marshal(expectedVault)
@@ -30,6 +43,7 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 	}
 
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		filePath := regexp.MustCompile("/v1/vaults/[a-z0-9]*/items/[a-z0-9]*/files/[a-z0-9]*/content")
 		if r.Method == http.MethodGet {
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items/%s", expectedItem.Vault.ID, expectedItem.ID) {
 				// Mock returning an item specified by uuid
@@ -53,17 +67,32 @@ func setupTestServer(expectedItem *onepassword.Item, expectedVault onepassword.V
 				if err != nil {
 					t.Errorf("error writing body: %s", err)
 				}
+			} else if filePath.MatchString(r.URL.String()) {
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("1Password-Connect-Version", "1.3.0") // must be >= 1.3.0
+				i := slices.IndexFunc(files, func(f *onepassword.File) bool {
+					return f.ID == strings.Split(r.URL.Path, "/")[7]
+				})
+				if i == -1 {
+					t.Errorf("file not found")
+				}
+				_, err := w.Write(fileBytes[i])
+				if err != nil {
+					t.Errorf("error writing body: %s", err)
+				}
 			} else {
 				t.Errorf("Unexpected request: %s Consider adding this endpoint to the test server", r.URL.String())
 			}
 		} else if r.Method == http.MethodPost {
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items", expectedItem.Vault.ID) {
 				itemToReturn := convertBodyToItem(r, t)
-				itemField := onepassword.ItemField{
-					Label: "password",
-					Value: "somepassword",
+				if itemToReturn.Category != onepassword.SecureNote {
+					itemField := onepassword.ItemField{
+						Label: "password",
+						Value: "somepassword",
+					}
+					itemToReturn.Fields = append(itemToReturn.Fields, &itemField)
 				}
-				itemToReturn.Fields = append(itemToReturn.Fields, &itemField)
 
 				itemToReturn.ID = expectedItem.ID
 				itemBytes, err := json.Marshal(itemToReturn)

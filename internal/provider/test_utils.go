@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"fmt"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"golang.org/x/crypto/ssh"
@@ -95,6 +96,51 @@ notes
 	}
 
 	return &item
+}
+
+func generateDocumentItem() *onepassword.Item {
+	item := generateBaseItem()
+	item.Category = onepassword.Document
+	item.Files = []*onepassword.File{
+		{
+			ID:          "ascii",
+			Name:        "ascii",
+			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "ascii"),
+		},
+		{
+			ID:          "binary",
+			Name:        "binary",
+			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "binary"),
+		},
+	}
+	item.Files[0].SetContent([]byte("ascii"))
+	item.Files[1].SetContent([]byte{0xDE, 0xAD, 0xBE, 0xEF})
+
+	return &item
+}
+
+func generateLoginItemWithFiles() *onepassword.Item {
+	item := generateItemWithSections()
+	item.Category = onepassword.Login
+	section := item.Sections[0]
+	item.Files = []*onepassword.File{
+		{
+			ID:          "ascii",
+			Name:        "ascii",
+			Section:     section,
+			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "ascii"),
+		},
+		{
+			ID:          "binary",
+			Name:        "binary",
+			Section:     section,
+			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "binary"),
+		},
+	}
+	item.Files[0].SetContent([]byte("ascii"))
+	item.Files[1].SetContent([]byte{0xDE, 0xAD, 0xBE, 0xEF})
+
+	return item
 }
 
 func generateDatabaseFields() []*onepassword.ItemField {
