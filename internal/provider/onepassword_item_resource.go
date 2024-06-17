@@ -47,23 +47,22 @@ type OnePasswordItemResource struct {
 
 // OnePasswordItemResourceModel describes the resource data model.
 type OnePasswordItemResourceModel struct {
-	ID         types.String                          `tfsdk:"id"`
-	UUID       types.String                          `tfsdk:"uuid"`
-	Vault      types.String                          `tfsdk:"vault"`
-	Category   types.String                          `tfsdk:"category"`
-	Title      types.String                          `tfsdk:"title"`
-	URL        types.String                          `tfsdk:"url"`
-	Hostname   types.String                          `tfsdk:"hostname"`
-	Database   types.String                          `tfsdk:"database"`
-	Port       types.String                          `tfsdk:"port"`
-	Type       types.String                          `tfsdk:"type"`
-	Tags       types.List                            `tfsdk:"tags"`
-	Username   types.String                          `tfsdk:"username"`
-	Password   types.String                          `tfsdk:"password"`
-	NoteValue  types.String                          `tfsdk:"note_value"`
-	Credential types.String                          `tfsdk:"credential"`
-	Section    []OnePasswordItemResourceSectionModel `tfsdk:"section"`
-	Recipe     []PasswordRecipeModel                 `tfsdk:"password_recipe"`
+	ID        types.String                          `tfsdk:"id"`
+	UUID      types.String                          `tfsdk:"uuid"`
+	Vault     types.String                          `tfsdk:"vault"`
+	Category  types.String                          `tfsdk:"category"`
+	Title     types.String                          `tfsdk:"title"`
+	URL       types.String                          `tfsdk:"url"`
+	Hostname  types.String                          `tfsdk:"hostname"`
+	Database  types.String                          `tfsdk:"database"`
+	Port      types.String                          `tfsdk:"port"`
+	Type      types.String                          `tfsdk:"type"`
+	Tags      types.List                            `tfsdk:"tags"`
+	Username  types.String                          `tfsdk:"username"`
+	Password  types.String                          `tfsdk:"password"`
+	NoteValue types.String                          `tfsdk:"note_value"`
+	Section   []OnePasswordItemResourceSectionModel `tfsdk:"section"`
+	Recipe    []PasswordRecipeModel                 `tfsdk:"password_recipe"`
 }
 
 type PasswordRecipeModel struct {
@@ -217,11 +216,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				PlanModifiers: []planmodifier.String{
 					ValueModifier(),
 				},
-			},
-			"credential": schema.StringAttribute{
-				MarkdownDescription: credentialDescription,
-				Computed:            true,
-				Sensitive:           true,
 			},
 			"note_value": schema.StringAttribute{
 				MarkdownDescription: noteValueDescription,
@@ -605,10 +599,6 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 				case "type":
 					data.Type = setStringValue(f.Value)
 				}
-			}
-
-			if f.ID == "credential" && item.Category == "API_CREDENTIAL" {
-				data.Credential = types.StringValue(f.Value)
 			}
 		}
 	}
