@@ -1,4 +1,4 @@
-module github.com/1Password/terraform-provider-onepassword
+module github.com/1Password/terraform-provider-onepassword/v2
 
 go 1.21
 

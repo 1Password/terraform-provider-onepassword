@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/1Password/terraform-provider-onepassword/internal/provider"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/provider"
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 

@@ -13,7 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 )
 
 // Ensure ScaffoldingProvider satisfies various provider interfaces.
