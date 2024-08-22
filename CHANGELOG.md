@@ -12,6 +12,17 @@
 
 ---
 
+[//]: # (START/v2.1.1)
+# v2.1.1
+
+## Fixes
+ * Update Go mod name. {#193}
+
+## Security
+ * Update dependencies with security vulnerabilities to patched versions. {#192}
+
+---
+
 [//]: # (START/v2.1.0)
 # v2.1.0
 
