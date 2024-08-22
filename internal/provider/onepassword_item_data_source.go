@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
-	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.

@@ -28,8 +28,8 @@ import (
 	"github.com/hashicorp/go-uuid"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
-	"github.com/1Password/terraform-provider-onepassword/internal/onepassword"
-	"github.com/1Password/terraform-provider-onepassword/internal/onepassword/util"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.

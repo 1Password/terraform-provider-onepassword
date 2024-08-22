@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
-	"github.com/1Password/terraform-provider-onepassword/version"
+	"github.com/1Password/terraform-provider-onepassword/v2/version"
 	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
