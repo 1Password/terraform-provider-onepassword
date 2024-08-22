@@ -56,6 +56,11 @@ type Server struct {
 	// access from race conditions.
 	dataSourceTypesMutex sync.Mutex
 
+	// deferred indicates an automatic provider deferral. When this is set,
+	// the provider will automatically defer the PlanResourceChange, ReadResource,
+	// ImportResourceState, and ReadDataSource RPCs.
+	deferred *provider.Deferred
+
 	// functionDefinitions is the cached Function Definitions for RPCs that need to
 	// convert data from the protocol. If not found, it will be fetched from the
 	// Function.Definition() method.
@@ -137,6 +142,19 @@ type Server struct {
 	// resourceTypesMutex is a mutex to protect concurrent resourceTypes
 	// access from race conditions.
 	resourceTypesMutex sync.Mutex
+
+	// resourceBehaviors is the cached Resource behaviors for RPCs that need to
+	// control framework-specific logic when interacting with a resource.
+	resourceBehaviors map[string]resource.ResourceBehavior
+
+	// resourceBehaviorsDiags is the cached Diagnostics obtained while populating
+	// resourceBehaviors. This is to ensure any warnings or errors are also
+	// returned appropriately when fetching resourceBehaviors.
+	resourceBehaviorsDiags diag.Diagnostics
+
+	// resourceBehaviorsMutex is a mutex to protect concurrent resourceBehaviors
+	// access from race conditions.
+	resourceBehaviorsMutex sync.Mutex
 }
 
 // DataSource returns the DataSource for a given type name.
@@ -412,6 +430,78 @@ func (s *Server) Resource(ctx context.Context, typeName string) (resource.Resour
 	}
 
 	return resourceFunc(), diags
+}
+
+// ResourceBehavior returns the ResourceBehavior for a given type name.
+func (s *Server) ResourceBehavior(ctx context.Context, typeName string) (resource.ResourceBehavior, diag.Diagnostics) {
+	resourceBehaviors, diags := s.ResourceBehaviors(ctx)
+
+	resourceBehavior, ok := resourceBehaviors[typeName]
+
+	if !ok {
+		diags.AddError(
+			"Resource Type Not Found",
+			fmt.Sprintf("No resource type named %q was found in the provider.", typeName),
+		)
+
+		return resource.ResourceBehavior{}, diags
+	}
+
+	return resourceBehavior, diags
+}
+
+// ResourceBehaviors returns a map of ResourceBehavior. The results are cached
+// on first use.
+func (s *Server) ResourceBehaviors(ctx context.Context) (map[string]resource.ResourceBehavior, diag.Diagnostics) {
+	logging.FrameworkTrace(ctx, "Checking ResourceBehaviors lock")
+	s.resourceBehaviorsMutex.Lock()
+	defer s.resourceBehaviorsMutex.Unlock()
+
+	if s.resourceBehaviors != nil {
+		return s.resourceBehaviors, s.resourceBehaviorsDiags
+	}
+
+	providerTypeName := s.ProviderTypeName(ctx)
+	s.resourceBehaviors = make(map[string]resource.ResourceBehavior)
+
+	resourceFuncs, diags := s.ResourceFuncs(ctx)
+	s.resourceBehaviorsDiags.Append(diags...)
+
+	for _, resourceFunc := range resourceFuncs {
+		res := resourceFunc()
+
+		metadataRequest := resource.MetadataRequest{
+			ProviderTypeName: providerTypeName,
+		}
+		metadataResponse := resource.MetadataResponse{}
+
+		res.Metadata(ctx, metadataRequest, &metadataResponse)
+
+		if metadataResponse.TypeName == "" {
+			s.resourceBehaviorsDiags.AddError(
+				"Resource Type Name Missing",
+				fmt.Sprintf("The %T Resource returned an empty string from the Metadata method. ", res)+
+					"This is always an issue with the provider and should be reported to the provider developers.",
+			)
+			continue
+		}
+
+		logging.FrameworkTrace(ctx, "Found resource type", map[string]interface{}{logging.KeyResourceType: metadataResponse.TypeName})
+
+		if _, ok := s.resourceBehaviors[metadataResponse.TypeName]; ok {
+			s.resourceBehaviorsDiags.AddError(
+				"Duplicate Resource Type Defined",
+				fmt.Sprintf("The %s resource type name was returned for multiple resources. ", metadataResponse.TypeName)+
+					"Resource type names must be unique. "+
+					"This is always an issue with the provider and should be reported to the provider developers.",
+			)
+			continue
+		}
+
+		s.resourceBehaviors[metadataResponse.TypeName] = metadataResponse.ResourceBehavior
+	}
+
+	return s.resourceBehaviors, s.resourceBehaviorsDiags
 }
 
 // ResourceFuncs returns a map of Resource functions. The results are cached
