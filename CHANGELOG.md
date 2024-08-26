@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v2.1.2)
+# v2.1.2
+
+## Fixes
+ * Export provider initialization function. {#196}
+
+---
+
 [//]: # (START/v2.1.1)
 # v2.1.1
 
