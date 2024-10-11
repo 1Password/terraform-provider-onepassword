@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"errors"
 
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
@@ -37,6 +38,10 @@ func (c *Client) UpdateItem(_ context.Context, item *onepassword.Item, vaultUuid
 
 func (c *Client) DeleteItem(_ context.Context, item *onepassword.Item, vaultUuid string) error {
 	return c.connectClient.DeleteItem(item, vaultUuid)
+}
+
+func (w *Client) ShareItem(_ context.Context, itemUuid string, vaultUUID string, emails string, expires_in string, view_once bool) (*string, error) {
+	return nil, errors.New("ShareItem is not implemented in Connect Server")
 }
 
 func (w *Client) GetFileContent(_ context.Context, file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error) {

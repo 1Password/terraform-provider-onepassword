@@ -18,6 +18,7 @@ type Client interface {
 	CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error)
 	UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error)
 	DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error
+	ShareItem(ctx context.Context, itemUuid string, vaultUuid string, emails string, expires_in string, view_once bool) (*string, error)
 	GetFileContent(ctx context.Context, file *onepassword.File, itemUUid, vaultUuid string) ([]byte, error)
 }
 
