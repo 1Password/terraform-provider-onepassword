@@ -4,11 +4,16 @@ page_title: "onepassword_item_share Resource - onepassword"
 subcategory: ""
 description: |-
   A 1Password Item Share URL.
+  
+  Note: Sharing at item is only supported by the 1Password CLI, and therefore, only by service and user accounts.Attempting to create this resource when using 1Password Connect Server will result in an error.
 ---
 
 # onepassword_item_share (Resource)
 
 A 1Password Item Share URL.
+
+> **Note:** Sharing at item is only supported by the 1Password CLI, and therefore, only by service and user accounts.
+Attempting to create this resource when using 1Password Connect Server will result in an error.
 
 ## Example Usage
 

@@ -53,7 +53,11 @@ func (r *OnePasswordItemShareResource) Metadata(ctx context.Context, req resourc
 func (r *OnePasswordItemShareResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "A 1Password Item Share URL.",
+		MarkdownDescription: `
+		A 1Password Item Share URL.
+
+> **Note:** Sharing at item is only supported by the 1Password CLI, and therefore, only by service and user accounts.
+Attempting to create this resource when using 1Password Connect Server will result in an error.`,
 
 		Attributes: map[string]schema.Attribute{
 			// "id": schema.StringAttribute{
