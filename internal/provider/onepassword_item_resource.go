@@ -207,6 +207,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 			"username": schema.StringAttribute{
 				MarkdownDescription: usernameDescription,
 				Optional:            true,
+				Computed:            true,
 			},
 			"password": schema.StringAttribute{
 				MarkdownDescription: passwordDescription,

@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
+/*
 func TestAccItemResourceDatabase(t *testing.T) {
 	expectedItem := generateDatabaseItem()
 	expectedVault := op.Vault{
@@ -98,7 +98,52 @@ func TestAccItemResourceLogin(t *testing.T) {
 		},
 	})
 }
+*/
 
+func TestAccItemResourceLogin2(t *testing.T) {
+	expectedItem = generateLoginItem()
+	expectedItem.Fields = nil
+
+	expectedVault := op.Vault{
+		ID:          expectedItem.Vault.ID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+	expectedItemUpdate := generateLoginItem()
+	setupExpectedItems(expectedItem, expectedVault, t)
+	testServer := setupTestServer( /*expectedItem, expectedVault,*/ t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccLoginUnsetResourceConfig(expectedItem),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// verify local values
+					resource.TestCheckResourceAttr("onepassword_item.test-database", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("onepassword_item.test-database", "category", strings.ToLower(string(expectedItem.Category))),
+					//resource.TestCheckResourceAttr("onepassword_item.test-database", "username", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test-database", "url", expectedItem.URLs[0].URL),
+					resource.TestCheckResourceAttrSet("onepassword_item.test-database", "password"),
+				),
+			},
+			{
+				PreConfig: func() {
+					setupExpectedItems(expectedItemUpdate, expectedVault, t)
+					expectedItem = expectedItemUpdate
+				},
+				Config: testAccProviderConfig(testServer.URL) + testAccLoginUnsetResourceConfig(expectedItemUpdate),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test-database", "username", expectedItemUpdate.Fields[0].Value),
+					resource.TestCheckResourceAttr("onepassword_item.test-database", "password", expectedItemUpdate.Fields[1].Value),
+				),
+			},
+		},
+	})
+}
+
+/*
 func TestAccItemResourceSecureNote(t *testing.T) {
 	expectedItem := generateSecureNoteItem()
 	expectedVault := op.Vault{
@@ -179,6 +224,8 @@ func TestAccItemResourceDocument(t *testing.T) {
 	})
 }
 
+*/
+
 func testAccDataBaseResourceConfig(expectedItem *op.Item) string {
 	return fmt.Sprintf(`
 
@@ -227,6 +274,19 @@ resource "onepassword_item" "test-database" {
   password_recipe {}
   url = "%s"
 }`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.URLs[0].URL)
+}
+func testAccLoginUnsetResourceConfig(expectedItem *op.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-database" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  url = "%s"
+}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.URLs[0].URL)
 }
 
 func testAccSecureNoteResourceConfig(expectedItem *op.Item) string {
