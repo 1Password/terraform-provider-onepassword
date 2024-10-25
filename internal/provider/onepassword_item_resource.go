@@ -179,6 +179,10 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 			"url": schema.StringAttribute{
 				MarkdownDescription: urlDescription,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					ValueModifier(),
+				},
 			},
 			"hostname": schema.StringAttribute{
 				MarkdownDescription: dbHostnameDescription,
@@ -207,6 +211,10 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 			"username": schema.StringAttribute{
 				MarkdownDescription: usernameDescription,
 				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					ValueModifier(),
+				},
 			},
 			"password": schema.StringAttribute{
 				MarkdownDescription: passwordDescription,
@@ -464,7 +472,10 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 
 	for _, u := range item.URLs {
 		if u.Primary {
-			data.URL = setStringValue(u.URL)
+			// we need to keep "" and can't set to null here because otherwise:
+			// When applying changes to onepassword_item.test-database, provider produced an
+			// unexpected new value: .username: was cty.StringVal(""), but now null.
+			data.URL = types.StringValue(u.URL)
 		}
 	}
 
@@ -580,7 +591,10 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 	for _, f := range item.Fields {
 		switch f.Purpose {
 		case op.FieldPurposeUsername:
-			data.Username = setStringValue(f.Value)
+			// we need to keep "" and can't set to null here because otherwise:
+			// When applying changes to onepassword_item.test-database, provider produced an
+			// unexpected new value: .username: was cty.StringVal(""), but now null.
+			data.Username = types.StringValue(f.Value)
 		case op.FieldPurposePassword:
 			data.Password = setStringValue(f.Value)
 		case op.FieldPurposeNotes:
@@ -603,6 +617,10 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 				}
 			}
 		}
+	}
+	// we set username to be a known null value just in case it hasn't been set above
+	if data.Username.IsUnknown() {
+		data.Username = types.StringNull()
 	}
 
 	if item.Category == op.SecureNote && data.Password.IsUnknown() {
