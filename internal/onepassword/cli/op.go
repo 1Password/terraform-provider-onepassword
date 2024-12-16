@@ -208,6 +208,37 @@ func (op *OP) delete(ctx context.Context, item *onepassword.Item, vaultUuid stri
 	return nil, op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
 }
 
+func (op *OP) ShareItem(ctx context.Context, itemUuid string, vaultUuid string, emails string, expires_in string, view_once bool) (*string, error) {
+	versionErr := op.checkCliVersion(ctx)
+	if versionErr != nil {
+		return nil, versionErr
+	}
+	return op.share(ctx, itemUuid, vaultUuid, emails, expires_in, view_once)
+}
+
+func (op *OP) share(ctx context.Context, itemUuid string, vaultUuid string, emails string, expires_in string, view_once bool) (*string, error) {
+	args := []opArg{p("item"), p("share"), p(itemUuid), f("vault", vaultUuid)}
+
+	if emails != "" {
+		args = append(args, f("emails", emails))
+	}
+
+	if view_once {
+		args = append(args, p("--view-once"))
+	} else if expires_in != "" {
+		args = append(args, f("expires-in", expires_in))
+	}
+
+	result, err := op.execRaw(ctx, nil, args...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	res := strings.TrimSpace(string(result))
+	return &res, nil
+}
+
 func (op *OP) GetFileContent(ctx context.Context, file *onepassword.File, itemUuid, vaultUuid string) ([]byte, error) {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
