@@ -375,11 +375,9 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.PublicKey = types.StringValue(f.Value)
 				case "private key":
 					data.PrivateKey = types.StringValue(f.Value)
+				case "credential":
+					data.Credential = types.StringValue(f.Value)
 				}
-			}
-
-			if f.ID == "credential" && item.Category == "API_CREDENTIAL" {
-				data.Credential = types.StringValue(f.Value)
 			}
 		}
 	}
