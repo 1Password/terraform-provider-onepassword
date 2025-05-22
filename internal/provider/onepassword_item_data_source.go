@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"golang.org/x/crypto/ssh"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
@@ -33,25 +35,26 @@ type OnePasswordItemDataSource struct {
 
 // OnePasswordItemDataSourceModel describes the data source data model.
 type OnePasswordItemDataSourceModel struct {
-	ID         types.String                  `tfsdk:"id"`
-	Vault      types.String                  `tfsdk:"vault"`
-	UUID       types.String                  `tfsdk:"uuid"`
-	Title      types.String                  `tfsdk:"title"`
-	Category   types.String                  `tfsdk:"category"`
-	URL        types.String                  `tfsdk:"url"`
-	Hostname   types.String                  `tfsdk:"hostname"`
-	Database   types.String                  `tfsdk:"database"`
-	Port       types.String                  `tfsdk:"port"`
-	Type       types.String                  `tfsdk:"type"`
-	Tags       types.List                    `tfsdk:"tags"`
-	Username   types.String                  `tfsdk:"username"`
-	Password   types.String                  `tfsdk:"password"`
-	NoteValue  types.String                  `tfsdk:"note_value"`
-	Credential types.String                  `tfsdk:"credential"`
-	PublicKey  types.String                  `tfsdk:"public_key"`
-	PrivateKey types.String                  `tfsdk:"private_key"`
-	Section    []OnePasswordItemSectionModel `tfsdk:"section"`
-	File       []OnePasswordItemFileModel    `tfsdk:"file"`
+	ID                types.String                  `tfsdk:"id"`
+	Vault             types.String                  `tfsdk:"vault"`
+	UUID              types.String                  `tfsdk:"uuid"`
+	Title             types.String                  `tfsdk:"title"`
+	Category          types.String                  `tfsdk:"category"`
+	URL               types.String                  `tfsdk:"url"`
+	Hostname          types.String                  `tfsdk:"hostname"`
+	Database          types.String                  `tfsdk:"database"`
+	Port              types.String                  `tfsdk:"port"`
+	Type              types.String                  `tfsdk:"type"`
+	Tags              types.List                    `tfsdk:"tags"`
+	Username          types.String                  `tfsdk:"username"`
+	Password          types.String                  `tfsdk:"password"`
+	NoteValue         types.String                  `tfsdk:"note_value"`
+	Credential        types.String                  `tfsdk:"credential"`
+	PublicKey         types.String                  `tfsdk:"public_key"`
+	PrivateKey        types.String                  `tfsdk:"private_key"`
+	PrivateKeyOpenSSH types.String                  `tfsdk:"private_key_openssh"`
+	Section           []OnePasswordItemSectionModel `tfsdk:"section"`
+	File              []OnePasswordItemFileModel    `tfsdk:"file"`
 }
 
 type OnePasswordItemFileModel struct {
@@ -188,6 +191,11 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 			},
 			"private_key": schema.StringAttribute{
 				MarkdownDescription: privateKeyDescription,
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"private_key_openssh": schema.StringAttribute{
+				MarkdownDescription: privateKeyOpenSSHDescription,
 				Computed:            true,
 				Sensitive:           true,
 			},
@@ -375,6 +383,11 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.PublicKey = types.StringValue(f.Value)
 				case "private key":
 					data.PrivateKey = types.StringValue(f.Value)
+					openSSHPrivateKey, err := convertPEMToOpenSSH(f.Value)
+					if err != nil {
+						resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to convert private key to OpenSSH format, got error: %s", err))
+					}
+					data.PrivateKeyOpenSSH = types.StringValue(openSSHPrivateKey)
 				}
 			}
 
@@ -426,4 +439,20 @@ func getItemForDataSource(ctx context.Context, client onepassword.Client, data O
 		return client.GetItem(ctx, itemUUID, vaultUUID)
 	}
 	return nil, errors.New("uuid or title must be set")
+}
+
+func convertPEMToOpenSSH(pemStr string) (string, error) {
+	// Parse the private key
+	privateKey, err := ssh.ParseRawPrivateKey([]byte(pemStr))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse private key: %v", err)
+	}
+
+	// Convert to OpenSSH format
+	openSSHPrivateKey, err := ssh.MarshalPrivateKey(privateKey, "")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal OpenSSH private key: %v", err)
+	}
+
+	return string(pem.EncodeToMemory(openSSHPrivateKey)), nil
 }
