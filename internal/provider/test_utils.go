@@ -49,6 +49,14 @@ func generateDatabaseItem() *onepassword.Item {
 	return &item
 }
 
+func generateApiCredentialItem() *onepassword.Item {
+	item := generateBaseItem()
+	item.Category = onepassword.Database
+	item.Fields = generateApiCredentialFields()
+
+	return &item
+}
+
 func generatePasswordItem() *onepassword.Item {
 	item := generateBaseItem()
 	item.Category = onepassword.Password
@@ -168,6 +176,40 @@ func generateDatabaseFields() []*onepassword.ItemField {
 		{
 			Label: "type",
 			Value: "mysql",
+		},
+	}
+	return fields
+}
+
+func generateApiCredentialFields() []*onepassword.ItemField {
+	fields := []*onepassword.ItemField{
+		{
+			Label: "username",
+			Value: "test test_user",
+		},
+		{
+			Label: "credential",
+			Value: "test_credential",
+		},
+		{
+			Label: "type",
+			Value: "test_type",
+		},
+		{
+			Label: "filename",
+			Value: "test_filename",
+		},
+		{
+			Label: "valid_from",
+			Value: "test_valid_from",
+		},
+		{
+			Label: "expires",
+			Value: "expires_expires",
+		},
+		{
+			Label: "hostname",
+			Value: "test_hostname",
 		},
 	}
 	return fields

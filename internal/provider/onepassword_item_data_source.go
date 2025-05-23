@@ -48,6 +48,9 @@ type OnePasswordItemDataSourceModel struct {
 	Password   types.String                  `tfsdk:"password"`
 	NoteValue  types.String                  `tfsdk:"note_value"`
 	Credential types.String                  `tfsdk:"credential"`
+	Filename   types.String                  `tfsdk:"filename"`
+	ValidFrom  types.String                  `tfsdk:"valid_from"`
+	Expires    types.String                  `tfsdk:"expires"`
 	PublicKey  types.String                  `tfsdk:"public_key"`
 	PrivateKey types.String                  `tfsdk:"private_key"`
 	Section    []OnePasswordItemSectionModel `tfsdk:"section"`
@@ -175,6 +178,18 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				MarkdownDescription: credentialDescription,
 				Computed:            true,
 				Sensitive:           true,
+			},
+			"valid_from": schema.StringAttribute{
+				MarkdownDescription: validFromDescription,
+				Computed:            true,
+			},
+			"expires": schema.StringAttribute{
+				MarkdownDescription: expiresDescription,
+				Computed:            true,
+			},
+			"filename": schema.StringAttribute{
+				MarkdownDescription: filenameDescription,
+				Computed:            true,
 			},
 			"note_value": schema.StringAttribute{
 				MarkdownDescription: noteValueDescription,
@@ -375,11 +390,15 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.PublicKey = types.StringValue(f.Value)
 				case "private key":
 					data.PrivateKey = types.StringValue(f.Value)
+				case "credential":
+					data.Credential = types.StringValue(f.Value)
+				case "valid_from":
+					data.ValidFrom = types.StringValue(f.Value)
+				case "expires":
+					data.Expires = types.StringValue(f.Value)
+				case "filename":
+					data.Filename = types.StringValue(f.Value)
 				}
-			}
-
-			if f.ID == "credential" && item.Category == "API_CREDENTIAL" {
-				data.Credential = types.StringValue(f.Value)
 			}
 		}
 	}

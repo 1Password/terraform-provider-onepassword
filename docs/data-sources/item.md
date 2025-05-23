@@ -34,7 +34,7 @@ data "onepassword_item" "example" {
 
 ### Read-Only
 
-- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key"]
+- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key" "credential"]
 - `credential` (String, Sensitive) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
 - `file` (Block List) A list of files attached to the item. (see [below for nested schema](#nestedblock--file))
@@ -46,9 +46,10 @@ data "onepassword_item" "example" {
 - `public_key` (String) SSH Public Key for this item.
 - `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
-- `type` (String) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
+- `type` (String) (Applies to the database and API credential categories) The type of database or API credential. For the database category, one of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]. For API credentials, it can be any string.
 - `url` (String) The primary URL for the item.
 - `username` (String) Username for this item.
+- `filename` (String) (Applies to the API credential category) Filename for this item.
 
 <a id="nestedblock--file"></a>
 ### Nested Schema for `file`

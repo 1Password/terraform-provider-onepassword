@@ -17,15 +17,19 @@ const (
 	tagsDescription       = "An array of strings of the tags assigned to the item."
 	usernameDescription   = "Username for this item."
 	passwordDescription   = "Password for this item."
-	credentialDescription = "API credential for this item."
 	noteValueDescription  = "Secure Note value."
 	publicKeyDescription  = "SSH Public Key for this item."
 	privateKeyDescription = "SSH Private Key for this item."
 
+	credentialDescription = "(Only applies to the API credential category) API credential for this item."
+	validFromDescription  = "(Only applies to the API credential category) The timestamp from which the API credential is valid."
+	expiresDescription    = "(Only applies to the API credential category) The timestamp when the API credential expires."
+	filenameDescription   = "(Only applies to the API credential category) The filename associated with the API credential."
+
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
 	dbPortDescription     = "(Only applies to the database category) The port the database is listening on."
-	dbTypeDescription     = "(Only applies to the database category) The type of database."
+	dbTypeDescription     = "(Only applies to database and API credential categories) For the database category"
 
 	sectionsDescription      = "A list of custom sections in an item"
 	sectionDescription       = "A custom section in an item that contains custom fields"
@@ -72,6 +76,7 @@ var (
 	dataSourceCategories = append(categories,
 		strings.ToLower(string(op.Document)),
 		strings.ToLower(string(op.SSHKey)),
+		strings.ToLower(string(op.ApiCredential)),
 	)
 
 	fieldPurposes = []string{
