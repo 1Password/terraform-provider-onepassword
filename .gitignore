@@ -33,3 +33,4 @@ override.tf.json
 
 **/terraform-provider-onepassword
 /dist
+.idea
