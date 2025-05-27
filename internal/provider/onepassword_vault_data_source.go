@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/model"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 )
 
@@ -34,6 +34,13 @@ type OnePasswordVaultDataSourceModel struct {
 	UUID        types.String `tfsdk:"uuid"`
 	Name        types.String `tfsdk:"name"`
 	Description types.String `tfsdk:"description"`
+}
+
+func (ds *OnePasswordVaultDataSourceModel) FromVault(vault *model.Vault) {
+	ds.ID = types.StringValue(fmt.Sprintf("vaults/%s", vault.ID))
+	ds.UUID = types.StringValue(vault.ID)
+	ds.Name = types.StringValue(vault.Title)
+	ds.Description = types.StringValue(vault.Description)
 }
 
 func (d *OnePasswordVaultDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -95,7 +102,7 @@ func (d *OnePasswordVaultDataSource) Configure(ctx context.Context, req datasour
 }
 
 func (d *OnePasswordVaultDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data OnePasswordVaultDataSourceModel
+	data := OnePasswordVaultDataSourceModel{}
 
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -106,7 +113,7 @@ func (d *OnePasswordVaultDataSource) Read(ctx context.Context, req datasource.Re
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	var vault *op.Vault
+	var vault *model.Vault
 	if data.UUID.ValueString() != "" {
 		vaultByUUID, err := d.client.GetVault(ctx, data.UUID.ValueString())
 		if err != nil {
@@ -135,12 +142,7 @@ func (d *OnePasswordVaultDataSource) Read(ctx context.Context, req datasource.Re
 		vault = fullVault
 	}
 
-	data = OnePasswordVaultDataSourceModel{
-		ID:          types.StringValue(vaultTerraformID(vault)),
-		UUID:        types.StringValue(vault.ID),
-		Name:        types.StringValue(vault.Name),
-		Description: types.StringValue(vault.Description),
-	}
+	data.FromVault(vault)
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log

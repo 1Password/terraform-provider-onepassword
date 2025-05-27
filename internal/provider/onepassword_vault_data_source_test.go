@@ -2,6 +2,8 @@ package provider
 
 import (
 	"fmt"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/model"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
@@ -40,4 +42,20 @@ func testAccVaultDataSourceConfig(vault string) string {
 data "onepassword_vault" "test" {
   uuid = "%s"
 }`, vault)
+}
+
+func TestOnePasswordVaultDataSourceModel_FromVault(t *testing.T) {
+	vault := &model.Vault{
+		ID:          "test-id",
+		Title:       "test-name",
+		Description: "test-description",
+	}
+
+	ds := &OnePasswordVaultDataSourceModel{}
+	ds.FromVault(vault)
+
+	require.Equal(t, fmt.Sprintf("vaults/%s", vault.ID), ds.ID)
+	require.Equal(t, vault.ID, ds.UUID)
+	require.Equal(t, vault.Title, ds.Name)
+	require.Equal(t, vault.Description, ds.Description)
 }

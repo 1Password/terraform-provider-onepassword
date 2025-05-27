@@ -5,14 +5,15 @@ import (
 	"errors"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/model"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/connect"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/sdk"
 )
 
 // Client is a subset of connect.Client with context added.
 type Client interface {
-	GetVault(ctx context.Context, uuid string) (*onepassword.Vault, error)
-	GetVaultsByTitle(ctx context.Context, title string) ([]onepassword.Vault, error)
+	GetVault(ctx context.Context, uuid string) (*model.Vault, error)
+	GetVaultsByTitle(ctx context.Context, title string) ([]model.Vault, error)
 	GetItem(ctx context.Context, itemUuid, vaultUuid string) (*onepassword.Item, error)
 	GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*onepassword.Item, error)
 	CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error)
