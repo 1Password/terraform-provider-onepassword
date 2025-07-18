@@ -42,7 +42,8 @@ data "onepassword_item" "example" {
 - `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - `password` (String, Sensitive) Password for this item.
 - `port` (String) (Only applies to the database category) The port the database is listening on.
-- `private_key` (String, Sensitive) SSH Private Key for this item.
+- `private_key` (String, Sensitive) SSH Private Key in PKCS#8 for this item.
+- `private_key_openssh` (String, Sensitive) SSH Private key in OpenSSH PEM format.
 - `public_key` (String) SSH Public Key for this item.
 - `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
