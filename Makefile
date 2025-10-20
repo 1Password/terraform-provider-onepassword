@@ -20,6 +20,9 @@ test/coverage:	## Run test suite with coverage report
 testacc: ## Run acceptance tests
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
+test-e2e: ## Run e2e tests
+	TF_ACC=1 go test -v ./e2e/... -timeout 30m
+
 build: clean	## Build project
 	go build -o ./dist/terraform-provider-onepassword .
 
