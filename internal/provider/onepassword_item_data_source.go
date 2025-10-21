@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"encoding/base64"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
@@ -15,10 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"golang.org/x/crypto/ssh"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
+	opssh "github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/ssh"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -383,7 +382,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.PublicKey = types.StringValue(f.Value)
 				case "private key":
 					data.PrivateKey = types.StringValue(f.Value)
-					openSSHPrivateKey, err := convertPEMToOpenSSH(f.Value)
+					openSSHPrivateKey, err := opssh.PrivateKeyToOpenSSH([]byte(f.Value), item.ID)
 					if err != nil {
 						resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to convert private key to OpenSSH format, got error: %s", err))
 					}
@@ -439,20 +438,4 @@ func getItemForDataSource(ctx context.Context, client onepassword.Client, data O
 		return client.GetItem(ctx, itemUUID, vaultUUID)
 	}
 	return nil, errors.New("uuid or title must be set")
-}
-
-func convertPEMToOpenSSH(pemStr string) (string, error) {
-	// Parse the private key
-	privateKey, err := ssh.ParseRawPrivateKey([]byte(pemStr))
-	if err != nil {
-		return "", fmt.Errorf("failed to parse private key: %v", err)
-	}
-
-	// Convert to OpenSSH format
-	openSSHPrivateKey, err := ssh.MarshalPrivateKey(privateKey, "")
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal OpenSSH private key: %v", err)
-	}
-
-	return string(pem.EncodeToMemory(openSSHPrivateKey)), nil
 }
