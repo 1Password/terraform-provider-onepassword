@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"regexp"
 	"testing"
 
@@ -9,124 +8,123 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccLoginItemDataSourceByTitle(t *testing.T) {
+const testVaultID = "t7dnwbjh6nlyw475wl3m442sdi"
+
+type testItem struct {
+	Title string
+	UUID  string
+	Attrs map[string]string
+}
+
+var testItems = map[string]testItem{
+	"Login": {
+		Title: "Test Login",
+		UUID:  "dsrwv5dyacw4f7pdrfnmh36pne",
+		Attrs: map[string]string{
+			"category": "login",
+			"username": "testUsername",
+			"password": "testPassword",
+			"url":      "www.example.com",
+		},
+	},
+	"Password": {
+		Title: "Test Password",
+		UUID:  "nlinya3ju5lagllswd6ggleoqi",
+		Attrs: map[string]string{
+			"category": "password",
+			"password": "samplePassword",
+		},
+	},
+	"Database": {
+		Title: "Test Database",
+		UUID:  "cq24ebmitcdwpt52f4xqdrq3ce",
+		Attrs: map[string]string{
+			"category": "database",
+			"username": "testUsername",
+			"password": "testPassword",
+			"database": "testDatabase",
+			"port":     "3306",
+			"type":     "mysql",
+		},
+	},
+	"SecureNote": {
+		Title: "Test Secure Note",
+		UUID:  "culehzcmv2qcc62qjsngj5ghyi",
+		Attrs: map[string]string{
+			"category":   "secure_note",
+			"note_value": "Test note",
+		},
+	},
+}
+
+func TestAccItemDataSource(t *testing.T) {
 	config, err := utils.GetTestConfig()
 	if err != nil {
 		t.Fatalf("Failed to get test config: %v", err)
 	}
 
-	vaultID := "t7dnwbjh6nlyw475wl3m442sdi"
-	itemTitle := "Test Login"
+	testCases := []struct {
+		name           string
+		item           testItem
+		identifierType string
+	}{
+		{"LoginByTitle", testItems["Login"], "title"},
+		{"LoginByUUID", testItems["Login"], "uuid"},
+		{"PasswordByTitle", testItems["Password"], "title"},
+		{"PasswordByUUID", testItems["Password"], "uuid"},
+		{"DatabaseByTitle", testItems["Database"], "title"},
+		{"DatabaseByUUID", testItems["Database"], "uuid"},
+		{"SecureNoteByTitle", testItems["SecureNote"], "title"},
+		{"SecureNoteByUUID", testItems["SecureNote"], "uuid"},
+	}
 
-	itemUUID := "dsrwv5dyacw4f7pdrfnmh36pne"
-	username := "testUsername"
-	password := "testPassword"
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			identifierValue := tc.item.Title
+			if tc.identifierType == "uuid" {
+				identifierValue = tc.item.UUID
+			}
 
+			checks := make([]resource.TestCheckFunc, 0, len(tc.item.Attrs))
+			for attr, expectedValue := range tc.item.Attrs {
+				checks = append(checks, utils.ValidateResourceAttribute("data.onepassword_item.test", attr, expectedValue))
+			}
 
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccLoginItemDataSourceByTitleConfig(config, itemTitle, vaultID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", itemTitle),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", "login"),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", itemUUID),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "username", username),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "password", password),
-				),
-			},
-		},
-	})
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{{
+					Config: utils.TestAccItemDataSourceConfig(config, testVaultID, tc.identifierType, identifierValue),
+					Check:  resource.ComposeAggregateTestCheckFunc(checks...),
+				}},
+			})
+		})
+	}
 }
 
-func TestAccLoginItemDataSourceByUUID(t *testing.T) {
+func TestAccItemDataSource_NotFound(t *testing.T) {
 	config, err := utils.GetTestConfig()
 	if err != nil {
 		t.Fatalf("Failed to get test config: %v", err)
 	}
 
-	vaultID := "t7dnwbjh6nlyw475wl3m442sdi"
-	itemUUID := "dsrwv5dyacw4f7pdrfnmh36pne"
+	testCases := []struct {
+		name        string
+		lookupType  string
+		lookupValue string
+	}{
+		{"ByTitle", "title", "invalid-title"},
+		{"ByUUID", "uuid", "invalid-uuid"},
+	}
 
-	itemTitle := "Test Login"
-	username := "testUsername"
-	password := "testPassword"
-
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: testAccLoginItemDataByUUIDConfig(config, itemUUID, vaultID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", itemUUID),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", "login"),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", itemTitle),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "username", username),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "password", password),
-
-				),
-			},
-		},
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{{
+					Config:      utils.TestAccItemDataSourceConfig(config, testVaultID, tc.lookupType, tc.lookupValue),
+					ExpectError: regexp.MustCompile(`Unable to read item`),
+				}},
+			})
+		})
+	}
 }
-
-func TestAccLoginItemDataSource_InvalidUUID(t *testing.T) {
-    config, err := utils.GetTestConfig()
-    if err != nil {
-        t.Fatalf("Failed to get test config: %v", err)
-    }
-
-    resource.Test(t, resource.TestCase{
-        ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-        Steps: []resource.TestStep{
-            {
-                Config:      testAccLoginItemDataByUUIDConfig(config, "invalid-uuid", "t7dnwbjh6nlyw475wl3m442sdi"),
-                ExpectError: regexp.MustCompile(`"invalid-uuid" isn't an item`),
-            },
-        },
-    })
-}
-
-func TestAccLoginItemDataSource_InvalidTitle(t *testing.T) {
-    config, err := utils.GetTestConfig()
-    if err != nil {
-        t.Fatalf("Failed to get test config: %v", err)
-    }
-
-    resource.Test(t, resource.TestCase{
-        ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-        Steps: []resource.TestStep{
-            {
-                Config:      testAccLoginItemDataSourceByTitleConfig(config, "invalid-name", "t7dnwbjh6nlyw475wl3m442sdi"),
-                ExpectError: regexp.MustCompile(`"invalid-name" isn't an item`),
-            },
-        },
-    })
-}
-
-
-func testAccLoginItemDataSourceByTitleConfig(config *utils.TestConfig, itemTitle string, vaultID string) string {
-	return fmt.Sprintf(`
-%s
-
-# Test reading a pre-existing item by title
-data "onepassword_item" "test" {
-  title = "%s"
-  vault = "%s"
-}
-`, utils.GetProviderConfig(config), itemTitle, vaultID)
-}
-
-func testAccLoginItemDataByUUIDConfig(config *utils.TestConfig, itemUUID string, vaultID string) string {
-    return fmt.Sprintf(`
-%s
-
-# Test reading a pre-existing item by UUID
-data "onepassword_item" "test" {
-  uuid  = "%s"
-  vault = "%s"
-}`, utils.GetProviderConfig(config), itemUUID, vaultID)
-}
-

@@ -59,3 +59,15 @@ func ValidateResourceAttribute(resourceName, attribute, expectedValue string) re
 func ValidateResourceAttributeSet(resourceName, attribute string) resource.TestCheckFunc {
 	return resource.TestCheckResourceAttrSet(resourceName, attribute)
 }
+
+// TestAccItemDataSourceConfig generates a Terraform configuration for testing the onepassword_item data source
+func TestAccItemDataSourceConfig(config *TestConfig, vaultID, identifierType, identifierValue string) string {
+	return fmt.Sprintf(`
+%s
+data "onepassword_item" "test" {
+  %s    = "%s"
+  vault = "%s"
+}
+`, GetProviderConfig(config), identifierType, identifierValue, vaultID)
+}
+
