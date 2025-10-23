@@ -94,7 +94,7 @@ func TestAccItemDataSource(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
-					Config: tfconfig.ItemDataSourceConfig(config, testVaultID, tc.identifierType, identifierValue),
+					Config: tfconfig.ItemDataSource(config, testVaultID, tc.identifierType, identifierValue),
 					Check:  resource.ComposeAggregateTestCheckFunc(checks...),
 				}},
 			})
@@ -110,8 +110,8 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 
 	testCases := []struct {
 		name        string
-		lookupType  string
-		lookupValue string
+		identifierType  string
+		identifierValue string
 	}{
 		{"ByTitle", "title", "invalid-title"},
 		{"ByUUID", "uuid", "invalid-uuid"},
@@ -122,7 +122,7 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
-					Config:      tfconfig.ItemDataSourceConfig(config, testVaultID, tc.lookupType, tc.lookupValue),
+					Config:      tfconfig.ItemDataSource(config, testVaultID, tc.identifierType, tc.identifierValue),
 					ExpectError: regexp.MustCompile(`Unable to read item`),
 				}},
 			})
