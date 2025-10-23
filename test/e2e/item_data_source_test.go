@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"testing"
 
+	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -17,8 +18,8 @@ type testItem struct {
 	Attrs map[string]string
 }
 
-var testItems = map[string]testItem{
-	"Login": {
+var testItems = map[op.ItemCategory]testItem{
+	op.Login: {
 		Title: "Test Login",
 		UUID:  "5axoqbjhbx3u7wqmersrg6qnqy",
 		Attrs: map[string]string{
@@ -28,7 +29,7 @@ var testItems = map[string]testItem{
 			"url":      "www.example.com",
 		},
 	},
-	"Password": {
+	op.Password: {
 		Title: "Test Password",
 		UUID:  "axoqeauq7ilndgdpimb4j4dwhi",
 		Attrs: map[string]string{
@@ -36,7 +37,7 @@ var testItems = map[string]testItem{
 			"password": "testPassword",
 		},
 	},
-	"Database": {
+	op.Database: {
 		Title: "Test Database",
 		UUID:  "ck6mbmf3yjps6gk5qldnx4frni",
 		Attrs: map[string]string{
@@ -48,7 +49,7 @@ var testItems = map[string]testItem{
 			"type":     "mysql",
 		},
 	},
-	"SecureNote": {
+	op.SecureNote: {
 		Title: "Test Secure Note",
 		UUID:  "5xbca3eblv5kxkszrbuhdame4a",
 		Attrs: map[string]string{
@@ -69,14 +70,14 @@ func TestAccItemDataSource(t *testing.T) {
 		item           testItem
 		identifierType string
 	}{
-		{"LoginByTitle", testItems["Login"], "title"},
-		{"LoginByUUID", testItems["Login"], "uuid"},
-		{"PasswordByTitle", testItems["Password"], "title"},
-		{"PasswordByUUID", testItems["Password"], "uuid"},
-		{"DatabaseByTitle", testItems["Database"], "title"},
-		{"DatabaseByUUID", testItems["Database"], "uuid"},
-		{"SecureNoteByTitle", testItems["SecureNote"], "title"},
-		{"SecureNoteByUUID", testItems["SecureNote"], "uuid"},
+		{"LoginByTitle", testItems[op.Login], "title"},
+		{"LoginByUUID", testItems[op.Login], "uuid"},
+		{"PasswordByTitle", testItems[op.Password], "title"},
+		{"PasswordByUUID", testItems[op.Password], "uuid"},
+		{"DatabaseByTitle", testItems[op.Database], "title"},
+		{"DatabaseByUUID", testItems[op.Database], "uuid"},
+		{"SecureNoteByTitle", testItems[op.SecureNote], "title"},
+		{"SecureNoteByUUID", testItems[op.SecureNote], "uuid"},
 	}
 
 	for _, tc := range testCases {
