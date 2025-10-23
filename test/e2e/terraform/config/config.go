@@ -46,3 +46,24 @@ data "onepassword_item" "test" {
 }
 `, Provider(config), identifierType, identifierValue, vaultID)
 }
+
+// ----------------------------
+
+type ConfigParams struct {
+    TestConfig      *config.TestConfig
+    Type  			string
+    Vault           string
+    IdentifierType  string
+    IdentifierValue string
+}
+
+func GenerateDataSource(config ConfigParams) string {
+	return fmt.Sprintf(`
+	%s
+	data "%s" "test" {
+	  %s    = "%s"
+	  vault = "%s"
+	}
+	`, Provider(config.TestConfig), config.Type, config.IdentifierType, config.IdentifierValue, config.Vault)
+}
+

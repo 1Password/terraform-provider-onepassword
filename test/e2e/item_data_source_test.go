@@ -94,7 +94,13 @@ func TestAccItemDataSource(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
-					Config: tfconfig.ItemDataSource(config, testVaultID, tc.identifierType, identifierValue),
+					Config: tfconfig.GenerateDataSource(tfconfig.ConfigParams{
+						TestConfig:      config,
+						Type:  "onepassword_item",
+						Vault:           testVaultID,
+						IdentifierType:  tc.identifierType,
+						IdentifierValue: identifierValue,
+					}),
 					Check:  resource.ComposeAggregateTestCheckFunc(checks...),
 				}},
 			})
@@ -122,7 +128,13 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
-					Config:      tfconfig.ItemDataSource(config, testVaultID, tc.identifierType, tc.identifierValue),
+					Config:      tfconfig.GenerateDataSource(tfconfig.ConfigParams{
+						TestConfig:      config,
+						Type:  "onepassword_item",
+						Vault:           testVaultID,
+						IdentifierType:  tc.identifierType,
+						IdentifierValue: tc.identifierValue,
+					}),
 					ExpectError: regexp.MustCompile(`Unable to read item`),
 				}},
 			})
