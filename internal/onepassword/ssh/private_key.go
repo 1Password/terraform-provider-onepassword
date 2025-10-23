@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"math/big"
-	"runtime"
 )
 
 const (
@@ -181,8 +180,6 @@ func generateOpenSSHPadding(block []byte, blockSize int) []byte {
 func openSSHLineBreaker(privateKeyBytes []byte) string {
 	const lineFeedByte = byte('\n')
 	const lineBreaker = 70
-	const carriageReturnByte = byte('\r')
-	isWindows := runtime.GOOS == "windows"
 	var prefix = []byte("-----BEGIN OPENSSH PRIVATE KEY-----")
 	var suffix = []byte("-----END OPENSSH PRIVATE KEY-----")
 
@@ -194,25 +191,16 @@ func openSSHLineBreaker(privateKeyBytes []byte) string {
 
 	// append the new line character once every 70 bytes instead according to OpenSSH standard
 	openSSHBytes := bytes.NewBuffer(prefix)
-	// use CR character for prefix and suffix in case the key is output on Windows where lines in text files are terminated using CR followed immediately by LF, as opposed to just LF
-	if isWindows {
-		openSSHBytes.WriteByte(carriageReturnByte)
-	}
+
 	for i, b := range keyWithoutPrefixAndSuffix {
 		if i%lineBreaker == 0 {
 			openSSHBytes.WriteByte(lineFeedByte)
 		}
 		openSSHBytes.WriteByte(b)
 	}
-	// Only add CR if windows OS
-	if isWindows {
-		openSSHBytes.WriteByte(carriageReturnByte)
-	}
+
 	openSSHBytes.WriteByte(lineFeedByte)
 	openSSHBytes.Write(suffix)
-	if isWindows {
-		openSSHBytes.WriteByte(carriageReturnByte)
-	}
 	openSSHBytes.WriteByte(lineFeedByte)
 
 	return openSSHBytes.String()
