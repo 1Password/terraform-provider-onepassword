@@ -4,11 +4,12 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/e2e/utils"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
+	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-const testVaultID = "t7dnwbjh6nlyw475wl3m442sdi"
+const testVaultID = "bbucuyq2nn4fozygwttxwizpcy"
 
 type testItem struct {
 	Title string
@@ -19,7 +20,7 @@ type testItem struct {
 var testItems = map[string]testItem{
 	"Login": {
 		Title: "Test Login",
-		UUID:  "dsrwv5dyacw4f7pdrfnmh36pne",
+		UUID:  "5axoqbjhbx3u7wqmersrg6qnqy",
 		Attrs: map[string]string{
 			"category": "login",
 			"username": "testUsername",
@@ -29,15 +30,15 @@ var testItems = map[string]testItem{
 	},
 	"Password": {
 		Title: "Test Password",
-		UUID:  "nlinya3ju5lagllswd6ggleoqi",
+		UUID:  "axoqeauq7ilndgdpimb4j4dwhi",
 		Attrs: map[string]string{
 			"category": "password",
-			"password": "samplePassword",
+			"password": "testPassword",
 		},
 	},
 	"Database": {
 		Title: "Test Database",
-		UUID:  "cq24ebmitcdwpt52f4xqdrq3ce",
+		UUID:  "ck6mbmf3yjps6gk5qldnx4frni",
 		Attrs: map[string]string{
 			"category": "database",
 			"username": "testUsername",
@@ -49,16 +50,16 @@ var testItems = map[string]testItem{
 	},
 	"SecureNote": {
 		Title: "Test Secure Note",
-		UUID:  "culehzcmv2qcc62qjsngj5ghyi",
+		UUID:  "5xbca3eblv5kxkszrbuhdame4a",
 		Attrs: map[string]string{
 			"category":   "secure_note",
-			"note_value": "Test note",
+			"note_value": "This is a test secure note for terraform-provider-onepassword",
 		},
 	},
 }
 
 func TestAccItemDataSource(t *testing.T) {
-	config, err := utils.GetTestConfig()
+	config, err := config.GetTestConfig()
 	if err != nil {
 		t.Fatalf("Failed to get test config: %v", err)
 	}
@@ -87,13 +88,13 @@ func TestAccItemDataSource(t *testing.T) {
 
 			checks := make([]resource.TestCheckFunc, 0, len(tc.item.Attrs))
 			for attr, expectedValue := range tc.item.Attrs {
-				checks = append(checks, utils.ValidateResourceAttribute("data.onepassword_item.test", attr, expectedValue))
+				checks = append(checks, resource.TestCheckResourceAttr("data.onepassword_item.test", attr, expectedValue))
 			}
 
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
-					Config: utils.TestAccItemDataSourceConfig(config, testVaultID, tc.identifierType, identifierValue),
+					Config: tfconfig.ItemDataSourceConfig(config, testVaultID, tc.identifierType, identifierValue),
 					Check:  resource.ComposeAggregateTestCheckFunc(checks...),
 				}},
 			})
@@ -102,7 +103,7 @@ func TestAccItemDataSource(t *testing.T) {
 }
 
 func TestAccItemDataSource_NotFound(t *testing.T) {
-	config, err := utils.GetTestConfig()
+	config, err := config.GetTestConfig()
 	if err != nil {
 		t.Fatalf("Failed to get test config: %v", err)
 	}
@@ -121,7 +122,7 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
-					Config:      utils.TestAccItemDataSourceConfig(config, testVaultID, tc.lookupType, tc.lookupValue),
+					Config:      tfconfig.ItemDataSourceConfig(config, testVaultID, tc.lookupType, tc.lookupValue),
 					ExpectError: regexp.MustCompile(`Unable to read item`),
 				}},
 			})

@@ -18,7 +18,5 @@ jobs:
       run: go build -v ./...
 
     - name: Test
-      run: go test -v ./... -cover
-      env:
-        TF_ACC: "1"
+      run: make test
       timeout-minutes: 10
