@@ -11,11 +11,11 @@ versionFile = $(CURDIR)/.VERSION
 
 curVersion := $(shell cat $(versionFile) | sed 's/^v//')
 
-test:	## Run test suite
-	go test -v ./...
+test:	## Runs integration and unit tests
+	TF_ACC=1 go test $(shell go list ./... | grep -v /test/e2e)
 
-test/coverage:	## Run test suite with coverage report
-	go test -v ./... -cover
+test/coverage:	## Runs integration and unit tests with coverage report
+	TF_ACC=1 go test $(shell go list ./... | grep -v /test/e2e)
 
 testacc: ## Run acceptance tests
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
