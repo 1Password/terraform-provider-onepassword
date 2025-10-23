@@ -45,12 +45,16 @@ resource "onepassword_item" "example" {
 
 ### Optional
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `category` (String) The category of the item. One of ["login" "password" "database" "secure_note"]
 - `database` (String) (Only applies to the database category) The name of the database.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `note_value` (String, Sensitive) Secure Note value.
 - `password` (String, Sensitive) Password for this item.
 - `password_recipe` (Block List) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedblock--password_recipe))
+- `password_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) A write-only password for this item. This value is not stored in the state and is intended for use with ephemeral values.
+- `password_wo_version` (Number) An integer that must be incremented to trigger an update to the 'password_wo' field.
 - `port` (String) (Only applies to the database category) The port the database is listening on.
 - `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
@@ -118,6 +122,8 @@ Optional:
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # import an existing 1Password item
