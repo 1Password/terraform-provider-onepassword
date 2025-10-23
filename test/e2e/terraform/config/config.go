@@ -36,3 +36,13 @@ data "onepassword_vault" "test" {
 }
 `, Provider(config), vaultUUID)
 }
+
+func ItemDataSource(config *config.TestConfig, vaultID, identifierType, identifierValue string) string {
+    return fmt.Sprintf(`
+%s
+data "onepassword_item" "test" {
+  %s    = "%s"
+  vault = "%s"
+}
+`, Provider(config), identifierType, identifierValue, vaultID)
+}

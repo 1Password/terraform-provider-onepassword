@@ -29,9 +29,9 @@ func TestAccVaultDataSourceByName(t *testing.T) {
 	}
 
 	expectedVault := op.Vault{
-		ID:          "oogirevsqtgi4foiv66ntgowwm",
-		Name:        "operator-acceptance-tests",
-		Description: "This vault contains items to be used in Kubernetes Operator e2e tests.",
+		ID:          "bbucuyq2nn4fozygwttxwizpcy",
+		Name:        "terraform-provider-acceptance-tests",
+		Description: "This vault contains the items that are used for 1Password Terraform Provider acceptance (e2e) tests.",
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -57,9 +57,9 @@ func TestAccVaultDataSourceByUUID(t *testing.T) {
 	}
 
 	expectedVault := op.Vault{
-		ID:          "oogirevsqtgi4foiv66ntgowwm",
-		Name:        "operator-acceptance-tests",
-		Description: "This vault contains items to be used in Kubernetes Operator e2e tests.",
+		ID:          "bbucuyq2nn4fozygwttxwizpcy",
+		Name:        "terraform-provider-acceptance-tests",
+		Description: "This vault contains the items that are used for 1Password Terraform Provider acceptance (e2e) tests.",
 	}
 
 	resource.Test(t, resource.TestCase{
