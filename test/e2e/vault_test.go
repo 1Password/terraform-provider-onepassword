@@ -38,9 +38,9 @@ func TestAccVaultDataSourceByName(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: tfconfig.GenerateConfig(tfconfig.ConfigParams{
+				Config: tfconfig.DataSource(tfconfig.DataSourceConfigParams{
 					TestConfig: config,
-					Type: "onepassword_vault",
+					DataSource: "onepassword_vault",
 					IdentifierType: "name",
 					IdentifierValue: expectedVault.Name,
 				}),
@@ -71,9 +71,9 @@ func TestAccVaultDataSourceByUUID(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: tfconfig.GenerateConfig(tfconfig.ConfigParams{
+				Config: tfconfig.DataSource(tfconfig.DataSourceConfigParams{
 					TestConfig: config,
-					Type: "onepassword_vault",
+					DataSource: "onepassword_vault",
 					IdentifierType: "uuid",
 					IdentifierValue: expectedVault.ID,
 				}),

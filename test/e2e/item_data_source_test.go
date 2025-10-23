@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 const testVaultID = "bbucuyq2nn4fozygwttxwizpcy"
@@ -95,9 +96,9 @@ func TestAccItemDataSource(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
-					Config: tfconfig.GenerateConfig(tfconfig.ConfigParams{
+					Config: tfconfig.DataSource(tfconfig.DataSourceConfigParams{
 						TestConfig:      config,
-						Type:  "onepassword_item",
+						DataSource:  "onepassword_item",
 						Vault:           testVaultID,
 						IdentifierType:  tc.identifierType,
 						IdentifierValue: identifierValue,
@@ -120,8 +121,8 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 		identifierType  string
 		identifierValue string
 	}{
-		// {"ByTitle", "title", "invalid-title"},
-		// {"ByUUID", "uuid", "invalid-uuid"},
+		{"ByTitle", "title", "invalid-title"},
+		{"ByUUID", "uuid", "invalid-uuid"},
 	}
 
 	for _, tc := range testCases {
@@ -129,9 +130,9 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
-					Config:      tfconfig.GenerateConfig(tfconfig.ConfigParams{
+					Config: tfconfig.DataSource(tfconfig.DataSourceConfigParams{
 						TestConfig:      config,
-						Type:  "onepassword_item",
+						DataSource:  "onepassword_item",
 						Vault:           testVaultID,
 						IdentifierType:  tc.identifierType,
 						IdentifierValue: tc.identifierValue,

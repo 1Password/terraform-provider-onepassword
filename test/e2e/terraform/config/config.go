@@ -6,6 +6,13 @@ import (
 
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 )
+type DataSourceConfigParams struct {
+    TestConfig      *config.TestConfig
+    DataSource  	string
+    Vault           string
+    IdentifierType  string
+    IdentifierValue string
+}
 
 // Provider returns the provider configuration for tests
 func Provider(config *config.TestConfig) string {
@@ -15,53 +22,12 @@ provider "onepassword" {
 }`, config.ServiceAccountToken)
 }
 
-func VaultDataSourceByName(config *config.TestConfig, vaultName string) string {
-	return fmt.Sprintf(`
-%s
-
-# Test reading a pre-existing vault by name
-data "onepassword_vault" "test" {
- name = "%s"
-}
-`, Provider(config), vaultName)
-}
-
-func VaultDataSourceByUUID(config *config.TestConfig, vaultUUID string) string {
-	return fmt.Sprintf(`
-%s
-
-# Test reading a pre-existing vault by UUID
-data "onepassword_vault" "test" {
- uuid = "%s"
-}
-`, Provider(config), vaultUUID)
-}
-
-func ItemDataSource(config *config.TestConfig, vaultID, identifierType, identifierValue string) string {
-    return fmt.Sprintf(`
-%s
-data "onepassword_item" "test" {
-  %s    = "%s"
-  vault = "%s"
-}
-`, Provider(config), identifierType, identifierValue, vaultID)
-}
-
-// ----------------------------
-
-type ConfigParams struct {
-    TestConfig      *config.TestConfig
-    Type  			string
-    Vault           string
-    IdentifierType  string
-    IdentifierValue string
-}
-
-func GenerateConfig(config ConfigParams) string {
+// DataSource returns the terraform configuration for a data source
+func DataSource(config DataSourceConfigParams) string {
 	var vaultLine string
 	identifierLine := fmt.Sprintf(`%s = "%s"`, config.IdentifierType, config.IdentifierValue)
 
-	if config.Type == "onepassword_item" {
+	if config.DataSource == "onepassword_item" {
 		vaultLine = fmt.Sprintf(`vault = "%s"`, config.Vault)
 	}
 
@@ -71,6 +37,6 @@ data "%s" "test" {
 %s
 %s
 }
-`, Provider(config.TestConfig), config.Type, identifierLine, vaultLine)
+`, Provider(config.TestConfig), config.DataSource, identifierLine, vaultLine)
 }
 
