@@ -58,6 +58,16 @@ var testItems = map[op.ItemCategory]testItem{
 			"note_value": "This is a test secure note for terraform-provider-onepassword",
 		},
 	},
+	op.Document: {
+		Title: "Test Document",
+		UUID:  "p6uyugpmxo6zcxo5fdfctet7xa",
+		Attrs: map[string]string{
+			"category": "document",
+			"file.0.name":     "test.txt",
+			"file.0.content":  "This is a test\n",
+			"file.0.content_base64": "VGhpcyBpcyBhIHRlc3QK",
+		},
+	},
 }
 
 func TestAccItemDataSource(t *testing.T) {
@@ -79,6 +89,8 @@ func TestAccItemDataSource(t *testing.T) {
 		{"DatabaseByUUID", testItems[op.Database], "uuid"},
 		{"SecureNoteByTitle", testItems[op.SecureNote], "title"},
 		{"SecureNoteByUUID", testItems[op.SecureNote], "uuid"},
+		{"DocumentByTitle", testItems[op.Document], "title"},
+		{"DocumentByUUID", testItems[op.Document], "uuid"},
 	}
 
 	for _, tc := range testCases {
