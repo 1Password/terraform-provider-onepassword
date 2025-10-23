@@ -38,7 +38,12 @@ func TestAccVaultDataSourceByName(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: tfconfig.VaultDataSourceByName(config, expectedVault.Name),
+				Config: tfconfig.GenerateConfig(tfconfig.ConfigParams{
+					TestConfig: config,
+					Type: "onepassword_vault",
+					IdentifierType: "name",
+					IdentifierValue: expectedVault.Name,
+				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_vault.test", "id", fmt.Sprintf("vaults/%s", expectedVault.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_vault.test", "uuid", expectedVault.ID),
@@ -66,7 +71,12 @@ func TestAccVaultDataSourceByUUID(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: tfconfig.VaultDataSourceByUUID(config, expectedVault.ID),
+				Config: tfconfig.GenerateConfig(tfconfig.ConfigParams{
+					TestConfig: config,
+					Type: "onepassword_vault",
+					IdentifierType: "uuid",
+					IdentifierValue: expectedVault.ID,
+				}),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_vault.test", "name", expectedVault.Name),
 					resource.TestCheckResourceAttr("data.onepassword_vault.test", "uuid", expectedVault.ID),

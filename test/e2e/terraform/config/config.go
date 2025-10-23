@@ -57,13 +57,20 @@ type ConfigParams struct {
     IdentifierValue string
 }
 
-func GenerateDataSource(config ConfigParams) string {
-	return fmt.Sprintf(`
-	%s
-	data "%s" "test" {
-	  %s    = "%s"
-	  vault = "%s"
+func GenerateConfig(config ConfigParams) string {
+	var vaultLine string
+	identifierLine := fmt.Sprintf(`%s = "%s"`, config.IdentifierType, config.IdentifierValue)
+
+	if config.Type == "onepassword_item" {
+		vaultLine = fmt.Sprintf(`vault = "%s"`, config.Vault)
 	}
-	`, Provider(config.TestConfig), config.Type, config.IdentifierType, config.IdentifierValue, config.Vault)
+
+	return fmt.Sprintf(`
+%s
+data "%s" "test" {
+%s
+%s
+}
+`, Provider(config.TestConfig), config.Type, identifierLine, vaultLine)
 }
 
