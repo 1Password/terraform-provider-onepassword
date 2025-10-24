@@ -21,7 +21,7 @@ const (
 	noteValueDescription         = "Secure Note value."
 	publicKeyDescription         = "SSH Public Key for this item."
 	privateKeyDescription        = "SSH Private Key in PKCS#8 for this item."
-	privateKeyOpenSSHDescription = "SSH Private key in OpenSSH PEM format."
+	privateKeyOpenSSHDescription = "SSH Private key in OpenSSH format."
 
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
