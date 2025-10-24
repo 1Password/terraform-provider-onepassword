@@ -1,14 +1,17 @@
 package integration
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils"
 )
 
 const testVaultID = "bbucuyq2nn4fozygwttxwizpcy"
@@ -56,6 +59,23 @@ var testItems = map[op.ItemCategory]testItem{
 		Attrs: map[string]string{
 			"category":   "secure_note",
 			"note_value": "This is a test secure note for terraform-provider-onepassword",
+		},
+	},
+	op.Document: {
+		Title: "Test Document",
+		UUID:  "p6uyugpmxo6zcxo5fdfctet7xa",
+		Attrs: map[string]string{
+			"category":              "document",
+			"file.0.name":           "test.txt",
+			"file.0.content":        "This is a test\n",
+			"file.0.content_base64": "VGhpcyBpcyBhIHRlc3QK",
+		},
+	},
+	op.SSHKey: {
+		Title: "Test SSH Key",
+		UUID:  "5dbnxvhcknslz4mcaz7lobzt6i",
+		Attrs: map[string]string{
+			"category": "ssh_key",
 		},
 	},
 }
@@ -175,6 +195,58 @@ func TestAccItemDataSource(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "DocumentByTitle",
+			item: testItems[op.Document],
+			itemDataSourceConfig: tfconfig.ItemDataSource{
+				Auth: tfconfig.AuthConfig{
+					ServiceAccountToken: serviceAccountToken,
+				},
+				Params: map[string]string{
+					"title": testItems[op.Document].Title,
+					"vault": testVaultID,
+				},
+			},
+		},
+		{
+			name: "DocumentByUUID",
+			item: testItems[op.Document],
+			itemDataSourceConfig: tfconfig.ItemDataSource{
+				Auth: tfconfig.AuthConfig{
+					ServiceAccountToken: serviceAccountToken,
+				},
+				Params: map[string]string{
+					"uuid":  testItems[op.Document].UUID,
+					"vault": testVaultID,
+				},
+			},
+		},
+		{
+			name: "SSHKeyByTitle",
+			item: testItems[op.SSHKey],
+			itemDataSourceConfig: tfconfig.ItemDataSource{
+				Auth: tfconfig.AuthConfig{
+					ServiceAccountToken: serviceAccountToken,
+				},
+				Params: map[string]string{
+					"title": testItems[op.SSHKey].Title,
+					"vault": testVaultID,
+				},
+			},
+		},
+		{
+			name: "SSHKeyByUUID",
+			item: testItems[op.SSHKey],
+			itemDataSourceConfig: tfconfig.ItemDataSource{
+				Auth: tfconfig.AuthConfig{
+					ServiceAccountToken: serviceAccountToken,
+				},
+				Params: map[string]string{
+					"uuid":  testItems[op.SSHKey].UUID,
+					"vault": testVaultID,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -188,6 +260,21 @@ func TestAccItemDataSource(t *testing.T) {
 
 			for attr, expectedValue := range tc.item.Attrs {
 				checks = append(checks, resource.TestCheckResourceAttr("data.onepassword_item.test_item", attr, expectedValue))
+			}
+
+			// Validate SSH keys
+			if tc.item.Attrs["category"] == "ssh_key" {
+				checks = append(checks, resource.TestCheckFunc(func(s *terraform.State) error {
+					item, ok := s.RootModule().Resources["data.onepassword_item.test_item"]
+					if !ok {
+						return fmt.Errorf("resource not found in state")
+					}
+
+					publicKey := item.Primary.Attributes["public_key"]
+					privateKey := item.Primary.Attributes["private_key"]
+
+					return utils.ValidateSSHKeys(publicKey, privateKey)
+				}))
 			}
 
 			resource.Test(t, resource.TestCase{
