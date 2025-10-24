@@ -3,40 +3,44 @@ package terraform
 
 import (
 	"fmt"
-
-	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 )
-type DataSourceConfigParams struct {
-    TestConfig      *config.TestConfig
-    DataSource  	string
-    Vault           string
-    IdentifierType  string
-    IdentifierValue string
-}
 
-// Provider returns the provider configuration for tests
-func Provider(config *config.TestConfig) string {
-	return fmt.Sprintf(`
-provider "onepassword" {
-  service_account_token = "%s"
-}`, config.ServiceAccountToken)
-}
-
-// DataSource returns the terraform configuration for a data source
-func DataSource(config DataSourceConfigParams) string {
-	var vaultLine string
-	identifierLine := fmt.Sprintf(`%s = "%s"`, config.IdentifierType, config.IdentifierValue)
-
-	if config.DataSource == "onepassword_item" {
-		vaultLine = fmt.Sprintf(`vault = "%s"`, config.Vault)
+func ProviderAuthWithServiceAccount(config AuthConfig) func() string {
+	return func() string {
+		return fmt.Sprintf(`
+		provider "onepassword" {
+		  service_account_token = "%s"
+		}
+		`, config.ServiceAccountToken,
+		)
 	}
+}
 
+func ProviderAuthWithConnect(config ItemDataSource) string {
 	return fmt.Sprintf(`
-%s
-data "%s" "test" {
-%s
-%s
-}
-`, Provider(config.TestConfig), config.DataSource, identifierLine, vaultLine)
+		provider "onepassword" {
+			token = "%s"
+			url = "%s"
+		}
+		`, config.Auth.ConnectToken, config.Auth.ConnectHost,
+	)
 }
 
+type AuthConfig struct {
+	ServiceAccountToken string
+	ConnectHost         string
+	ConnectToken        string
+}
+
+func CreateItemDataSourceConfigBuilder() func(functions ...func() string) string {
+	configStr := ""
+
+	return func(functions ...func() string) string {
+		for _, f := range functions {
+			configStr += f()
+			configStr += "\n"
+		}
+
+		return configStr
+	}
+}
