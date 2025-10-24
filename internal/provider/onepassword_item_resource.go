@@ -63,6 +63,8 @@ type OnePasswordItemResourceModel struct {
 	NoteValue types.String                          `tfsdk:"note_value"`
 	Section   []OnePasswordItemResourceSectionModel `tfsdk:"section"`
 	Recipe    []PasswordRecipeModel                 `tfsdk:"password_recipe"`
+	PrivateKey types.String                          `tfsdk:"private_key"`
+	PublicKey  types.String                          `tfsdk:"public_key"`
 }
 
 type PasswordRecipeModel struct {
@@ -222,6 +224,23 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				MarkdownDescription: noteValueDescription,
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"private_key": schema.StringAttribute{
+				MarkdownDescription: publicKeyDescription,
+				Computed:            true,
+				Optional:            true,
+				Sensitive:           true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"public_key": schema.StringAttribute{
+				MarkdownDescription: privateKeyDescription,
+				Computed:            true,
+				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -609,6 +628,13 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 		data.Password = types.StringNull()
 	}
 
+	if data.PrivateKey.IsUnknown() {
+		data.PrivateKey = types.StringNull()
+	}
+	if data.PublicKey.IsUnknown() {
+		data.PublicKey = types.StringNull()
+	}
+
 	return nil
 }
 
@@ -739,6 +765,25 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				Purpose: op.FieldPurposeNotes,
 				Value:   data.NoteValue.ValueString(),
 			},
+		}
+	case "ssh_key":
+		item.Category = op.SSHKey
+		item.Fields = []*op.ItemField{}
+		if !data.PrivateKey.IsNull() && !data.PrivateKey.IsUnknown() {
+			item.Fields = append(item.Fields, &op.ItemField{
+				ID:    "private_key",
+				Label: "private key",
+				Type:  op.FieldTypeConcealed,
+				Value: data.PrivateKey.ValueString(),
+			})
+		}
+		if !data.PublicKey.IsNull() && !data.PublicKey.IsUnknown() {
+			item.Fields = append(item.Fields, &op.ItemField{
+				ID:    "public_key",
+				Label: "public key",
+				Type:  op.FieldTypeString,
+				Value: data.PublicKey.ValueString(),
+			})
 		}
 	case "secure_note":
 		item.Category = op.SecureNote

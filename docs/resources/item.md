@@ -45,13 +45,15 @@ resource "onepassword_item" "example" {
 
 ### Optional
 
-- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note"]
+- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "ssh_key"]
 - `database` (String) (Only applies to the database category) The name of the database.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `note_value` (String, Sensitive) Secure Note value.
 - `password` (String, Sensitive) Password for this item.
 - `password_recipe` (Block List) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedblock--password_recipe))
 - `port` (String) (Only applies to the database category) The port the database is listening on.
+- `private_key` (String, Sensitive) SSH Private Key for this item.
+- `public_key` (String) SSH Public Key for this item.
 - `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
 - `title` (String) The title of the item.
@@ -65,6 +67,7 @@ resource "onepassword_item" "example" {
 - `uuid` (String) The UUID of the item. Item identifiers are unique within a specific vault.
 
 <a id="nestedblock--password_recipe"></a>
+
 ### Nested Schema for `password_recipe`
 
 Optional:
@@ -74,8 +77,8 @@ Optional:
 - `letters` (Boolean) Use letters [a-zA-Z] when generating the password.
 - `symbols` (Boolean) Use symbols [!@.-_*] when generating the password.
 
-
 <a id="nestedblock--section"></a>
+
 ### Nested Schema for `section`
 
 Required:
@@ -91,6 +94,7 @@ Read-Only:
 - `id` (String) A unique identifier for the section.
 
 <a id="nestedblock--section--field"></a>
+
 ### Nested Schema for `section.field`
 
 Required:
@@ -106,6 +110,7 @@ Optional:
 - `value` (String, Sensitive) The value of the field.
 
 <a id="nestedblock--section--field--password_recipe"></a>
+
 ### Nested Schema for `section.field.password_recipe`
 
 Optional:
