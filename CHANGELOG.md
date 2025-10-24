@@ -12,6 +12,17 @@
 
 ---
 
+[//]: # (START/v2.2.0)
+# v2.2.0
+
+## Features
+  * Add `private_key_openssh` property to Item Data Source that returns SSH private key in OpenSSH format. {#189}
+
+## Security
+ * Address dependabot alerts and update Go version. {#226}
+
+---
+
 [//]: # (START/v2.1.2)
 # v2.1.2
 
