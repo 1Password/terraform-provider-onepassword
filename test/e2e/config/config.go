@@ -5,20 +5,10 @@ import (
 	"os"
 )
 
-// TestConfig holds configuration for e2e tests
-type TestConfig struct {
-	ServiceAccountToken string
-}
-
-// GetTestConfig retrieves test configuration from environment variables
-func GetTestConfig() (*TestConfig, error) {
-	config := &TestConfig{
-		ServiceAccountToken: os.Getenv("OP_SERVICE_ACCOUNT_TOKEN"),
+func GetServiceAccountToken() (string, error) {
+	token := os.Getenv("OP_SERVICE_ACCOUNT_TOKEN")
+	if token == "" {
+		return "", fmt.Errorf("OP_SERVICE_ACCOUNT_TOKEN environment variable is required")
 	}
-
-	if config.ServiceAccountToken == "" {
-		return nil, fmt.Errorf("OP_SERVICE_ACCOUNT_TOKEN environment variable is required")
-	}
-
-	return config, nil
+	return token, nil
 }
