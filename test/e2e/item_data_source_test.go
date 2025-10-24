@@ -48,7 +48,6 @@ var testItems = map[op.ItemCategory]testItem{
 			"database": "testDatabase",
 			"port":     "3306",
 			"type":     "mysql",
-			"hostname": "testDatabase.example.com",
 		},
 	},
 	op.SecureNote: {
