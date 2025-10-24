@@ -1,17 +1,15 @@
 package integration
 
 import (
-	"fmt"
 	"testing"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/provider"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
-	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
-	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 // testAccProtoV6ProviderFactories are used to instantiate a provider during
@@ -22,69 +20,74 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 	"onepassword": providerserver.NewProtocol6WithError(provider.New("test")()),
 }
 
-func TestAccVaultDataSourceByName(t *testing.T) {
-	config, err := config.GetTestConfig()
+func TestAccVaultDataSource(t *testing.T) {
+	serviceAccountToken, err := config.GetServiceAccountToken()
 	if err != nil {
 		t.Fatalf("Failed to get test config: %v", err)
 	}
 
-	expectedVault := op.Vault{
-		ID:          "bbucuyq2nn4fozygwttxwizpcy",
-		Name:        "terraform-provider-acceptance-tests",
-		Description: "This vault contains the items that are used for 1Password Terraform Provider acceptance (e2e) tests.",
+	expectedVaultAttrs := map[string]string{
+		"description": "This vault contains the items that are used for 1Password Terraform Provider acceptance (e2e) tests.",
+		"name":        "terraform-provider-acceptance-tests",
+		"uuid":        "bbucuyq2nn4fozygwttxwizpcy",
 	}
 
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: tfconfig.DataSource(tfconfig.DataSourceConfigParams{
-					TestConfig: config,
-					DataSource: "onepassword_vault",
-					IdentifierType: "name",
-					IdentifierValue: expectedVault.Name,
-				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.onepassword_vault.test", "id", fmt.Sprintf("vaults/%s", expectedVault.ID)),
-					resource.TestCheckResourceAttr("data.onepassword_vault.test", "uuid", expectedVault.ID),
-					resource.TestCheckResourceAttr("data.onepassword_vault.test", "name", expectedVault.Name),
-					resource.TestCheckResourceAttr("data.onepassword_vault.test", "description", expectedVault.Description),
-				),
+	testCases := []struct {
+		name                  string
+		identifierParam       string
+		identifierValue       string
+		expectedAttrs         map[string]string
+		vaultDataSourceConfig tfconfig.VaultDataSource
+	}{
+		{
+			name:            "ByName",
+			identifierParam: "name",
+			identifierValue: "terraform-provider-acceptance-tests",
+			expectedAttrs:   expectedVaultAttrs,
+			vaultDataSourceConfig: tfconfig.VaultDataSource{
+				Auth: tfconfig.AuthConfig{
+					ServiceAccountToken: serviceAccountToken,
+				},
+				Params: map[string]string{
+					"name": "terraform-provider-acceptance-tests",
+				},
 			},
 		},
-	})
-}
-
-func TestAccVaultDataSourceByUUID(t *testing.T) {
-	config, err := config.GetTestConfig()
-	if err != nil {
-		t.Fatalf("Failed to get test config: %v", err)
-	}
-
-	expectedVault := op.Vault{
-		ID:          "bbucuyq2nn4fozygwttxwizpcy",
-		Name:        "terraform-provider-acceptance-tests",
-		Description: "This vault contains the items that are used for 1Password Terraform Provider acceptance (e2e) tests.",
-	}
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: tfconfig.DataSource(tfconfig.DataSourceConfigParams{
-					TestConfig: config,
-					DataSource: "onepassword_vault",
-					IdentifierType: "uuid",
-					IdentifierValue: expectedVault.ID,
-				}),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.onepassword_vault.test", "name", expectedVault.Name),
-					resource.TestCheckResourceAttr("data.onepassword_vault.test", "uuid", expectedVault.ID),
-					resource.TestCheckResourceAttr("data.onepassword_vault.test", "description", expectedVault.Description),
-				),
+		{
+			name:            "ByUUID",
+			identifierParam: "uuid",
+			identifierValue: "bbucuyq2nn4fozygwttxwizpcy",
+			expectedAttrs:   expectedVaultAttrs,
+			vaultDataSourceConfig: tfconfig.VaultDataSource{
+				Auth: tfconfig.AuthConfig{
+					ServiceAccountToken: serviceAccountToken,
+				},
+				Params: map[string]string{
+					"uuid": "bbucuyq2nn4fozygwttxwizpcy",
+				},
 			},
 		},
-	})
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataSourceBuilder := tfconfig.CreateItemDataSourceConfigBuilder()
+
+			checks := make([]resource.TestCheckFunc, 0, len(tc.expectedAttrs))
+			for attr, expectedValue := range tc.expectedAttrs {
+				checks = append(checks, resource.TestCheckResourceAttr("data.onepassword_vault.test_vault", attr, expectedValue))
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{{
+					Config: dataSourceBuilder(
+						tfconfig.ProviderAuthWithServiceAccount(tc.vaultDataSourceConfig.Auth),
+						tfconfig.VaultDataSourceConfig(tc.vaultDataSourceConfig.Params),
+					),
+					Check: resource.ComposeTestCheckFunc(checks...),
+				}},
+			})
+		})
+	}
 }
-
-
