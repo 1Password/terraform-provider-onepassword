@@ -1,14 +1,17 @@
 package integration
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils"
 )
 
 const testVaultID = "bbucuyq2nn4fozygwttxwizpcy"
@@ -68,6 +71,13 @@ var testItems = map[op.ItemCategory]testItem{
 			"file.0.content_base64": "VGhpcyBpcyBhIHRlc3QK",
 		},
 	},
+	op.SSHKey: {
+		Title: "Test SSH Key",
+		UUID:  "5dbnxvhcknslz4mcaz7lobzt6i",
+		Attrs: map[string]string{
+			"category": "ssh_key",
+		},
+	},
 }
 
 func TestAccItemDataSource(t *testing.T) {
@@ -91,6 +101,8 @@ func TestAccItemDataSource(t *testing.T) {
 		{"SecureNoteByUUID", testItems[op.SecureNote], "uuid"},
 		{"DocumentByTitle", testItems[op.Document], "title"},
 		{"DocumentByUUID", testItems[op.Document], "uuid"},
+		{"SSHKeyByTitle", testItems[op.SSHKey], "title"},
+		{"SSHKeyByUUID", testItems[op.SSHKey], "uuid"},
 	}
 
 	for _, tc := range testCases {
@@ -103,6 +115,22 @@ func TestAccItemDataSource(t *testing.T) {
 			checks := make([]resource.TestCheckFunc, 0, len(tc.item.Attrs))
 			for attr, expectedValue := range tc.item.Attrs {
 				checks = append(checks, resource.TestCheckResourceAttr("data.onepassword_item.test", attr, expectedValue))
+			}
+
+
+			// Validate SSH keys
+			if tc.item.Attrs["category"] == "ssh_key" {
+				checks = append(checks, resource.TestCheckFunc(func(s *terraform.State) error {
+					item, ok := s.RootModule().Resources["data.onepassword_item.test"]
+					if !ok {
+						return fmt.Errorf("resource not found in state")
+					}
+
+					publicKey := item.Primary.Attributes["public_key"]
+					privateKey := item.Primary.Attributes["private_key"]
+
+					return utils.ValidateSSHKeys(publicKey, privateKey)
+				}))
 			}
 
 			resource.Test(t, resource.TestCase{
