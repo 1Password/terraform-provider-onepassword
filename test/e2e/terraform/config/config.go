@@ -44,3 +44,16 @@ func CreateItemDataSourceConfigBuilder() func(functions ...func() string) string
 		return configStr
 	}
 }
+
+func CreateItemResourceConfigBuilder() func(functions ...func() string) string {
+	configStr := ""
+
+	return func(functions ...func() string) string {
+		for _, f := range functions {
+			configStr += f()
+			configStr += "\n"
+		}
+
+		return configStr
+	}
+}
