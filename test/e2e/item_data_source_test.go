@@ -60,11 +60,6 @@ var testItems = map[op.ItemCategory]testItem{
 }
 
 func TestAccItemDataSource(t *testing.T) {
-	//serviceAccountToken, err := config.GetServiceAccountToken()
-	// if err != nil {
-	// 	t.Fatalf("Failed to get test config: %v", err)
-	// }
-
 	testCases := []struct {
 		name                 string
 		item                 testItem
