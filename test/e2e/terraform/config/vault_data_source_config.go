@@ -3,7 +3,6 @@ package terraform
 import "fmt"
 
 type VaultDataSource struct {
-	Auth   AuthConfig
 	Params map[string]string
 }
 
