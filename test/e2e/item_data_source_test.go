@@ -7,7 +7,6 @@ import (
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 )
 
@@ -61,10 +60,10 @@ var testItems = map[op.ItemCategory]testItem{
 }
 
 func TestAccItemDataSource(t *testing.T) {
-	serviceAccountToken, err := config.GetServiceAccountToken()
-	if err != nil {
-		t.Fatalf("Failed to get test config: %v", err)
-	}
+	//serviceAccountToken, err := config.GetServiceAccountToken()
+	// if err != nil {
+	// 	t.Fatalf("Failed to get test config: %v", err)
+	// }
 
 	testCases := []struct {
 		name                 string
@@ -75,9 +74,6 @@ func TestAccItemDataSource(t *testing.T) {
 			name: "LoginByTitle",
 			item: testItems[op.Login],
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"title": testItems[op.Login].Title,
 					"vault": testVaultID,
@@ -88,9 +84,6 @@ func TestAccItemDataSource(t *testing.T) {
 			name: "LoginByUUID",
 			item: testItems[op.Login],
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"uuid":  testItems[op.Login].UUID,
 					"vault": testVaultID,
@@ -101,9 +94,6 @@ func TestAccItemDataSource(t *testing.T) {
 			name: "PasswordByTitle",
 			item: testItems[op.Password],
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"title": testItems[op.Password].Title,
 					"vault": testVaultID,
@@ -114,9 +104,6 @@ func TestAccItemDataSource(t *testing.T) {
 			name: "PasswordByUUID",
 			item: testItems[op.Password],
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"uuid":  testItems[op.Password].UUID,
 					"vault": testVaultID,
@@ -127,9 +114,6 @@ func TestAccItemDataSource(t *testing.T) {
 			name: "DatabaseByTitle",
 			item: testItems[op.Database],
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"title": testItems[op.Database].Title,
 					"vault": testVaultID,
@@ -140,9 +124,6 @@ func TestAccItemDataSource(t *testing.T) {
 			name: "DatabaseByUUID",
 			item: testItems[op.Database],
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"uuid":  testItems[op.Database].UUID,
 					"vault": testVaultID,
@@ -153,9 +134,6 @@ func TestAccItemDataSource(t *testing.T) {
 			name: "SecureNoteByTitle",
 			item: testItems[op.SecureNote],
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"title": testItems[op.SecureNote].Title,
 					"vault": testVaultID,
@@ -166,9 +144,6 @@ func TestAccItemDataSource(t *testing.T) {
 			name: "SecureNoteByUUID",
 			item: testItems[op.SecureNote],
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"uuid":  testItems[op.SecureNote].UUID,
 					"vault": testVaultID,
@@ -194,7 +169,7 @@ func TestAccItemDataSource(t *testing.T) {
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
 					Config: dataSourceBuilder(
-						tfconfig.ProviderAuthWithServiceAccount(tc.itemDataSourceConfig.Auth),
+						tfconfig.ProviderConfig(),
 						tfconfig.ItemDataSourceConfig(tc.itemDataSourceConfig.Params),
 					),
 					Check: resource.ComposeAggregateTestCheckFunc(checks...),
@@ -205,11 +180,6 @@ func TestAccItemDataSource(t *testing.T) {
 }
 
 func TestAccItemDataSource_NotFound(t *testing.T) {
-	serviceAccountToken, err := config.GetServiceAccountToken()
-	if err != nil {
-		t.Fatalf("Failed to get test config: %v", err)
-	}
-
 	testCases := []struct {
 		name                 string
 		item                 testItem
@@ -218,9 +188,6 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 		{
 			name: "ByTitle",
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"title": "invalid-title",
 					"vault": testVaultID,
@@ -230,9 +197,6 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 		{
 			name: "ByUUID",
 			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"uuid":  "invalid-uuid",
 					"vault": testVaultID,
@@ -249,7 +213,7 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
 					Config: dataSourceBuilder(
-						tfconfig.ProviderAuthWithServiceAccount(tc.itemDataSourceConfig.Auth),
+						tfconfig.ProviderConfig(),
 						tfconfig.ItemDataSourceConfig(tc.itemDataSourceConfig.Params),
 					),
 					ExpectError: regexp.MustCompile(`Unable to read item`),

@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/provider"
-	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/config"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 )
 
@@ -21,11 +20,6 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 }
 
 func TestAccVaultDataSource(t *testing.T) {
-	serviceAccountToken, err := config.GetServiceAccountToken()
-	if err != nil {
-		t.Fatalf("Failed to get test config: %v", err)
-	}
-
 	expectedVaultAttrs := map[string]string{
 		"description": "This vault contains the items that are used for 1Password Terraform Provider acceptance (e2e) tests.",
 		"name":        "terraform-provider-acceptance-tests",
@@ -45,9 +39,6 @@ func TestAccVaultDataSource(t *testing.T) {
 			identifierValue: "terraform-provider-acceptance-tests",
 			expectedAttrs:   expectedVaultAttrs,
 			vaultDataSourceConfig: tfconfig.VaultDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"name": "terraform-provider-acceptance-tests",
 				},
@@ -59,9 +50,6 @@ func TestAccVaultDataSource(t *testing.T) {
 			identifierValue: "bbucuyq2nn4fozygwttxwizpcy",
 			expectedAttrs:   expectedVaultAttrs,
 			vaultDataSourceConfig: tfconfig.VaultDataSource{
-				Auth: tfconfig.AuthConfig{
-					ServiceAccountToken: serviceAccountToken,
-				},
 				Params: map[string]string{
 					"uuid": "bbucuyq2nn4fozygwttxwizpcy",
 				},
@@ -82,7 +70,7 @@ func TestAccVaultDataSource(t *testing.T) {
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{{
 					Config: dataSourceBuilder(
-						tfconfig.ProviderAuthWithServiceAccount(tc.vaultDataSourceConfig.Auth),
+						tfconfig.ProviderConfig(),
 						tfconfig.VaultDataSourceConfig(tc.vaultDataSourceConfig.Params),
 					),
 					Check: resource.ComposeTestCheckFunc(checks...),
