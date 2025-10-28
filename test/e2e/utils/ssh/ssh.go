@@ -1,4 +1,4 @@
-package utils
+package ssh
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ func ValidateSSHKeys(publicKey string, privateKey string) error {
 		return fmt.Errorf("ssh_private_key attribute is not set")
 	}
 
-	_ , _, _, _, err := ssh.ParseAuthorizedKey([]byte(publicKey))
+	_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(publicKey))
 	if err != nil {
 		return fmt.Errorf("invalid ssh public key: %s", err)
 	}
@@ -27,5 +27,5 @@ func ValidateSSHKeys(publicKey string, privateKey string) error {
 		return fmt.Errorf("invalid ssh private key: %s", err)
 	}
 
-	return  nil
+	return nil
 }

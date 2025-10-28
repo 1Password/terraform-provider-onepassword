@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
-	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/ssh"
 )
 
 const testVaultID = "bbucuyq2nn4fozygwttxwizpcy"
@@ -146,7 +146,7 @@ func TestAccItemDataSource(t *testing.T) {
 					publicKey := item.Primary.Attributes["public_key"]
 					privateKey := item.Primary.Attributes["private_key"]
 
-					return utils.ValidateSSHKeys(publicKey, privateKey)
+					return ssh.ValidateSSHKeys(publicKey, privateKey)
 				}))
 			}
 
