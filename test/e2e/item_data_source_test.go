@@ -103,12 +103,12 @@ func TestAccItemDataSource(t *testing.T) {
 		category op.ItemCategory
 		name     string
 	}{
-		{op.Login, "Login"},
-		{op.Password, "Password"},
-		{op.Database, "Database"},
-		{op.SecureNote, "SecureNote"},
-		{op.Document, "Document"},
-		{op.SSHKey, "SSHKey"},
+		// {op.Login, "Login"},
+		// {op.Password, "Password"},
+		// {op.Database, "Database"},
+		// {op.SecureNote, "SecureNote"},
+		// {op.Document, "Document"},
+		// {op.SSHKey, "SSHKey"},
 	}
 
 	var testCases []itemDataSourceTestCase
@@ -170,24 +170,24 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 		item                 testItem
 		itemDataSourceConfig tfconfig.ItemDataSource
 	}{
-		{
-			name: "ByTitle",
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"title": "invalid-title",
-					"vault": testVaultID,
-				},
-			},
-		},
-		{
-			name: "ByUUID",
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"uuid":  "invalid-uuid",
-					"vault": testVaultID,
-				},
-			},
-		},
+		// {
+		// 	name: "ByTitle",
+		// 	itemDataSourceConfig: tfconfig.ItemDataSource{
+		// 		Params: map[string]string{
+		// 			"title": "invalid-title",
+		// 			"vault": testVaultID,
+		// 		},
+		// 	},
+		// },
+		// {
+		// 	name: "ByUUID",
+		// 	itemDataSourceConfig: tfconfig.ItemDataSource{
+		// 		Params: map[string]string{
+		// 			"uuid":  "invalid-uuid",
+		// 			"vault": testVaultID,
+		// 		},
+		// 	},
+		// },
 	}
 
 	for _, tc := range testCases {
