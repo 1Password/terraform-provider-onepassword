@@ -8,20 +8,20 @@ type ItemResource struct {
 
 func ItemResourceConfig(vaultID string, params map[string]string, passwordRecipe bool) func() string {
 	return func() string {
-		dataSourceStr := `resource "onepassword_item" "test_item" {`
+		resourceStr := `resource "onepassword_item" "test_item" {`
 
-		dataSourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
+		resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
 
 		for key, value := range params {
 			if key == "tags" {
-				dataSourceStr += fmt.Sprintf("\n  %s = [%q]", key, value)
+				resourceStr += fmt.Sprintf("\n  %s = [%q]", key, value)
 				continue
 			}
-			dataSourceStr += fmt.Sprintf("\n  %s = %q", key, value)
+			resourceStr += fmt.Sprintf("\n  %s = %q", key, value)
 		}
 
 		if passwordRecipe {
-			dataSourceStr += `
+			resourceStr += `
 			password_recipe {
 			length  = 40
 			letters = true
@@ -30,7 +30,7 @@ func ItemResourceConfig(vaultID string, params map[string]string, passwordRecipe
   			}`
 		}
 
-		dataSourceStr += "\n}"
-		return dataSourceStr
+		resourceStr += "\n}"
+		return resourceStr
 	}
 }

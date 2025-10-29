@@ -83,7 +83,7 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]string{
 	},
 }
 
-func TestAccItemResourceCRUD(t *testing.T) {
+func TestAccItemResource(t *testing.T) {
 	testCases := []struct {
 		category op.ItemCategory
 		name     string
