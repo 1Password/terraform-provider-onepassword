@@ -124,7 +124,7 @@ func TestAccItemDataSource(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dataSourceBuilder := tfconfig.CreateItemDataSourceConfigBuilder()
+			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			checks := []resource.TestCheckFunc{
 				resource.TestCheckResourceAttr("data.onepassword_item.test_item", "title", tc.item.Title),
@@ -192,7 +192,7 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dataSourceBuilder := tfconfig.CreateItemDataSourceConfigBuilder()
+			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,

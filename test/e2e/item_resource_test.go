@@ -115,7 +115,7 @@ func TestAccItemResourceCRUD(t *testing.T) {
 				Steps: []resource.TestStep{
 					// Create
 					{
-						Config: tfconfig.CreateItemResourceConfigBuilder()(
+						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
 							tfconfig.ItemResourceConfig(testVaultID, initialConfig),
 						),
@@ -128,7 +128,7 @@ func TestAccItemResourceCRUD(t *testing.T) {
 					},
 					// Read
 					{
-						Config: tfconfig.CreateItemResourceConfigBuilder()(
+						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
 							tfconfig.ItemResourceConfig(testVaultID, initialConfig),
 						),
@@ -143,7 +143,7 @@ func TestAccItemResourceCRUD(t *testing.T) {
 					},
 					// Update
 					{
-						Config: tfconfig.CreateItemResourceConfigBuilder()(
+						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
 							tfconfig.ItemResourceConfig(testVaultID, updatedConfig),
 						),
@@ -156,7 +156,7 @@ func TestAccItemResourceCRUD(t *testing.T) {
 					},
 					// Delete
 					{
-						Config: tfconfig.CreateItemResourceConfigBuilder()(
+						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
 						),
 						Check: resource.TestCheckFunc(func(s *terraform.State) error {
@@ -165,7 +165,7 @@ func TestAccItemResourceCRUD(t *testing.T) {
 						}),
 					},
 					{
-						Config: tfconfig.CreateItemResourceConfigBuilder()(
+						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
 							tfconfig.ItemDataSourceConfig(
 								map[string]string{
