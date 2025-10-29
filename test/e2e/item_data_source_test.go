@@ -1,16 +1,25 @@
 package integration
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/ssh"
 )
 
 const testVaultID = "bbucuyq2nn4fozygwttxwizpcy"
+
+type itemDataSourceTestCase struct {
+	name                 string
+	item                 testItem
+	itemDataSourceConfig tfconfig.ItemDataSource
+}
 
 type testItem struct {
 	Title string
@@ -57,94 +66,60 @@ var testItems = map[op.ItemCategory]testItem{
 			"note_value": "This is a test secure note for terraform-provider-onepassword",
 		},
 	},
+	op.Document: {
+		Title: "Test Document",
+		UUID:  "p6uyugpmxo6zcxo5fdfctet7xa",
+		Attrs: map[string]string{
+			"category":              "document",
+			"file.0.name":           "test.txt",
+			"file.0.content":        "This is a test\n",
+			"file.0.content_base64": "VGhpcyBpcyBhIHRlc3QK",
+		},
+	},
+	op.SSHKey: {
+		Title: "Test SSH Key",
+		UUID:  "5dbnxvhcknslz4mcaz7lobzt6i",
+		Attrs: map[string]string{
+			"category": "ssh_key",
+		},
+	},
 }
 
 func TestAccItemDataSource(t *testing.T) {
-	testCases := []struct {
-		name                 string
-		item                 testItem
-		itemDataSourceConfig tfconfig.ItemDataSource
+	createTestCase := func(name string, item testItem, identifierParam string, identifierValue string) itemDataSourceTestCase {
+		return itemDataSourceTestCase{
+			name: name,
+			item: item,
+			itemDataSourceConfig: tfconfig.ItemDataSource{
+				Params: map[string]string{
+					identifierParam: identifierValue,
+					"vault":         testVaultID,
+				},
+			},
+		}
+	}
+
+	itemTypes := []struct {
+		category op.ItemCategory
+		name     string
 	}{
-		{
-			name: "LoginByTitle",
-			item: testItems[op.Login],
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"title": testItems[op.Login].Title,
-					"vault": testVaultID,
-				},
-			},
-		},
-		{
-			name: "LoginByUUID",
-			item: testItems[op.Login],
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"uuid":  testItems[op.Login].UUID,
-					"vault": testVaultID,
-				},
-			},
-		},
-		{
-			name: "PasswordByTitle",
-			item: testItems[op.Password],
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"title": testItems[op.Password].Title,
-					"vault": testVaultID,
-				},
-			},
-		},
-		{
-			name: "PasswordByUUID",
-			item: testItems[op.Password],
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"uuid":  testItems[op.Password].UUID,
-					"vault": testVaultID,
-				},
-			},
-		},
-		{
-			name: "DatabaseByTitle",
-			item: testItems[op.Database],
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"title": testItems[op.Database].Title,
-					"vault": testVaultID,
-				},
-			},
-		},
-		{
-			name: "DatabaseByUUID",
-			item: testItems[op.Database],
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"uuid":  testItems[op.Database].UUID,
-					"vault": testVaultID,
-				},
-			},
-		},
-		{
-			name: "SecureNoteByTitle",
-			item: testItems[op.SecureNote],
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"title": testItems[op.SecureNote].Title,
-					"vault": testVaultID,
-				},
-			},
-		},
-		{
-			name: "SecureNoteByUUID",
-			item: testItems[op.SecureNote],
-			itemDataSourceConfig: tfconfig.ItemDataSource{
-				Params: map[string]string{
-					"uuid":  testItems[op.SecureNote].UUID,
-					"vault": testVaultID,
-				},
-			},
-		},
+		{op.Login, "Login"},
+		{op.Password, "Password"},
+		{op.Database, "Database"},
+		{op.SecureNote, "SecureNote"},
+		{op.Document, "Document"},
+		{op.SSHKey, "SSHKey"},
+	}
+
+	var testCases []itemDataSourceTestCase
+
+	// Create test cases for each item type with both title and UUID lookup methods
+	for _, itemType := range itemTypes {
+		item := testItems[itemType.category]
+		testCases = append(testCases,
+			createTestCase(itemType.name+"ByTitle", item, "title", item.Title),
+			createTestCase(itemType.name+"ByUUID", item, "uuid", item.UUID),
+		)
 	}
 
 	for _, tc := range testCases {
@@ -158,6 +133,21 @@ func TestAccItemDataSource(t *testing.T) {
 
 			for attr, expectedValue := range tc.item.Attrs {
 				checks = append(checks, resource.TestCheckResourceAttr("data.onepassword_item.test_item", attr, expectedValue))
+			}
+
+			// Validate SSH keys
+			if tc.item.Attrs["category"] == "ssh_key" {
+				checks = append(checks, resource.TestCheckFunc(func(s *terraform.State) error {
+					item, ok := s.RootModule().Resources["data.onepassword_item.test_item"]
+					if !ok {
+						return fmt.Errorf("resource not found in state")
+					}
+
+					publicKey := item.Primary.Attributes["public_key"]
+					privateKey := item.Primary.Attributes["private_key"]
+
+					return ssh.ValidateSSHKeys(publicKey, privateKey)
+				}))
 			}
 
 			resource.Test(t, resource.TestCase{
