@@ -7,9 +7,10 @@ import (
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
-	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 )
 
 var testItemsToCreate = map[op.ItemCategory]testItem{
@@ -18,16 +19,16 @@ var testItemsToCreate = map[op.ItemCategory]testItem{
 			"title":      "Test Login Create",
 			"category":   "login",
 			"username":   "testuser@example.com",
-			"password":   "testPassword",
 			"url":        "https://example.com",
 			"note_value": "Test login note",
+			"tags":       "testTag",
 		},
 	},
 	op.Password: {
 		Attrs: map[string]string{
 			"title":    "Test Password Create",
 			"category": "password",
-			"password": "testPassword",
+			"tags":     "testTag",
 		},
 	},
 	op.Database: {
@@ -39,6 +40,7 @@ var testItemsToCreate = map[op.ItemCategory]testItem{
 			"database": "testDatabase",
 			"port":     "3306",
 			"type":     "mysql",
+			"tags":     "testTag",
 		},
 	},
 	op.SecureNote: {
@@ -46,29 +48,38 @@ var testItemsToCreate = map[op.ItemCategory]testItem{
 			"title":      "Test Secure Note Create",
 			"category":   "secure_note",
 			"note_value": "This is a test secure note",
+			"tags":       "testTag",
 		},
 	},
 }
 
 var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]string{
 	op.Login: {
+		"title":      "Test Login Create - Updated",
 		"username":   "updateduser@example.com",
 		"password":   "updatedPassword",
 		"url":        "https://updated-example.com",
 		"note_value": "Updated login note",
+		"tags":       "updatedTag",
 	},
 	op.Password: {
+		"title":    "Test Password Create - Updated",
 		"password": "updatedPassword",
+		"tags":     "updatedTag",
 	},
 	op.Database: {
+		"title":    "Test Database Create - Updated",
 		"username": "updatedUsername",
 		"password": "updatedPassword",
 		"database": "updatedDatabase",
 		"port":     "5432",
 		"type":     "postgresql",
+		"tags":     "updatedTag",
 	},
 	op.SecureNote: {
+		"title":      "Test Secure Note Create - Updated",
 		"note_value": "This is an updated secure note",
+		"tags":       "updatedTag",
 	},
 }
 
@@ -87,97 +98,101 @@ func TestAccItemResourceCRUD(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			item := testItemsToCreate[tc.category]
 
-			// Create Config
-			initialConfig := maps.Clone(item.Attrs)
+			// Determine if password_recipe is supported for this category
+			// Only Login and Password support password_recipe currently
+			usePasswordRecipe := tc.category == op.Login || tc.category == op.Password
 
-			// Update Config
+			// Configs for creating and updating items
+			initialConfig := maps.Clone(item.Attrs)
 			updatedConfig := maps.Clone(item.Attrs)
 			maps.Copy(updatedConfig, testItemsUpdatedAttrs[tc.category])
-
-			// Create Checks
-			initialChecks := []resource.TestCheckFunc{
-				resource.TestCheckResourceAttr("onepassword_item.test_item", "title", item.Attrs["title"]),
-			}
-			for attr, expectedValue := range item.Attrs {
-				initialChecks = append(initialChecks, resource.TestCheckResourceAttr("onepassword_item.test_item", attr, expectedValue))
-			}
-
-			// Update Checks
-			updatedChecks := []resource.TestCheckFunc{
-				resource.TestCheckResourceAttr("onepassword_item.test_item", "title", item.Attrs["title"]),
-			}
-			for attr, expectedValue := range testItemsUpdatedAttrs[tc.category] {
-				updatedChecks = append(updatedChecks, resource.TestCheckResourceAttr("onepassword_item.test_item", attr, expectedValue))
-			}
 
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
-					// Create
+					// Create new item
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, initialConfig),
+							tfconfig.ItemResourceConfig(testVaultID, initialConfig, usePasswordRecipe),
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
-							resource.TestCheckFunc(func(s *terraform.State) error {
-								t.Logf("CREATE")
-								return nil
-							}),
-						}, initialChecks...)...),
+							logStep(t, "CREATE"),
+						}, buildItemChecks("onepassword_item.test_item", initialConfig)...)...),
 					},
-					// Read
+					// Read/Import new item and verify it matches state
 					{
-						Config: tfconfig.CreateConfigBuilder()(
-							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, initialConfig),
-						),
-						ResourceName:  "onepassword_item.test_item",
-						ImportStateId: fmt.Sprintf("vaults/%s/items/%s", "t7dnwbjh6nlyw475wl3m442sdi", item.Title),
-						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
-							resource.TestCheckFunc(func(s *terraform.State) error {
-								t.Logf("READ")
-								return nil
-							}),
-						}, initialChecks...)...),
-					},
-					// Update
-					{
-						Config: tfconfig.CreateConfigBuilder()(
-							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, updatedConfig),
-						),
-						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
-							resource.TestCheckFunc(func(s *terraform.State) error {
-								t.Logf("UPDATE")
-								return nil
-							}),
-						}, updatedChecks...)...),
-					},
-					// Delete
-					{
-						Config: tfconfig.CreateConfigBuilder()(
-							tfconfig.ProviderConfig(),
-						),
-						Check: resource.TestCheckFunc(func(s *terraform.State) error {
-							t.Logf("DELETE")
+						ResourceName:      "onepassword_item.test_item",
+						ImportState:       true,
+						ImportStateId:     fmt.Sprintf("vaults/%s/items/%s", testVaultID, item.Attrs["title"]),
+						ImportStateVerify: true,
+						ImportStateVerifyIgnore: []string{
+							"password_recipe",
+						},
+						ImportStateCheck: func(states []*terraform.InstanceState) error {
+							t.Log("READ")
 							return nil
-						}),
+						},
 					},
+					// Update new item
+					{
+						Config: tfconfig.CreateConfigBuilder()(
+							tfconfig.ProviderConfig(),
+							tfconfig.ItemResourceConfig(testVaultID, updatedConfig, false),
+						),
+						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
+							logStep(t, "UPDATE"),
+						}, buildItemChecks("onepassword_item.test_item", updatedConfig)...)...),
+					},
+					// Delete new item
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
 							tfconfig.ItemDataSourceConfig(
 								map[string]string{
-									"vault": "t7dnwbjh6nlyw475wl3m442sdi",
-									"title": item.Title,
+									"vault": testVaultID,
+									"title": updatedConfig["title"],
 								},
 							),
 						),
 						ExpectError: regexp.MustCompile("Unable to read item"),
+						Check:       logStep(t, "DELETE"),
 					},
 				},
 			})
 		})
 	}
+}
+
+func logStep(t *testing.T, step string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		t.Log(step)
+		return nil
+	}
+}
+
+func buildItemChecks(resourceName string, attrs map[string]string) []resource.TestCheckFunc {
+	checks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttrSet(resourceName, "uuid"),
+		resource.TestCheckResourceAttrSet(resourceName, "id"),
+	}
+
+	category := attrs["category"]
+	if category == "login" || category == "password" || category == "database" {
+		checks = append(checks, resource.TestCheckResourceAttrSet(resourceName, "password"))
+	}
+
+	for attr, expectedValue := range attrs {
+		if attr == "tags" {
+			checks = append(checks,
+				resource.TestCheckResourceAttr(resourceName, "tags.#", "1"),
+				resource.TestCheckResourceAttr(resourceName, "tags.0", expectedValue),
+			)
+			continue
+		}
+
+		checks = append(checks, resource.TestCheckResourceAttr(resourceName, attr, expectedValue))
+	}
+
+	return checks
 }
