@@ -164,6 +164,7 @@ func TestAccItemResource(t *testing.T) {
 	}
 }
 
+// logStep logs the current test step for easier test debugging
 func logStep(t *testing.T, step string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		t.Log(step)
@@ -171,6 +172,7 @@ func logStep(t *testing.T, step string) resource.TestCheckFunc {
 	}
 }
 
+// buildItemChecks creates a list of test assertions to verify item attributes
 func buildItemChecks(resourceName string, attrs map[string]string) []resource.TestCheckFunc {
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttrSet(resourceName, "uuid"),
