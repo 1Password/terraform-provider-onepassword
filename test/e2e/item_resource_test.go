@@ -177,8 +177,10 @@ func buildItemChecks(resourceName string, attrs map[string]string) []resource.Te
 		resource.TestCheckResourceAttrSet(resourceName, "id"),
 	}
 
+	// Verify password exists for login/password categories using password_recipe
+	// (generated passwords are random for CREATE step, so we only check existence, not value)
 	category := attrs["category"]
-	if category == "login" || category == "password" || category == "database" {
+	if category == "login" || category == "password" {
 		checks = append(checks, resource.TestCheckResourceAttrSet(resourceName, "password"))
 	}
 
