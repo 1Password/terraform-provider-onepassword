@@ -1,36 +1,50 @@
 package terraform
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+)
 
 type ItemResource struct {
 	Params map[string]string
 }
 
-func ItemResourceConfig(vaultID string, params map[string]string, passwordRecipe bool) func() string {
+func ItemResourceConfig(vaultID string, params map[string]interface{}) func() string {
 	return func() string {
 		resourceStr := `resource "onepassword_item" "test_item" {`
 
 		resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
 
 		for key, value := range params {
-			if key == "tags" {
-				resourceStr += fmt.Sprintf("\n  %s = [%q]", key, value)
-				continue
-			}
-			resourceStr += fmt.Sprintf("\n  %s = %q", key, value)
-		}
-
-		if passwordRecipe {
-			resourceStr += `
-			password_recipe {
-			length  = 40
-			letters = true
-			digits  = true
-			symbols = false
-  			}`
+			resourceStr += formatTerraformAttribute(key, value)
 		}
 
 		resourceStr += "\n}"
 		return resourceStr
+	}
+}
+
+func formatTerraformAttribute(key string, value interface{}) string {
+	rv := reflect.ValueOf(value)
+
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Array:
+		quotedItems := make([]string, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			quotedItems[i] = fmt.Sprintf("%q", rv.Index(i).Interface())
+		}
+		return fmt.Sprintf("\n  %s = [%s]", key, strings.Join(quotedItems, ", "))
+	case reflect.Bool:
+		return fmt.Sprintf("\n  %s = %t", key, value)
+
+	case reflect.String:
+		return fmt.Sprintf("\n  %s = %q", key, value)
+
+	case reflect.Int:
+		return fmt.Sprintf("\n  %s = %d", key, value)
+
+	default:
+		return fmt.Sprintf("\n  %s = %q", key, value)
 	}
 }

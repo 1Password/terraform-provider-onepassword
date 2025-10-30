@@ -13,73 +13,83 @@ import (
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 )
 
-var testItemsToCreate = map[op.ItemCategory]testItem{
+type testResourceItem struct {
+	Attrs map[string]any
+}
+
+var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 	op.Login: {
-		Attrs: map[string]string{
+		Attrs: map[string]any{
 			"title":      "Test Login Create",
 			"category":   "login",
 			"username":   "testuser@example.com",
+			"password":   "testPassword",
 			"url":        "https://example.com",
 			"note_value": "Test login note",
-			"tags":       "testTag",
+			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
 	op.Password: {
-		Attrs: map[string]string{
-			"title":    "Test Password Create",
-			"category": "password",
-			"tags":     "testTag",
+		Attrs: map[string]any{
+			"title":      "Test Password Create",
+			"category":   "password",
+			"password":   "testPassword",
+			"note_value": "Test password note",
+			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
 	op.Database: {
-		Attrs: map[string]string{
-			"title":    "Test Database Create",
-			"category": "database",
-			"username": "testUsername",
-			"password": "testPassword",
-			"database": "testDatabase",
-			"port":     "3306",
-			"type":     "mysql",
-			"tags":     "testTag",
+		Attrs: map[string]any{
+			"title":      "Test Database Create",
+			"category":   "database",
+			"username":   "testUsername",
+			"password":   "testPassword",
+			"database":   "testDatabase",
+			"port":       "3306",
+			"type":       "mysql",
+			"note_value": "Test database note",
+			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
 	op.SecureNote: {
-		Attrs: map[string]string{
+		Attrs: map[string]any{
 			"title":      "Test Secure Note Create",
 			"category":   "secure_note",
 			"note_value": "This is a test secure note",
-			"tags":       "testTag",
+			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
 }
 
-var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]string{
+var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 	op.Login: {
 		"title":      "Test Login Create - Updated",
 		"username":   "updateduser@example.com",
 		"password":   "updatedPassword",
 		"url":        "https://updated-example.com",
 		"note_value": "Updated login note",
-		"tags":       "updatedTag",
+		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.Password: {
-		"title":    "Test Password Create - Updated",
-		"password": "updatedPassword",
-		"tags":     "updatedTag",
+		"title":      "Test Password Create - Updated",
+		"password":   "updatedPassword",
+		"note_value": "Updated password note",
+		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.Database: {
-		"title":    "Test Database Create - Updated",
-		"username": "updatedUsername",
-		"password": "updatedPassword",
-		"database": "updatedDatabase",
-		"port":     "5432",
-		"type":     "postgresql",
-		"tags":     "updatedTag",
+		"title":      "Test Database Create - Updated",
+		"username":   "updatedUsername",
+		"password":   "updatedPassword",
+		"database":   "updatedDatabase",
+		"port":       "5432",
+		"type":       "postgresql",
+		"note_value": "Updated database note",
+		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.SecureNote: {
 		"title":      "Test Secure Note Create - Updated",
 		"note_value": "This is an updated secure note",
-		"tags":       "updatedTag",
+		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 }
 
@@ -88,19 +98,15 @@ func TestAccItemResource(t *testing.T) {
 		category op.ItemCategory
 		name     string
 	}{
-		{op.Login, "Login"},
-		{op.Password, "Password"},
-		{op.Database, "Database"},
-		{op.SecureNote, "SecureNote"},
+		{category: op.Login, name: "Login"},
+		{category: op.Password, name: "Password"},
+		{category: op.Database, name: "Database"},
+		{category: op.SecureNote, name: "SecureNote"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			item := testItemsToCreate[tc.category]
-
-			// Determine if password_recipe is supported for this category
-			// Only Login and Password support password_recipe currently
-			usePasswordRecipe := tc.category == op.Login || tc.category == op.Password
 
 			// Configs for creating and updating items
 			initialConfig := maps.Clone(item.Attrs)
@@ -114,7 +120,7 @@ func TestAccItemResource(t *testing.T) {
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, initialConfig, usePasswordRecipe),
+							tfconfig.ItemResourceConfig(testVaultID, item.Attrs),
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "CREATE"),
@@ -126,9 +132,6 @@ func TestAccItemResource(t *testing.T) {
 						ImportState:       true,
 						ImportStateId:     fmt.Sprintf("vaults/%s/items/%s", testVaultID, item.Attrs["title"]),
 						ImportStateVerify: true,
-						ImportStateVerifyIgnore: []string{
-							"password_recipe",
-						},
 						ImportStateCheck: func(states []*terraform.InstanceState) error {
 							t.Log("READ")
 							return nil
@@ -138,7 +141,7 @@ func TestAccItemResource(t *testing.T) {
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, updatedConfig, false),
+							tfconfig.ItemResourceConfig(testVaultID, updatedConfig),
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "UPDATE"),
@@ -151,7 +154,7 @@ func TestAccItemResource(t *testing.T) {
 							tfconfig.ItemDataSourceConfig(
 								map[string]string{
 									"vault": testVaultID,
-									"title": updatedConfig["title"],
+									"title": fmt.Sprintf("%v", updatedConfig["title"]),
 								},
 							),
 						),
@@ -173,29 +176,23 @@ func logStep(t *testing.T, step string) resource.TestCheckFunc {
 }
 
 // buildItemChecks creates a list of test assertions to verify item attributes
-func buildItemChecks(resourceName string, attrs map[string]string) []resource.TestCheckFunc {
+func buildItemChecks(resourceName string, attrs map[string]any) []resource.TestCheckFunc {
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttrSet(resourceName, "uuid"),
 		resource.TestCheckResourceAttrSet(resourceName, "id"),
 	}
 
-	// Verify password exists for login/password categories using password_recipe
-	// (generated passwords are random for CREATE step, so we only check existence, not value)
-	category := attrs["category"]
-	if category == "login" || category == "password" {
-		checks = append(checks, resource.TestCheckResourceAttrSet(resourceName, "password"))
-	}
-
 	for attr, expectedValue := range attrs {
-		if attr == "tags" {
-			checks = append(checks,
-				resource.TestCheckResourceAttr(resourceName, "tags.#", "1"),
-				resource.TestCheckResourceAttr(resourceName, "tags.0", expectedValue),
-			)
-			continue
-		}
+		// Check if the value is a slice and iterate over it
+		if slice, ok := expectedValue.([]string); ok {
+			checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attr), fmt.Sprintf("%d", len(slice))))
 
-		checks = append(checks, resource.TestCheckResourceAttr(resourceName, attr, expectedValue))
+			for i, val := range slice {
+				checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.%d", attr, i), val))
+			}
+		} else {
+			checks = append(checks, resource.TestCheckResourceAttr(resourceName, attr, fmt.Sprintf("%v", expectedValue)))
+		}
 	}
 
 	return checks
