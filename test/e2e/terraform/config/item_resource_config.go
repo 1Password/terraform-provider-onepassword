@@ -6,7 +6,14 @@ type ItemResource struct {
 	Params map[string]string
 }
 
-func ItemResourceConfig(vaultID string, params map[string]string, passwordRecipe bool) func() string {
+type PasswordRecipe struct {
+	Length  int
+	Letters bool
+	Digits  bool
+	Symbols bool
+}
+
+func ItemResourceConfig(vaultID string, params map[string]string, passwordRecipe *PasswordRecipe) func() string {
 	return func() string {
 		resourceStr := `resource "onepassword_item" "test_item" {`
 
@@ -20,14 +27,14 @@ func ItemResourceConfig(vaultID string, params map[string]string, passwordRecipe
 			resourceStr += fmt.Sprintf("\n  %s = %q", key, value)
 		}
 
-		if passwordRecipe {
-			resourceStr += `
+		if passwordRecipe != nil {
+			resourceStr += fmt.Sprintf(`
 			password_recipe {
-			length  = 40
-			letters = true
-			digits  = true
-			symbols = false
-  			}`
+			length  = %d
+			letters = %t
+			digits  = %t
+			symbols = %t
+  			}`, passwordRecipe.Length, passwordRecipe.Letters, passwordRecipe.Digits, passwordRecipe.Symbols)
 		}
 
 		resourceStr += "\n}"

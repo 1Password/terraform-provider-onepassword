@@ -100,7 +100,7 @@ func TestAccItemResource(t *testing.T) {
 
 			// Determine if password_recipe is supported for this category
 			// Only Login and Password support password_recipe currently
-			usePasswordRecipe := tc.category == op.Login || tc.category == op.Password
+			//	usePasswordRecipe := tc.category == op.Login || tc.category == op.Password
 
 			// Configs for creating and updating items
 			initialConfig := maps.Clone(item.Attrs)
@@ -114,7 +114,7 @@ func TestAccItemResource(t *testing.T) {
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, initialConfig, usePasswordRecipe),
+							tfconfig.ItemResourceConfig(testVaultID, initialConfig, nil),
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "CREATE"),
@@ -138,7 +138,7 @@ func TestAccItemResource(t *testing.T) {
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, updatedConfig, false),
+							tfconfig.ItemResourceConfig(testVaultID, updatedConfig, nil),
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "UPDATE"),
@@ -161,6 +161,49 @@ func TestAccItemResource(t *testing.T) {
 				},
 			})
 		})
+	}
+}
+
+func TestAccItemResourcePasswordGeneration(t *testing.T) {
+	testCases := []struct {
+		name           string
+		passwordRecipe *tfconfig.PasswordRecipe
+	}{
+		{"Length32", &tfconfig.PasswordRecipe{Length: 32, Symbols: false, Digits: false, Letters: true}},
+		{"Length16", &tfconfig.PasswordRecipe{Length: 16, Symbols: false, Digits: false, Letters: true}},
+		{"WithSymbols", &tfconfig.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: false}},
+		{"WithoutSymbols", &tfconfig.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: true}},
+		{"WithDigits", &tfconfig.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: false}},
+		{"WithoutDigits", &tfconfig.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: true}},
+		{"WithLetters", &tfconfig.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: true}},
+		{"WithoutLetters", &tfconfig.PasswordRecipe{Length: 20, Symbols: true, Digits: true, Letters: false}},
+	}
+
+	// Test both Login and Password items
+	items := []op.ItemCategory{op.Login, op.Password}
+
+	for _, item := range items {
+		item := testItemsToCreate[item]
+
+		for _, tc := range testCases {
+			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+
+				initialConfig := maps.Clone(item.Attrs)
+
+				resource.Test(t, resource.TestCase{
+					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+					Steps: []resource.TestStep{
+						{
+							Config: tfconfig.CreateConfigBuilder()(
+								tfconfig.ProviderConfig(),
+								tfconfig.ItemResourceConfig(testVaultID, initialConfig, tc.passwordRecipe),
+							),
+							Check: resource.ComposeAggregateTestCheckFunc(buildPasswordRecipeChecks("onepassword_item.test_item", tc.passwordRecipe)...),
+						},
+					},
+				})
+			})
+		}
 	}
 }
 
@@ -199,4 +242,48 @@ func buildItemChecks(resourceName string, attrs map[string]string) []resource.Te
 	}
 
 	return checks
+}
+
+func buildPasswordRecipeChecks(resourceName string, recipe *tfconfig.PasswordRecipe) []resource.TestCheckFunc {
+	checks := []resource.TestCheckFunc{}
+
+	if recipe.Length > 0 {
+		checks = append(checks, checkPasswordPattern(resourceName, fmt.Sprintf("^.{%d}$", recipe.Length), "length"))
+	}
+
+	if recipe.Symbols {
+		checks = append(checks, checkPasswordPattern(resourceName, `[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`+"`"+`]`, "symbols"))
+	} else {
+		checks = append(checks, checkPasswordPattern(resourceName, `^[^!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~\`+"`"+`]+$`, "symbols"))
+	}
+
+	if recipe.Digits {
+		checks = append(checks, checkPasswordPattern(resourceName, `[0-9]`, "digits"))
+	} else {
+		checks = append(checks, checkPasswordPattern(resourceName, `^[^0-9]+$`, "digits"))
+	}
+
+	if recipe.Letters {
+		checks = append(checks, checkPasswordPattern(resourceName, `[a-zA-Z]`, "letters"))
+	} else {
+		checks = append(checks, checkPasswordPattern(resourceName, `^[^a-zA-Z]+$`, "letters"))
+	}
+
+	return checks
+}
+
+func checkPasswordPattern(resourceName, pattern, description string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs, ok := s.RootModule().Resources[resourceName]
+		if !ok {
+			return fmt.Errorf("resource not found: %s", resourceName)
+		}
+
+		password := rs.Primary.Attributes["password"]
+		matched, _ := regexp.MatchString(pattern, password)
+		if !matched {
+			return fmt.Errorf("password does not match expected pattern: %s", description)
+		}
+		return nil
+	}
 }
