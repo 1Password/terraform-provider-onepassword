@@ -24,6 +24,11 @@ func ItemResourceConfig(vaultID string, params map[string]string, passwordRecipe
 				resourceStr += fmt.Sprintf("\n  %s = [%q]", key, value)
 				continue
 			}
+
+			if key == "password" && passwordRecipe != nil {
+				continue
+			}
+
 			resourceStr += fmt.Sprintf("\n  %s = %q", key, value)
 		}
 

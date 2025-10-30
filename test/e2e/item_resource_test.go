@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/validate"
 )
 
 var testItemsToCreate = map[op.ItemCategory]testItem{
@@ -19,6 +20,7 @@ var testItemsToCreate = map[op.ItemCategory]testItem{
 			"title":      "Test Login Create",
 			"category":   "login",
 			"username":   "testuser@example.com",
+			"password":   "testPassword",
 			"url":        "https://example.com",
 			"note_value": "Test login note",
 			"tags":       "testTag",
@@ -28,6 +30,7 @@ var testItemsToCreate = map[op.ItemCategory]testItem{
 		Attrs: map[string]string{
 			"title":    "Test Password Create",
 			"category": "password",
+			"password": "testPassword",
 			"tags":     "testTag",
 		},
 	},
@@ -98,10 +101,6 @@ func TestAccItemResource(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			item := testItemsToCreate[tc.category]
 
-			// Determine if password_recipe is supported for this category
-			// Only Login and Password support password_recipe currently
-			//	usePasswordRecipe := tc.category == op.Login || tc.category == op.Password
-
 			// Configs for creating and updating items
 			initialConfig := maps.Clone(item.Attrs)
 			updatedConfig := maps.Clone(item.Attrs)
@@ -118,7 +117,7 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "CREATE"),
-						}, buildItemChecks("onepassword_item.test_item", initialConfig)...)...),
+						}, validate.BuildItemChecks("onepassword_item.test_item", initialConfig)...)...),
 					},
 					// Read/Import new item and verify it matches state
 					{
@@ -142,7 +141,7 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "UPDATE"),
-						}, buildItemChecks("onepassword_item.test_item", updatedConfig)...)...),
+						}, validate.BuildItemChecks("onepassword_item.test_item", updatedConfig)...)...),
 					},
 					// Delete new item
 					{
@@ -198,7 +197,7 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 								tfconfig.ProviderConfig(),
 								tfconfig.ItemResourceConfig(testVaultID, initialConfig, tc.passwordRecipe),
 							),
-							Check: resource.ComposeAggregateTestCheckFunc(buildPasswordRecipeChecks("onepassword_item.test_item", tc.passwordRecipe)...),
+							Check: resource.ComposeAggregateTestCheckFunc(validate.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.passwordRecipe)...),
 						},
 					},
 				})
@@ -211,79 +210,6 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 func logStep(t *testing.T, step string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		t.Log(step)
-		return nil
-	}
-}
-
-// buildItemChecks creates a list of test assertions to verify item attributes
-func buildItemChecks(resourceName string, attrs map[string]string) []resource.TestCheckFunc {
-	checks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttrSet(resourceName, "uuid"),
-		resource.TestCheckResourceAttrSet(resourceName, "id"),
-	}
-
-	// Verify password exists for login/password categories using password_recipe
-	// (generated passwords are random for CREATE step, so we only check existence, not value)
-	category := attrs["category"]
-	if category == "login" || category == "password" {
-		checks = append(checks, resource.TestCheckResourceAttrSet(resourceName, "password"))
-	}
-
-	for attr, expectedValue := range attrs {
-		if attr == "tags" {
-			checks = append(checks,
-				resource.TestCheckResourceAttr(resourceName, "tags.#", "1"),
-				resource.TestCheckResourceAttr(resourceName, "tags.0", expectedValue),
-			)
-			continue
-		}
-
-		checks = append(checks, resource.TestCheckResourceAttr(resourceName, attr, expectedValue))
-	}
-
-	return checks
-}
-
-func buildPasswordRecipeChecks(resourceName string, recipe *tfconfig.PasswordRecipe) []resource.TestCheckFunc {
-	checks := []resource.TestCheckFunc{}
-
-	if recipe.Length > 0 {
-		checks = append(checks, checkPasswordPattern(resourceName, fmt.Sprintf("^.{%d}$", recipe.Length), "length"))
-	}
-
-	if recipe.Symbols {
-		checks = append(checks, checkPasswordPattern(resourceName, `[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`+"`"+`]`, "symbols"))
-	} else {
-		checks = append(checks, checkPasswordPattern(resourceName, `^[^!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~\`+"`"+`]+$`, "symbols"))
-	}
-
-	if recipe.Digits {
-		checks = append(checks, checkPasswordPattern(resourceName, `[0-9]`, "digits"))
-	} else {
-		checks = append(checks, checkPasswordPattern(resourceName, `^[^0-9]+$`, "digits"))
-	}
-
-	if recipe.Letters {
-		checks = append(checks, checkPasswordPattern(resourceName, `[a-zA-Z]`, "letters"))
-	} else {
-		checks = append(checks, checkPasswordPattern(resourceName, `^[^a-zA-Z]+$`, "letters"))
-	}
-
-	return checks
-}
-
-func checkPasswordPattern(resourceName, pattern, description string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[resourceName]
-		if !ok {
-			return fmt.Errorf("resource not found: %s", resourceName)
-		}
-
-		password := rs.Primary.Attributes["password"]
-		matched, _ := regexp.MatchString(pattern, password)
-		if !matched {
-			return fmt.Errorf("password does not match expected pattern: %s", description)
-		}
 		return nil
 	}
 }
