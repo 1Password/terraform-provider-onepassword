@@ -210,6 +210,8 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 					"password_recipe": tc.recipe,
 				}
 
+				checks := checks.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)
+
 				resource.Test(t, resource.TestCase{
 					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 					Steps: []resource.TestStep{
@@ -218,7 +220,7 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 								tfconfig.ProviderConfig(),
 								tfconfig.ItemResourceConfig(testVaultID, attrs),
 							),
-							Check: resource.ComposeAggregateTestCheckFunc(checks.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)...),
+							Check: resource.ComposeAggregateTestCheckFunc(checks...),
 						},
 					},
 				})
