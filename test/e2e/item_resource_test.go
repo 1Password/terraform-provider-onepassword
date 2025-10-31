@@ -158,7 +158,8 @@ func TestAccItemResource(t *testing.T) {
 							tfconfig.ItemDataSourceConfig(
 								map[string]string{
 									"vault": testVaultID,
-									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"])},
+									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"]),
+								},
 							),
 						),
 						ExpectError: regexp.MustCompile("Unable to read item"),
