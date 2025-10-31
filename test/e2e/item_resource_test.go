@@ -2,7 +2,6 @@ package integration
 
 import (
 	"fmt"
-	"maps"
 	"regexp"
 	"testing"
 
@@ -108,11 +107,6 @@ func TestAccItemResource(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			item := testItemsToCreate[tc.category]
 
-			// Configs for creating and updating items
-			initialConfig := maps.Clone(item.Attrs)
-			updatedConfig := maps.Clone(item.Attrs)
-			maps.Copy(updatedConfig, testItemsUpdatedAttrs[tc.category])
-
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
@@ -124,7 +118,7 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "CREATE"),
-						}, buildItemChecks("onepassword_item.test_item", initialConfig)...)...),
+						}, buildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
 					},
 					// Read/Import new item and verify it matches state
 					{
@@ -141,11 +135,11 @@ func TestAccItemResource(t *testing.T) {
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, updatedConfig),
+							tfconfig.ItemResourceConfig(testVaultID, testItemsUpdatedAttrs[tc.category]),
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "UPDATE"),
-						}, buildItemChecks("onepassword_item.test_item", updatedConfig)...)...),
+						}, buildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])...)...),
 					},
 					// Delete new item
 					{
@@ -154,7 +148,7 @@ func TestAccItemResource(t *testing.T) {
 							tfconfig.ItemDataSourceConfig(
 								map[string]string{
 									"vault": testVaultID,
-									"title": fmt.Sprintf("%v", updatedConfig["title"]),
+									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"]),
 								},
 							),
 						),
