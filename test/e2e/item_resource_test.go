@@ -119,7 +119,7 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "CREATE"),
-						}, validate.BuildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
+						}, buildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
 					},
 					// Read/Import new item and verify it matches state
 					{
@@ -149,6 +149,7 @@ func TestAccItemResource(t *testing.T) {
 							tfconfig.ItemDataSourceConfig(
 								map[string]string{
 									"vault": testVaultID,
+									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"]),
 									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"]),
 								},
 							),
