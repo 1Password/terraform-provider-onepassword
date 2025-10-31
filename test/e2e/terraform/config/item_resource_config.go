@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-type ItemResource struct {
-	Params map[string]string
-}
-
 func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 	return func() string {
 		resourceStr := `resource "onepassword_item" "test_item" {`
@@ -25,7 +21,7 @@ func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 	}
 }
 
-func formatTerraformAttribute(key string, value interface{}) string {
+func formatTerraformAttribute(key string, value any) string {
 	rv := reflect.ValueOf(value)
 
 	switch rv.Kind() {

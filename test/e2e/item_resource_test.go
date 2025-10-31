@@ -10,7 +10,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
-	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/validate"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 )
 
 type testResourceItem struct {
@@ -63,7 +64,8 @@ var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 
 var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 	op.Login: {
-		"title":      "Test Login Create - Updated",
+		"title":      "Test Login Create",
+		"category":   "login",
 		"username":   "updateduser@example.com",
 		"password":   "updatedPassword",
 		"url":        "https://updated-example.com",
@@ -71,13 +73,15 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.Password: {
-		"title":      "Test Password Create - Updated",
+		"title":      "Test Password Create",
+		"category":   "password",
 		"password":   "updatedPassword",
 		"note_value": "Updated password note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.Database: {
-		"title":      "Test Database Create - Updated",
+		"title":      "Test Database Create",
+		"category":   "database",
 		"username":   "updatedUsername",
 		"password":   "updatedPassword",
 		"database":   "updatedDatabase",
@@ -87,7 +91,8 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.SecureNote: {
-		"title":      "Test Secure Note Create - Updated",
+		"title":      "Test Secure Note Create",
+		"category":   "secure_note",
 		"note_value": "This is an updated secure note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
@@ -108,6 +113,8 @@ func TestAccItemResource(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			item := testItemsToCreate[tc.category]
 
+			var itemUUID string
+
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
@@ -119,7 +126,8 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "CREATE"),
-						}, validate.BuildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
+							uuid.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						}, checks.BuildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
 					},
 					// Read/Import new item and verify it matches state
 					{
@@ -140,7 +148,8 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "UPDATE"),
-						}, validate.BuildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])...)...),
+							uuid.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+						}, checks.BuildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])...)...),
 					},
 					// Delete new item
 					{
@@ -199,7 +208,7 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 								tfconfig.ProviderConfig(),
 								tfconfig.ItemResourceConfig(testVaultID, attrs),
 							),
-							Check: resource.ComposeAggregateTestCheckFunc(validate.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)...),
+							Check: resource.ComposeAggregateTestCheckFunc(checks.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)...),
 						},
 					},
 				})
