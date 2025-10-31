@@ -112,8 +112,23 @@ func TestAccItemResource(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			item := testItemsToCreate[tc.category]
-
 			var itemUUID string
+
+			// Build check functions for create step
+			createChecks := []resource.TestCheckFunc{
+				logStep(t, "CREATE"),
+				uuid.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+			}
+			bcCreate := checks.BuildItemChecks("onepassword_item.test_item", item.Attrs)
+			createChecks = append(createChecks, bcCreate...)
+
+			// Build checks for update step
+			updateChecks := []resource.TestCheckFunc{
+				logStep(t, "UPDATE"),
+				uuid.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+			}
+			bcUpdate := checks.BuildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])
+			updateChecks = append(updateChecks, bcUpdate...)
 
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -124,10 +139,7 @@ func TestAccItemResource(t *testing.T) {
 							tfconfig.ProviderConfig(),
 							tfconfig.ItemResourceConfig(testVaultID, item.Attrs),
 						),
-						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
-							logStep(t, "CREATE"),
-							uuid.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
-						}, checks.BuildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
+						Check: resource.ComposeAggregateTestCheckFunc(createChecks...),
 					},
 					// Read/Import new item and verify it matches state
 					{
@@ -146,10 +158,7 @@ func TestAccItemResource(t *testing.T) {
 							tfconfig.ProviderConfig(),
 							tfconfig.ItemResourceConfig(testVaultID, testItemsUpdatedAttrs[tc.category]),
 						),
-						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
-							logStep(t, "UPDATE"),
-							uuid.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
-						}, checks.BuildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])...)...),
+						Check: resource.ComposeAggregateTestCheckFunc(updateChecks...),
 					},
 					// Delete new item
 					{
