@@ -32,6 +32,15 @@ func formatTerraformAttribute(key string, value any) string {
 		}
 		return fmt.Sprintf("\n  %s = [%s]", key, strings.Join(quotedItems, ", "))
 
+	case reflect.Map:
+		blockStr := fmt.Sprintf("\n  %s {", key)
+		m := value.(map[string]any)
+		for k, v := range m {
+			blockStr += formatTerraformAttribute(k, v)
+		}
+		blockStr += "\n  }"
+		return blockStr
+
 	case reflect.Bool:
 		return fmt.Sprintf("\n  %s = %t", key, value)
 
