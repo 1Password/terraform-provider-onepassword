@@ -119,7 +119,7 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "CREATE"),
-						}, buildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
+						}, validate.BuildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
 					},
 					// Read/Import new item and verify it matches state
 					{
@@ -149,9 +149,7 @@ func TestAccItemResource(t *testing.T) {
 							tfconfig.ItemDataSourceConfig(
 								map[string]string{
 									"vault": testVaultID,
-									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"]),
-									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"]),
-								},
+									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"])},
 							),
 						),
 						ExpectError: regexp.MustCompile("Unable to read item"),
@@ -168,14 +166,14 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 		name   string
 		recipe map[string]any
 	}{
-		{"Length32", map[string]any{"length": 32, "symbols": false, "digits": false, "letters": true}},
-		{"Length16", map[string]any{"length": 16, "symbols": false, "digits": false, "letters": true}},
-		{"WithSymbols", map[string]any{"length": 20, "symbols": true, "digits": false, "letters": false}},
-		{"WithoutSymbols", map[string]any{"length": 20, "symbols": false, "digits": true, "letters": true}},
-		{"WithDigits", map[string]any{"length": 20, "symbols": false, "digits": true, "letters": false}},
-		{"WithoutDigits", map[string]any{"length": 20, "symbols": true, "digits": false, "letters": true}},
-		{"WithLetters", map[string]any{"length": 20, "symbols": false, "digits": false, "letters": true}},
-		{"WithoutLetters", map[string]any{"length": 20, "symbols": true, "digits": true, "letters": false}},
+		{name: "Length32", recipe: map[string]any{"length": 32, "symbols": false, "digits": false, "letters": true}},
+		{name: "Length16", recipe: map[string]any{"length": 16, "symbols": false, "digits": false, "letters": true}},
+		{name: "WithSymbols", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": false}},
+		{name: "WithoutSymbols", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": true}},
+		{name: "WithDigits", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": false}},
+		{name: "WithoutDigits", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": true}},
+		{name: "WithLetters", recipe: map[string]any{"length": 20, "symbols": false, "digits": false, "letters": true}},
+		{name: "WithoutLetters", recipe: map[string]any{"length": 20, "symbols": true, "digits": true, "letters": false}},
 	}
 
 	// Test both Login and Password items
