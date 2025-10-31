@@ -6,11 +6,7 @@ import (
 	"strings"
 )
 
-type ItemResource struct {
-	Params map[string]string
-}
-
-func ItemResourceConfig(vaultID string, params map[string]interface{}) func() string {
+func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 	return func() string {
 		resourceStr := `resource "onepassword_item" "test_item" {`
 
@@ -35,6 +31,7 @@ func formatTerraformAttribute(key string, value interface{}) string {
 			quotedItems[i] = fmt.Sprintf("%q", rv.Index(i).Interface())
 		}
 		return fmt.Sprintf("\n  %s = [%s]", key, strings.Join(quotedItems, ", "))
+
 	case reflect.Bool:
 		return fmt.Sprintf("\n  %s = %t", key, value)
 

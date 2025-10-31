@@ -62,7 +62,8 @@ var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 
 var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 	op.Login: {
-		"title":      "Test Login Create - Updated",
+		"title":      "Test Login Create",
+		"category":   "login",
 		"username":   "updateduser@example.com",
 		"password":   "updatedPassword",
 		"url":        "https://updated-example.com",
@@ -70,13 +71,15 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.Password: {
-		"title":      "Test Password Create - Updated",
+		"title":      "Test Password Create",
+		"category":   "password",
 		"password":   "updatedPassword",
 		"note_value": "Updated password note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.Database: {
-		"title":      "Test Database Create - Updated",
+		"title":      "Test Database Create",
+		"category":   "database",
 		"username":   "updatedUsername",
 		"password":   "updatedPassword",
 		"database":   "updatedDatabase",
@@ -86,7 +89,8 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
 	op.SecureNote: {
-		"title":      "Test Secure Note Create - Updated",
+		"title":      "Test Secure Note Create",
+		"category":   "secure_note",
 		"note_value": "This is an updated secure note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
@@ -107,6 +111,8 @@ func TestAccItemResource(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			item := testItemsToCreate[tc.category]
 
+			var itemUUID string
+
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 				Steps: []resource.TestStep{
@@ -118,6 +124,7 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "CREATE"),
+							captureItemUUID(t, "onepassword_item.test_item", &itemUUID),
 						}, buildItemChecks("onepassword_item.test_item", item.Attrs)...)...),
 					},
 					// Read/Import new item and verify it matches state
@@ -139,6 +146,7 @@ func TestAccItemResource(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(append([]resource.TestCheckFunc{
 							logStep(t, "UPDATE"),
+							verifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
 						}, buildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])...)...),
 					},
 					// Delete new item
@@ -190,4 +198,28 @@ func buildItemChecks(resourceName string, attrs map[string]any) []resource.TestC
 	}
 
 	return checks
+}
+
+// captureItemUUID captures the UUID of a resource item
+func captureItemUUID(t *testing.T, resourceName string, uuidPtr *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs := s.RootModule().Resources[resourceName]
+		*uuidPtr = rs.Primary.Attributes["uuid"]
+
+		return nil
+	}
+}
+
+// verifyItemUUIDUnchanged verifies that the resource UUID matches the expected UUID
+func verifyItemUUIDUnchanged(t *testing.T, resourceName string, expectedUUID *string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		rs := s.RootModule().Resources[resourceName]
+		currentUUID := rs.Primary.Attributes["uuid"]
+
+		if currentUUID != *expectedUUID {
+			return fmt.Errorf("UUID changed from %s to %s - resource was replaced instead of updated", *expectedUUID, currentUUID)
+		}
+
+		return nil
+	}
 }
