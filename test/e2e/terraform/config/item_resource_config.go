@@ -1,48 +1,60 @@
 package terraform
 
-import "fmt"
+import (
+	"fmt"
+	"reflect"
+	"strings"
+)
 
 type ItemResource struct {
 	Params map[string]string
 }
 
-type PasswordRecipe struct {
-	Length  int
-	Letters bool
-	Digits  bool
-	Symbols bool
-}
-
-func ItemResourceConfig(vaultID string, params map[string]string, passwordRecipe *PasswordRecipe) func() string {
+func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 	return func() string {
 		resourceStr := `resource "onepassword_item" "test_item" {`
 
 		resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
 
 		for key, value := range params {
-			if key == "tags" {
-				resourceStr += fmt.Sprintf("\n  %s = [%q]", key, value)
-				continue
-			}
-
-			if key == "password" && passwordRecipe != nil {
-				continue
-			}
-
-			resourceStr += fmt.Sprintf("\n  %s = %q", key, value)
-		}
-
-		if passwordRecipe != nil {
-			resourceStr += fmt.Sprintf(`
-			password_recipe {
-			length  = %d
-			letters = %t
-			digits  = %t
-			symbols = %t
-  			}`, passwordRecipe.Length, passwordRecipe.Letters, passwordRecipe.Digits, passwordRecipe.Symbols)
+			resourceStr += formatTerraformAttribute(key, value)
 		}
 
 		resourceStr += "\n}"
 		return resourceStr
+	}
+}
+
+func formatTerraformAttribute(key string, value interface{}) string {
+	rv := reflect.ValueOf(value)
+
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Array:
+		quotedItems := make([]string, rv.Len())
+		for i := 0; i < rv.Len(); i++ {
+			quotedItems[i] = fmt.Sprintf("%q", rv.Index(i).Interface())
+		}
+		return fmt.Sprintf("\n  %s = [%s]", key, strings.Join(quotedItems, ", "))
+
+	case reflect.Map:
+		blockStr := fmt.Sprintf("\n  %s {", key)
+		m := value.(map[string]any)
+		for k, v := range m {
+			blockStr += formatTerraformAttribute(k, v)
+		}
+		blockStr += "\n  }"
+		return blockStr
+
+	case reflect.Bool:
+		return fmt.Sprintf("\n  %s = %t", key, value)
+
+	case reflect.String:
+		return fmt.Sprintf("\n  %s = %q", key, value)
+
+	case reflect.Int:
+		return fmt.Sprintf("\n  %s = %d", key, value)
+
+	default:
+		return fmt.Sprintf("\n  %s = %q", key, value)
 	}
 }
