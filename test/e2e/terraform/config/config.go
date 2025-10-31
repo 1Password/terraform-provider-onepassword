@@ -9,7 +9,7 @@ func ProviderConfig() func() string {
 	}
 }
 
-func CreateItemDataSourceConfigBuilder() func(functions ...func() string) string {
+func CreateConfigBuilder() func(functions ...func() string) string {
 	configStr := ""
 
 	return func(functions ...func() string) string {

@@ -59,7 +59,7 @@ func TestAccVaultDataSource(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dataSourceBuilder := tfconfig.CreateItemDataSourceConfigBuilder()
+			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			checks := make([]resource.TestCheckFunc, 0, len(tc.expectedAttrs))
 			for attr, expectedValue := range tc.expectedAttrs {
