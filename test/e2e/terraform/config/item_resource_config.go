@@ -52,10 +52,12 @@ func formatTerraformAttribute(key string, value any) string {
 
 	case reflect.Map:
 		blockStr := fmt.Sprintf("\n  %s {", key)
-		m := value.(map[string]any)
-		for k, v := range m {
+		attributes := value.(map[string]any)
+
+		for k, v := range attributes {
 			blockStr += formatTerraformAttribute(k, v)
 		}
+
 		blockStr += "\n  }"
 		return blockStr
 
