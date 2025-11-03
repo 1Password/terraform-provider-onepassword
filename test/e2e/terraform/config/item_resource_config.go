@@ -17,7 +17,6 @@ func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 		}
 
 		resourceStr += "\n}"
-		fmt.Println(resourceStr)
 		return resourceStr
 	}
 }
@@ -27,7 +26,7 @@ func formatTerraformAttribute(key string, value any) string {
 
 	switch rv.Kind() {
 	case reflect.Slice, reflect.Array:
-		// Handle slices of maps
+		// Handle slices of maps recursively
 		if rv.Len() > 0 && rv.Index(0).Kind() == reflect.Map {
 			blockStr := ""
 

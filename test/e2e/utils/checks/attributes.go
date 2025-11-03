@@ -30,8 +30,9 @@ func buildAttributeChecks(resourceName, attrPath string, expectedValue any) []re
 		for i, val := range v {
 			checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.%d", attrPath, i), val))
 		}
+
 	case []map[string]any:
-		// Handle nested block lists
+		// Handle nested block lists recursively
 		checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attrPath), fmt.Sprintf("%d", len(v))))
 		for i, nestedMap := range v {
 			for nestedAttr, nestedValue := range nestedMap {
@@ -39,6 +40,7 @@ func buildAttributeChecks(resourceName, attrPath string, expectedValue any) []re
 				checks = append(checks, buildAttributeChecks(resourceName, nestedPath, nestedValue)...)
 			}
 		}
+
 	default:
 		// Handle simple attributes
 		checks = append(checks, resource.TestCheckResourceAttr(resourceName, attrPath, fmt.Sprintf("%v", expectedValue)))

@@ -27,19 +27,7 @@ var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 			"password":   "testPassword",
 			"url":        "https://example.com",
 			"note_value": "Test login note",
-			//"tags":       []string{"firstTestTag", "secondTestTag"},
-			"section": []map[string]any{ // ← Must be a SLICE (note the [])
-				{
-					"label": "Test Section",
-					"field": []map[string]any{ // ← Must also be a SLICE
-						{
-							"label": "Test Field",
-							"value": "2025-10-31",
-							"type":  "DATE",
-						},
-					},
-				},
-			},
+			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
 	op.Password: {
@@ -83,39 +71,6 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 		"url":        "https://updated-example.com",
 		"note_value": "Updated login note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
-		"section": []map[string]any{
-			{
-				"label": "Test Section",
-				"field": []map[string]any{
-					{
-						"label": "Test Field",
-						"value": "2025-11-29",
-						"type":  "DATE",
-					},
-					{
-						"label": "Test Field 2",
-						"value": "2025-11-29",
-						"type":  "DATE",
-					},
-				},
-			},
-
-			{
-				"label": "Test Section 2",
-				"field": []map[string]any{
-					{
-						"label": "Test Field 3",
-						"value": "2025-11-29",
-						"type":  "DATE",
-					},
-					{
-						"label": "Test Field 4",
-						"value": "2025-11-29",
-						"type":  "DATE",
-					},
-				},
-			},
-		},
 	},
 	op.Password: {
 		"title":      "Test Password Create",
@@ -149,9 +104,9 @@ func TestAccItemResource(t *testing.T) {
 		name     string
 	}{
 		{category: op.Login, name: "Login"},
-		// {category: op.Password, name: "Password"},
-		// {category: op.Database, name: "Database"},
-		// {category: op.SecureNote, name: "SecureNote"},
+		{category: op.Password, name: "Password"},
+		{category: op.Database, name: "Database"},
+		{category: op.SecureNote, name: "SecureNote"},
 	}
 
 	for _, tc := range testCases {
@@ -230,14 +185,14 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 		name   string
 		recipe map[string]any
 	}{
-		// {name: "Length32", recipe: map[string]any{"length": 32, "symbols": false, "digits": false, "letters": true}},
-		// {name: "Length16", recipe: map[string]any{"length": 16, "symbols": false, "digits": false, "letters": true}},
-		// {name: "WithSymbols", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": false}},
-		// {name: "WithoutSymbols", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": true}},
-		// {name: "WithDigits", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": false}},
-		// {name: "WithoutDigits", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": true}},
-		// {name: "WithLetters", recipe: map[string]any{"length": 20, "symbols": false, "digits": false, "letters": true}},
-		// {name: "WithoutLetters", recipe: map[string]any{"length": 20, "symbols": true, "digits": true, "letters": false}},
+		{name: "Length32", recipe: map[string]any{"length": 32, "symbols": false, "digits": false, "letters": true}},
+		{name: "Length16", recipe: map[string]any{"length": 16, "symbols": false, "digits": false, "letters": true}},
+		{name: "WithSymbols", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": false}},
+		{name: "WithoutSymbols", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": true}},
+		{name: "WithDigits", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": false}},
+		{name: "WithoutDigits", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": true}},
+		{name: "WithLetters", recipe: map[string]any{"length": 20, "symbols": false, "digits": false, "letters": true}},
+		{name: "WithoutLetters", recipe: map[string]any{"length": 20, "symbols": true, "digits": true, "letters": false}},
 	}
 
 	// Test both Login and Password items
@@ -266,6 +221,130 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 								tfconfig.ItemResourceConfig(testVaultID, attrs),
 							),
 							Check: resource.ComposeAggregateTestCheckFunc(checks...),
+						},
+					},
+				})
+			})
+		}
+	}
+}
+
+func TestAccItemResourceSectionsAndFields(t *testing.T) {
+	testCases := []struct {
+		name        string
+		createAttrs map[string]any
+		updateAttrs map[string]any
+	}{
+		{
+			name: "CreateSection",
+			createAttrs: map[string]any{
+				"section": []map[string]any{
+					{
+						"label": "Test Section",
+					},
+				},
+			},
+			updateAttrs: map[string]any{
+				"section": []map[string]any{
+					{
+						"label": "Updated Section Label",
+					},
+					{
+						"label": "Updated Section Label 2",
+					},
+				},
+			},
+		},
+		{
+			name: "CreateSectionWithField",
+			createAttrs: map[string]any{
+				"section": []map[string]any{
+					{
+						"label": "Test Section",
+						"field": []map[string]any{
+							{
+								"label": "Test Field",
+								"value": "2025-10-31",
+								"type":  "DATE",
+							},
+						},
+					},
+				},
+			},
+			updateAttrs: map[string]any{
+				"section": []map[string]any{
+					{
+						"label": "Test Section",
+						"field": []map[string]any{
+							{
+								"label": "Updated Field",
+								"value": "Test string",
+								"type":  "STRING",
+							},
+							{
+								"label": "Updated Field 2",
+								"value": "2026-12-25",
+								"type":  "DATE",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	items := []op.ItemCategory{op.Login}
+
+	for _, item := range items {
+		item := testItemsToCreate[item]
+		for _, tc := range testCases {
+			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+				var itemUUID string
+
+				createAttrs := map[string]any{
+					"title":    item.Attrs["title"],
+					"category": item.Attrs["category"],
+					"section":  tc.createAttrs["section"],
+				}
+
+				updateAttrs := map[string]any{
+					"title":    item.Attrs["title"],
+					"category": item.Attrs["category"],
+					"section":  tc.updateAttrs["section"],
+				}
+
+				// Build check functions for create step
+				createChecks := []resource.TestCheckFunc{
+					logStep(t, "CREATE"),
+					uuid.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				}
+				createChecks = append(createChecks, checks.BuildItemChecks("onepassword_item.test_item", createAttrs)...)
+
+				// Build check functions for update step
+				updateChecks := []resource.TestCheckFunc{
+					logStep(t, "UPDATE"),
+					uuid.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+				}
+				updateChecks = append(updateChecks, checks.BuildItemChecks("onepassword_item.test_item", updateAttrs)...)
+
+				resource.Test(t, resource.TestCase{
+					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+					Steps: []resource.TestStep{
+						// Create new item
+						{
+							Config: tfconfig.CreateConfigBuilder()(
+								tfconfig.ProviderConfig(),
+								tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+							),
+							Check: resource.ComposeAggregateTestCheckFunc(createChecks...),
+						},
+						// Update new item
+						{
+							Config: tfconfig.CreateConfigBuilder()(
+								tfconfig.ProviderConfig(),
+								tfconfig.ItemResourceConfig(testVaultID, updateAttrs),
+							),
+							Check: resource.ComposeAggregateTestCheckFunc(updateChecks...),
 						},
 					},
 				})
