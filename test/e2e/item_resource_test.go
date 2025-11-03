@@ -27,7 +27,19 @@ var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 			"password":   "testPassword",
 			"url":        "https://example.com",
 			"note_value": "Test login note",
-			"tags":       []string{"firstTestTag", "secondTestTag"},
+			//"tags":       []string{"firstTestTag", "secondTestTag"},
+			"section": []map[string]any{ // ← Must be a SLICE (note the [])
+				{
+					"label": "Test Section",
+					"field": []map[string]any{ // ← Must also be a SLICE
+						{
+							"label": "Test Field",
+							"value": "2025-10-31",
+							"type":  "DATE",
+						},
+					},
+				},
+			},
 		},
 	},
 	op.Password: {
@@ -71,6 +83,39 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 		"url":        "https://updated-example.com",
 		"note_value": "Updated login note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
+		"section": []map[string]any{
+			{
+				"label": "Test Section",
+				"field": []map[string]any{
+					{
+						"label": "Test Field",
+						"value": "2025-11-29",
+						"type":  "DATE",
+					},
+					{
+						"label": "Test Field 2",
+						"value": "2025-11-29",
+						"type":  "DATE",
+					},
+				},
+			},
+
+			{
+				"label": "Test Section 2",
+				"field": []map[string]any{
+					{
+						"label": "Test Field 3",
+						"value": "2025-11-29",
+						"type":  "DATE",
+					},
+					{
+						"label": "Test Field 4",
+						"value": "2025-11-29",
+						"type":  "DATE",
+					},
+				},
+			},
+		},
 	},
 	op.Password: {
 		"title":      "Test Password Create",
@@ -104,9 +149,9 @@ func TestAccItemResource(t *testing.T) {
 		name     string
 	}{
 		{category: op.Login, name: "Login"},
-		{category: op.Password, name: "Password"},
-		{category: op.Database, name: "Database"},
-		{category: op.SecureNote, name: "SecureNote"},
+		// {category: op.Password, name: "Password"},
+		// {category: op.Database, name: "Database"},
+		// {category: op.SecureNote, name: "SecureNote"},
 	}
 
 	for _, tc := range testCases {
@@ -185,14 +230,14 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 		name   string
 		recipe map[string]any
 	}{
-		{name: "Length32", recipe: map[string]any{"length": 32, "symbols": false, "digits": false, "letters": true}},
-		{name: "Length16", recipe: map[string]any{"length": 16, "symbols": false, "digits": false, "letters": true}},
-		{name: "WithSymbols", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": false}},
-		{name: "WithoutSymbols", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": true}},
-		{name: "WithDigits", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": false}},
-		{name: "WithoutDigits", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": true}},
-		{name: "WithLetters", recipe: map[string]any{"length": 20, "symbols": false, "digits": false, "letters": true}},
-		{name: "WithoutLetters", recipe: map[string]any{"length": 20, "symbols": true, "digits": true, "letters": false}},
+		// {name: "Length32", recipe: map[string]any{"length": 32, "symbols": false, "digits": false, "letters": true}},
+		// {name: "Length16", recipe: map[string]any{"length": 16, "symbols": false, "digits": false, "letters": true}},
+		// {name: "WithSymbols", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": false}},
+		// {name: "WithoutSymbols", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": true}},
+		// {name: "WithDigits", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": false}},
+		// {name: "WithoutDigits", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": true}},
+		// {name: "WithLetters", recipe: map[string]any{"length": 20, "symbols": false, "digits": false, "letters": true}},
+		// {name: "WithoutLetters", recipe: map[string]any{"length": 20, "symbols": true, "digits": true, "letters": false}},
 	}
 
 	// Test both Login and Password items

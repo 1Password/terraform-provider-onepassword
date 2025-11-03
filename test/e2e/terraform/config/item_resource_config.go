@@ -17,6 +17,7 @@ func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 		}
 
 		resourceStr += "\n}"
+		fmt.Println(resourceStr)
 		return resourceStr
 	}
 }
@@ -26,6 +27,23 @@ func formatTerraformAttribute(key string, value any) string {
 
 	switch rv.Kind() {
 	case reflect.Slice, reflect.Array:
+		// Handle slices of maps
+		if rv.Len() > 0 && rv.Index(0).Kind() == reflect.Map {
+			blockStr := ""
+
+			for i := 0; i < rv.Len(); i++ {
+				blockStr += fmt.Sprintf("\n  %s {", key)
+				attributes := rv.Index(i).Interface().(map[string]any)
+
+				for k, v := range attributes {
+					blockStr += formatTerraformAttribute(k, v)
+				}
+				blockStr += "\n  }"
+			}
+			return blockStr
+		}
+
+		// Otherwise, treat as a list attribute
 		quotedItems := make([]string, rv.Len())
 		for i := 0; i < rv.Len(); i++ {
 			quotedItems[i] = fmt.Sprintf("%q", rv.Index(i).Interface())
