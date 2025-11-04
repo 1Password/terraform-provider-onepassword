@@ -11,6 +11,7 @@ import (
 
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 )
 
@@ -181,48 +182,60 @@ func TestAccItemResource(t *testing.T) {
 }
 
 func TestAccItemResourcePasswordGeneration(t *testing.T) {
+	Bool := func(v bool) *bool { return &v }
+	Int := func(v int) *int { return &v }
+
 	testCases := []struct {
 		name   string
-		recipe map[string]any
+		recipe password.PasswordRecipe
 	}{
-		{name: "Length32", recipe: map[string]any{"length": 32, "symbols": false, "digits": false, "letters": true}},
-		{name: "Length16", recipe: map[string]any{"length": 16, "symbols": false, "digits": false, "letters": true}},
-		{name: "WithSymbols", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": false}},
-		{name: "WithoutSymbols", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": true}},
-		{name: "WithDigits", recipe: map[string]any{"length": 20, "symbols": false, "digits": true, "letters": false}},
-		{name: "WithoutDigits", recipe: map[string]any{"length": 20, "symbols": true, "digits": false, "letters": true}},
-		{name: "WithLetters", recipe: map[string]any{"length": 20, "symbols": false, "digits": false, "letters": true}},
-		{name: "WithoutLetters", recipe: map[string]any{"length": 20, "symbols": true, "digits": true, "letters": false}},
+		{name: "Length32", recipe: password.PasswordRecipe{Length: Int(32), Letters: Bool(true), Digits: Bool(false), Symbols: Bool(false)}},
+		{name: "Length16", recipe: password.PasswordRecipe{Length: Int(16), Letters: Bool(true), Digits: Bool(false), Symbols: Bool(false)}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(false), Letters: Bool(false)}},
+		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(true), Letters: Bool(true)}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(true), Letters: Bool(false)}},
+		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(false), Letters: Bool(true)}},
+		{name: "WithLetters", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(false), Letters: Bool(true)}},
+		{name: "WithoutLetters", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(true), Letters: Bool(false)}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(false), Letters: Bool(false)}},
+		{name: "LengthOnly", recipe: password.PasswordRecipe{Length: Int(20)}},
+		{name: "InvalidLength0", recipe: password.PasswordRecipe{Length: Int(0)}},
+		{name: "AllDefaults", recipe: password.PasswordRecipe{}},
 	}
 
 	// Test both Login and Password items
 	items := []op.ItemCategory{op.Login, op.Password}
 
-	for _, item := range items {
-		item := testItemsToCreate[item]
+	for _, tc := range testCases {
+		for _, item := range items {
+			item := testItemsToCreate[item]
 
-		for _, tc := range testCases {
 			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+				recipeMap := password.BuildPasswordRecipeMap(tc.recipe)
 
 				attrs := map[string]any{
 					"title":           item.Attrs["title"],
 					"category":        item.Attrs["category"],
-					"password_recipe": tc.recipe,
+					"password_recipe": recipeMap,
 				}
 
-				checks := checks.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)
+				testStep := resource.TestStep{
+					Config: tfconfig.CreateConfigBuilder()(
+						tfconfig.ProviderConfig(),
+						tfconfig.ItemResourceConfig(testVaultID, attrs),
+					),
+				}
+
+				if tc.recipe.Length != nil && *tc.recipe.Length == 0 {
+					testStep.ExpectError = regexp.MustCompile(`length value must be between 1 and 64`)
+				} else {
+					checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipeMap)
+					testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
+				}
 
 				resource.Test(t, resource.TestCase{
 					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-					Steps: []resource.TestStep{
-						{
-							Config: tfconfig.CreateConfigBuilder()(
-								tfconfig.ProviderConfig(),
-								tfconfig.ItemResourceConfig(testVaultID, attrs),
-							),
-							Check: resource.ComposeAggregateTestCheckFunc(checks...),
-						},
-					},
+					Steps:                    []resource.TestStep{testStep},
 				})
 			})
 		}
