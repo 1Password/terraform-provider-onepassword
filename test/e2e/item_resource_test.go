@@ -308,9 +308,9 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 
 	items := []op.ItemCategory{op.Login}
 
-	for _, item := range items {
-		item := testItemsToCreate[item]
-		for _, tc := range testCases {
+	for _, tc := range testCases {
+		for _, item := range items {
+			item := testItemsToCreate[item]
 			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
 				var itemUUID string
 
