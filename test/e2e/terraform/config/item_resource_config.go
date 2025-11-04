@@ -51,7 +51,11 @@ func formatTerraformAttribute(key string, value any) string {
 
 	case reflect.Map:
 		blockStr := fmt.Sprintf("\n  %s {", key)
-		attributes := value.(map[string]any)
+		attributes, ok := value.(map[string]any)
+
+		if !ok {
+			panic(fmt.Sprintf("invalid terraform config: attribute %q has unsupported type %T", key, value))
+		}
 
 		for k, v := range attributes {
 			blockStr += formatTerraformAttribute(k, v)

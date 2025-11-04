@@ -1,4 +1,4 @@
-package checks
+package password
 
 import (
 	"fmt"
@@ -8,16 +8,35 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
+type PasswordRecipe struct {
+	Length  *int
+	Symbols *bool
+	Digits  *bool
+	Letters *bool
+}
+
 // BuildPasswordRecipeChecks creates a list of test assertions to verify password recipe attributes
 func BuildPasswordRecipeChecks(resourceName string, recipe map[string]any) []resource.TestCheckFunc {
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "password_recipe.#", "1"),
 	}
 
-	length, _ := recipe["length"].(int)
+	length, ok := recipe["length"].(int)
+	// If length is not provided, provider will default to 32
+	if !ok {
+		length = 32
+	}
+
 	symbols, _ := recipe["symbols"].(bool)
 	digits, _ := recipe["digits"].(bool)
 	letters, _ := recipe["letters"].(bool)
+
+	// If all attributes are false the provided recipe is invalid, so we default to true
+	if !symbols && !digits && !letters {
+		symbols = true
+		digits = true
+		letters = true
+	}
 
 	if length > 0 {
 		checks = append(checks, checkPasswordPattern(resourceName, fmt.Sprintf("^.{%d}$", length), "length"))
@@ -42,6 +61,23 @@ func BuildPasswordRecipeChecks(resourceName string, recipe map[string]any) []res
 	}
 
 	return checks
+}
+
+func BuildPasswordRecipeMap(pr PasswordRecipe) map[string]any {
+	recipeMap := map[string]any{}
+	if pr.Length != nil {
+		recipeMap["length"] = *pr.Length
+	}
+	if pr.Symbols != nil {
+		recipeMap["symbols"] = *pr.Symbols
+	}
+	if pr.Digits != nil {
+		recipeMap["digits"] = *pr.Digits
+	}
+	if pr.Letters != nil {
+		recipeMap["letters"] = *pr.Letters
+	}
+	return recipeMap
 }
 
 // checkPasswordPattern creates a test assertion to verify password pattern with regex
