@@ -22,7 +22,7 @@ func BuildPasswordRecipeChecks(resourceName string, recipe map[string]any) []res
 	}
 
 	length, ok := recipe["length"].(int)
-	// If length is not provided, provider will default to 32
+	// If length is not provided, the default is 32
 	if !ok {
 		length = 32
 	}
