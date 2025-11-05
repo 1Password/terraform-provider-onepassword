@@ -182,25 +182,21 @@ func TestAccItemResource(t *testing.T) {
 }
 
 func TestAccItemResourcePasswordGeneration(t *testing.T) {
-	Bool := func(v bool) *bool { return &v }
-	Int := func(v int) *int { return &v }
-
 	testCases := []struct {
 		name   string
 		recipe password.PasswordRecipe
 	}{
-		{name: "Length32", recipe: password.PasswordRecipe{Length: Int(32), Letters: Bool(true), Digits: Bool(false), Symbols: Bool(false)}},
-		{name: "Length16", recipe: password.PasswordRecipe{Length: Int(16), Letters: Bool(true), Digits: Bool(false), Symbols: Bool(false)}},
-		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(false), Letters: Bool(false)}},
-		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(true), Letters: Bool(true)}},
-		{name: "WithDigits", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(true), Letters: Bool(false)}},
-		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(false), Letters: Bool(true)}},
-		{name: "WithLetters", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(false), Letters: Bool(true)}},
-		{name: "WithoutLetters", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(true), Letters: Bool(false)}},
-		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(false), Letters: Bool(false)}},
-		{name: "LengthOnly", recipe: password.PasswordRecipe{Length: Int(20)}},
-		{name: "InvalidLength0", recipe: password.PasswordRecipe{Length: Int(0)}},
-		{name: "AllDefaults", recipe: password.PasswordRecipe{}},
+		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Letters: true, Digits: false, Symbols: false}},
+		{name: "Length16", recipe: password.PasswordRecipe{Length: 16, Letters: true, Digits: false, Symbols: false}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: false}},
+		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: true}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: false}},
+		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: true}},
+		{name: "WithLetters", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: true}},
+		{name: "WithoutLetters", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: true, Letters: false}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: false}},
+		{name: "InvalidLength0", recipe: password.PasswordRecipe{Length: 0}},
+		{name: "InvalidLength65", recipe: password.PasswordRecipe{Length: 65}},
 	}
 
 	// Test both Login and Password items
@@ -226,7 +222,7 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 					),
 				}
 
-				if tc.recipe.Length != nil && *tc.recipe.Length == 0 {
+				if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
 					testStep.ExpectError = regexp.MustCompile(`length value must be between 1 and 64`)
 				} else {
 					checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipeMap)

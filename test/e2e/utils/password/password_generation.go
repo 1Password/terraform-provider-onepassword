@@ -9,10 +9,10 @@ import (
 )
 
 type PasswordRecipe struct {
-	Length  *int
-	Symbols *bool
-	Digits  *bool
-	Letters *bool
+	Length  int
+	Symbols bool
+	Digits  bool
+	Letters bool
 }
 
 // BuildPasswordRecipeChecks creates a list of test assertions to verify password recipe attributes
@@ -64,20 +64,12 @@ func BuildPasswordRecipeChecks(resourceName string, recipe map[string]any) []res
 }
 
 func BuildPasswordRecipeMap(pr PasswordRecipe) map[string]any {
-	recipeMap := map[string]any{}
-	if pr.Length != nil {
-		recipeMap["length"] = *pr.Length
+	return map[string]any{
+		"length":  pr.Length,
+		"symbols": pr.Symbols,
+		"digits":  pr.Digits,
+		"letters": pr.Letters,
 	}
-	if pr.Symbols != nil {
-		recipeMap["symbols"] = *pr.Symbols
-	}
-	if pr.Digits != nil {
-		recipeMap["digits"] = *pr.Digits
-	}
-	if pr.Letters != nil {
-		recipeMap["letters"] = *pr.Letters
-	}
-	return recipeMap
 }
 
 // checkPasswordPattern creates a test assertion to verify password pattern with regex
