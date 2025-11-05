@@ -16,26 +16,21 @@ type PasswordRecipe struct {
 }
 
 // BuildPasswordRecipeChecks creates a list of test assertions to verify password recipe attributes
-func BuildPasswordRecipeChecks(resourceName string, recipe map[string]any) []resource.TestCheckFunc {
+func BuildPasswordRecipeChecks(resourceName string, recipe PasswordRecipe) []resource.TestCheckFunc {
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttr(resourceName, "password_recipe.#", "1"),
 	}
 
-	length, ok := recipe["length"].(int)
-	// If length is not provided, the default is 32
-	if !ok {
-		length = 32
+	length, symbols, digits, letters := recipe.Length, recipe.Symbols, recipe.Digits, recipe.Letters
+
+	// If all are false, default all to true (invalid recipe)
+	if !symbols && !digits && !letters {
+		symbols, digits, letters = true, true, true
 	}
 
-	symbols, _ := recipe["symbols"].(bool)
-	digits, _ := recipe["digits"].(bool)
-	letters, _ := recipe["letters"].(bool)
-
-	// If all attributes are false the provided recipe is invalid, so we default to true
-	if !symbols && !digits && !letters {
-		symbols = true
-		digits = true
-		letters = true
+	// If length is not provided (0), the default is 32
+	if recipe.Length == 0 {
+		length = 32
 	}
 
 	if length > 0 {

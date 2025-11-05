@@ -225,7 +225,7 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 				if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
 					testStep.ExpectError = regexp.MustCompile(`length value must be between 1 and 64`)
 				} else {
-					checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipeMap)
+					checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)
 					testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
 				}
 
