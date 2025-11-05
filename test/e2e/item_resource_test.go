@@ -12,6 +12,7 @@ import (
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 )
 
@@ -240,61 +241,101 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 
 func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	testCases := []struct {
-		name        string
-		createAttrs map[string]any
-		updateAttrs map[string]any
+		name   string
+		create sections.TestSectionData
+		update sections.TestSectionData
 	}{
 		{
-			name: "CreateSection",
-			createAttrs: map[string]any{
-				"section": []map[string]any{
+			name: "RemoveSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section 1"},
+					{Label: "Test Section 2"},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section 1"},
+				},
+			},
+		},
+		{
+			name: "RemoveFieldFromSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
 					{
-						"label": "Test Section",
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "Field 1", Value: "value1", Type: "STRING"},
+							{Label: "Field 2", Value: "value2", Type: "STRING"},
+						},
 					},
 				},
 			},
-			updateAttrs: map[string]any{
-				"section": []map[string]any{
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
 					{
-						"label": "Updated Section Label",
-					},
-					{
-						"label": "Updated Section Label 2",
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "Field 1", Value: "value1", Type: "STRING"},
+						},
 					},
 				},
 			},
 		},
 		{
-			name: "CreateSectionWithField",
-			createAttrs: map[string]any{
-				"section": []map[string]any{
+			name: "AddFieldToExistingSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section"},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
 					{
-						"label": "Test Section",
-						"field": []map[string]any{
-							{
-								"label": "Test Field",
-								"value": "2025-10-31",
-								"type":  "DATE",
-							},
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "New Field", Value: "new value", Type: "STRING"},
 						},
 					},
 				},
 			},
-			updateAttrs: map[string]any{
-				"section": []map[string]any{
+		},
+		{
+			name: "MultipleSectionsWithMultipleFields",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
 					{
-						"label": "Test Section",
-						"field": []map[string]any{
-							{
-								"label": "Updated Field",
-								"value": "Test string",
-								"type":  "STRING",
-							},
-							{
-								"label": "Updated Field 2",
-								"value": "2026-12-25",
-								"type":  "DATE",
-							},
+						Label: "Personal Info",
+						Fields: []sections.TestField{
+							{Label: "Email", Value: "test@example.com", Type: "EMAIL"},
+							{Label: "Date", Value: "1990-01-01", Type: "DATE"},
+						},
+					},
+					{
+						Label: "Additional Info",
+						Fields: []sections.TestField{
+							{Label: "Website", Value: "https://example.com", Type: "URL"},
+							{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
+						},
+					},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Personal Info",
+						Fields: []sections.TestField{
+							{Label: "Updated Email", Value: "updated@example.com", Type: "EMAIL"},
+							{Label: "Date", Value: "1990-01-01", Type: "DATE"},
+						},
+					},
+					{
+						Label: "Additional Info",
+						Fields: []sections.TestField{
+							{Label: "Website", Value: "https://updated.com", Type: "URL"},
+							{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
+							{Label: "Notes", Value: "Some notes", Type: "STRING"},
 						},
 					},
 				},
@@ -307,19 +348,20 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	for _, tc := range testCases {
 		for _, item := range items {
 			item := testItemsToCreate[item]
+
 			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
 				var itemUUID string
 
 				createAttrs := map[string]any{
 					"title":    item.Attrs["title"],
 					"category": item.Attrs["category"],
-					"section":  tc.createAttrs["section"],
+					"section":  sections.MapSections(tc.create.Sections),
 				}
 
 				updateAttrs := map[string]any{
 					"title":    item.Attrs["title"],
 					"category": item.Attrs["category"],
-					"section":  tc.updateAttrs["section"],
+					"section":  sections.MapSections(tc.update.Sections),
 				}
 
 				// Build check functions for create step
