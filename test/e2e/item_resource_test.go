@@ -2,7 +2,9 @@ package integration
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
@@ -236,6 +238,68 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestAccItemResourceTags(t *testing.T) {
+	item := testItemsToCreate[op.Login]
+
+	itemWith3Tags := item
+	itemWith3Tags.Attrs = maps.Clone(item.Attrs)
+	tags := slices.Clone(item.Attrs["tags"].([]string))
+	itemWith3Tags.Attrs["tags"] = append(tags, "thirdTestTag")
+
+	itemWith1Tags := itemWith3Tags
+	itemWith1Tags.Attrs = maps.Clone(itemWith3Tags.Attrs)
+	tags = slices.Clone(itemWith3Tags.Attrs["tags"].([]string))
+	itemWith1Tags.Attrs["tags"] = []string{tags[0]}
+
+	// Build check functions for each step
+	createChecks := []resource.TestCheckFunc{
+		logStep(t, "CREATE_ITEM_WITH_2_TAGS"),
+	}
+	createChecks = append(createChecks, checks.BuildItemChecks("onepassword_item.test_item", item.Attrs)...)
+
+	addThirdTagChecks := []resource.TestCheckFunc{
+		logStep(t, "ADD_3RD_TAG"),
+	}
+	addThirdTagChecks = append(addThirdTagChecks, checks.BuildItemChecks("onepassword_item.test_item", itemWith3Tags.Attrs)...)
+
+	removeTagsChecks := []resource.TestCheckFunc{
+		logStep(t, "REMOVE_2_TAGS"),
+	}
+	removeTagsChecks = append(removeTagsChecks, checks.BuildItemChecks("onepassword_item.test_item", itemWith1Tags.Attrs)...)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create item with 2 tags
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, item.Attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(createChecks...),
+			},
+
+			// Add 3rd tag
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, itemWith3Tags.Attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(addThirdTagChecks...),
+			},
+
+			// Remove 2 tags
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, itemWith1Tags.Attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(removeTagsChecks...),
+			},
+		},
+	})
 }
 
 // logStep logs the current test step for easier test debugging
