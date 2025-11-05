@@ -32,7 +32,11 @@ func formatTerraformAttribute(key string, value any) string {
 
 			for i := 0; i < rv.Len(); i++ {
 				blockStr += fmt.Sprintf("\n  %s {", key)
-				attributes := rv.Index(i).Interface().(map[string]any)
+				attributes, ok := rv.Index(i).Interface().(map[string]any)
+
+				if !ok {
+					panic(fmt.Sprintf("invalid terraform config: attribute %q has unsupported type %T", key, value))
+				}
 
 				for k, v := range attributes {
 					blockStr += formatTerraformAttribute(k, v)
