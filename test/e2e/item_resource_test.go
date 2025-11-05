@@ -10,6 +10,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 )
 
 type testResourceItem struct {
@@ -115,17 +118,17 @@ func TestAccItemResource(t *testing.T) {
 			// Build check functions for create step
 			createChecks := []resource.TestCheckFunc{
 				logStep(t, "CREATE"),
-				captureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				uuid.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
 			}
-			bcCreate := buildItemChecks("onepassword_item.test_item", item.Attrs)
+			bcCreate := checks.BuildItemChecks("onepassword_item.test_item", item.Attrs)
 			createChecks = append(createChecks, bcCreate...)
 
 			// Build checks for update step
 			updateChecks := []resource.TestCheckFunc{
 				logStep(t, "UPDATE"),
-				verifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+				uuid.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
 			}
-			bcUpdate := buildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])
+			bcUpdate := checks.BuildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])
 			updateChecks = append(updateChecks, bcUpdate...)
 
 			resource.Test(t, resource.TestCase{
@@ -178,57 +181,67 @@ func TestAccItemResource(t *testing.T) {
 	}
 }
 
+func TestAccItemResourcePasswordGeneration(t *testing.T) {
+	testCases := []struct {
+		name   string
+		recipe password.PasswordRecipe
+	}{
+		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Letters: true, Digits: false, Symbols: false}},
+		{name: "Length16", recipe: password.PasswordRecipe{Length: 16, Letters: true, Digits: false, Symbols: false}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: false}},
+		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: true}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: false}},
+		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: true}},
+		{name: "WithLetters", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: true}},
+		{name: "WithoutLetters", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: true, Letters: false}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: false}},
+		{name: "InvalidLength0", recipe: password.PasswordRecipe{Length: 0}},
+		{name: "InvalidLength65", recipe: password.PasswordRecipe{Length: 65}},
+	}
+
+	// Test both Login and Password items
+	items := []op.ItemCategory{op.Login, op.Password}
+
+	for _, tc := range testCases {
+		for _, item := range items {
+			item := testItemsToCreate[item]
+
+			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+				recipeMap := password.BuildPasswordRecipeMap(tc.recipe)
+
+				attrs := map[string]any{
+					"title":           item.Attrs["title"],
+					"category":        item.Attrs["category"],
+					"password_recipe": recipeMap,
+				}
+
+				testStep := resource.TestStep{
+					Config: tfconfig.CreateConfigBuilder()(
+						tfconfig.ProviderConfig(),
+						tfconfig.ItemResourceConfig(testVaultID, attrs),
+					),
+				}
+
+				if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
+					testStep.ExpectError = regexp.MustCompile(`length value must be between 1 and 64`)
+				} else {
+					checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)
+					testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
+				}
+
+				resource.Test(t, resource.TestCase{
+					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+					Steps:                    []resource.TestStep{testStep},
+				})
+			})
+		}
+	}
+}
+
 // logStep logs the current test step for easier test debugging
 func logStep(t *testing.T, step string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		t.Log(step)
-		return nil
-	}
-}
-
-// buildItemChecks creates a list of test assertions to verify item attributes
-func buildItemChecks(resourceName string, attrs map[string]any) []resource.TestCheckFunc {
-	checks := []resource.TestCheckFunc{
-		resource.TestCheckResourceAttrSet(resourceName, "uuid"),
-		resource.TestCheckResourceAttrSet(resourceName, "id"),
-	}
-
-	for attr, expectedValue := range attrs {
-		// Check if the value is a slice and iterate over it
-		if slice, ok := expectedValue.([]string); ok {
-			checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attr), fmt.Sprintf("%d", len(slice))))
-
-			for i, val := range slice {
-				checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.%d", attr, i), val))
-			}
-		} else {
-			checks = append(checks, resource.TestCheckResourceAttr(resourceName, attr, fmt.Sprintf("%v", expectedValue)))
-		}
-	}
-
-	return checks
-}
-
-// captureItemUUID captures the UUID of a resource item
-func captureItemUUID(t *testing.T, resourceName string, uuidPtr *string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs := s.RootModule().Resources[resourceName]
-		*uuidPtr = rs.Primary.Attributes["uuid"]
-
-		return nil
-	}
-}
-
-// verifyItemUUIDUnchanged verifies that the resource UUID matches the expected UUID
-func verifyItemUUIDUnchanged(t *testing.T, resourceName string, expectedUUID *string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs := s.RootModule().Resources[resourceName]
-		currentUUID := rs.Primary.Attributes["uuid"]
-
-		if currentUUID != *expectedUUID {
-			return fmt.Errorf("UUID changed from %s to %s - resource was replaced instead of updated", *expectedUUID, currentUUID)
-		}
-
 		return nil
 	}
 }
