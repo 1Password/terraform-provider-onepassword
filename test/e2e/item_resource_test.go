@@ -12,6 +12,7 @@ import (
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 )
 
@@ -182,25 +183,21 @@ func TestAccItemResource(t *testing.T) {
 }
 
 func TestAccItemResourcePasswordGeneration(t *testing.T) {
-	Bool := func(v bool) *bool { return &v }
-	Int := func(v int) *int { return &v }
-
 	testCases := []struct {
 		name   string
 		recipe password.PasswordRecipe
 	}{
-		{name: "Length32", recipe: password.PasswordRecipe{Length: Int(32), Letters: Bool(true), Digits: Bool(false), Symbols: Bool(false)}},
-		{name: "Length16", recipe: password.PasswordRecipe{Length: Int(16), Letters: Bool(true), Digits: Bool(false), Symbols: Bool(false)}},
-		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(false), Letters: Bool(false)}},
-		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(true), Letters: Bool(true)}},
-		{name: "WithDigits", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(true), Letters: Bool(false)}},
-		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(false), Letters: Bool(true)}},
-		{name: "WithLetters", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(false), Letters: Bool(true)}},
-		{name: "WithoutLetters", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(true), Digits: Bool(true), Letters: Bool(false)}},
-		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: Int(20), Symbols: Bool(false), Digits: Bool(false), Letters: Bool(false)}},
-		{name: "LengthOnly", recipe: password.PasswordRecipe{Length: Int(20)}},
-		{name: "InvalidLength0", recipe: password.PasswordRecipe{Length: Int(0)}},
-		{name: "AllDefaults", recipe: password.PasswordRecipe{}},
+		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Letters: true, Digits: false, Symbols: false}},
+		{name: "Length16", recipe: password.PasswordRecipe{Length: 16, Letters: true, Digits: false, Symbols: false}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: false}},
+		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: true}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: false}},
+		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: true}},
+		{name: "WithLetters", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: true}},
+		{name: "WithoutLetters", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: true, Letters: false}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: false}},
+		{name: "InvalidLength0", recipe: password.PasswordRecipe{Length: 0}},
+		{name: "InvalidLength65", recipe: password.PasswordRecipe{Length: 65}},
 	}
 
 	// Test both Login and Password items
@@ -226,7 +223,7 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 					),
 				}
 
-				if tc.recipe.Length != nil && *tc.recipe.Length == 0 {
+				if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
 					testStep.ExpectError = regexp.MustCompile(`length value must be between 1 and 64`)
 				} else {
 					checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipeMap)
@@ -244,61 +241,101 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 
 func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	testCases := []struct {
-		name        string
-		createAttrs map[string]any
-		updateAttrs map[string]any
+		name   string
+		create sections.TestSectionData
+		update sections.TestSectionData
 	}{
 		{
-			name: "CreateSection",
-			createAttrs: map[string]any{
-				"section": []map[string]any{
+			name: "RemoveSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section 1"},
+					{Label: "Test Section 2"},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section 1"},
+				},
+			},
+		},
+		{
+			name: "RemoveFieldFromSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
 					{
-						"label": "Test Section",
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "Field 1", Value: "value1", Type: "STRING"},
+							{Label: "Field 2", Value: "value2", Type: "STRING"},
+						},
 					},
 				},
 			},
-			updateAttrs: map[string]any{
-				"section": []map[string]any{
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
 					{
-						"label": "Updated Section Label",
-					},
-					{
-						"label": "Updated Section Label 2",
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "Field 1", Value: "value1", Type: "STRING"},
+						},
 					},
 				},
 			},
 		},
 		{
-			name: "CreateSectionWithField",
-			createAttrs: map[string]any{
-				"section": []map[string]any{
+			name: "AddFieldToExistingSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section"},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
 					{
-						"label": "Test Section",
-						"field": []map[string]any{
-							{
-								"label": "Test Field",
-								"value": "2025-10-31",
-								"type":  "DATE",
-							},
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "New Field", Value: "new value", Type: "STRING"},
 						},
 					},
 				},
 			},
-			updateAttrs: map[string]any{
-				"section": []map[string]any{
+		},
+		{
+			name: "MultipleSectionsWithMultipleFields",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
 					{
-						"label": "Test Section",
-						"field": []map[string]any{
-							{
-								"label": "Updated Field",
-								"value": "Test string",
-								"type":  "STRING",
-							},
-							{
-								"label": "Updated Field 2",
-								"value": "2026-12-25",
-								"type":  "DATE",
-							},
+						Label: "Personal Info",
+						Fields: []sections.TestField{
+							{Label: "Email", Value: "test@example.com", Type: "EMAIL"},
+							{Label: "Date", Value: "1990-01-01", Type: "DATE"},
+						},
+					},
+					{
+						Label: "Additional Info",
+						Fields: []sections.TestField{
+							{Label: "Website", Value: "https://example.com", Type: "URL"},
+							{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
+						},
+					},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Personal Info",
+						Fields: []sections.TestField{
+							{Label: "Updated Email", Value: "updated@example.com", Type: "EMAIL"},
+							{Label: "Date", Value: "1990-01-01", Type: "DATE"},
+						},
+					},
+					{
+						Label: "Additional Info",
+						Fields: []sections.TestField{
+							{Label: "Website", Value: "https://updated.com", Type: "URL"},
+							{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
+							{Label: "Notes", Value: "Some notes", Type: "STRING"},
 						},
 					},
 				},
@@ -311,19 +348,20 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	for _, tc := range testCases {
 		for _, item := range items {
 			item := testItemsToCreate[item]
+
 			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
 				var itemUUID string
 
 				createAttrs := map[string]any{
 					"title":    item.Attrs["title"],
 					"category": item.Attrs["category"],
-					"section":  tc.createAttrs["section"],
+					"section":  sections.MapSections(tc.create.Sections),
 				}
 
 				updateAttrs := map[string]any{
 					"title":    item.Attrs["title"],
 					"category": item.Attrs["category"],
-					"section":  tc.updateAttrs["section"],
+					"section":  sections.MapSections(tc.update.Sections),
 				}
 
 				// Build check functions for create step

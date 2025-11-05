@@ -20,7 +20,7 @@ func BuildItemChecks(resourceName string, attrs map[string]any) []resource.TestC
 	return checks
 }
 
-func buildAttributeChecks(resourceName, attrPath string, expectedValue any) []resource.TestCheckFunc {
+func buildAttributeChecks(resourceName string, attrPath string, expectedValue any) []resource.TestCheckFunc {
 	var checks []resource.TestCheckFunc
 
 	switch v := expectedValue.(type) {
