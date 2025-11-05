@@ -1,0 +1,58 @@
+name: Test E2E
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: &ignore_paths
+      - "docs/**"
+      - "examples/**"
+      - "*.md"
+      - ".gitignore"
+      - "LICENSE"
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ["**"] # run for PRs targeting any branch (main and others)
+    paths-ignore: *ignore_paths
+
+concurrency:
+  group: >-
+    ${{ github.event_name == 'pull_request' &&
+          format('e2e-{0}', github.event.pull_request.head.ref) ||
+          format('e2e-{0}', github.ref) }}
+  cancel-in-progress: true # cancel previous job runs for the same branch
+
+jobs:
+  check-external-pr:
+    runs-on: ubuntu-latest
+    outputs:
+      condition: ${{ steps.check.outputs.condition }}
+    steps:
+      - name: Check if PR is from external contributor
+        id: check
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For pull_request events, check if PR is from external fork
+            echo "PR head repo: ${{ github.event.pull_request.head.repo.full_name }}"
+            if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+              echo "condition=skip" >> $GITHUB_OUTPUT
+              echo "Setting condition=skip (external fork PR creation)"
+            else
+              echo "condition=pr-creation-maintainer" >> $GITHUB_OUTPUT
+              echo "Setting condition=pr-creation-maintainer (internal PR creation)"
+            fi
+          else
+            # Unknown event type
+            echo "condition=skip" >> $GITHUB_OUTPUT
+            echo "Setting condition=skip (unknown event type: ${{ github.event_name }})"
+          fi
+
+  e2e:
+    needs: check-external-pr
+    if: needs.check-external-pr.outputs.condition == 'pr-creation-maintainer'
+    uses: ./.github/workflows/e2e-tests.yml
+    secrets:
+      OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}

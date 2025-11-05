@@ -1,0 +1,28 @@
+name: E2E Tests
+
+on:
+  workflow_call:
+    secrets:
+      OP_SERVICE_ACCOUNT_TOKEN:
+        description: "1Password service account token"
+        required: true
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Run E2E tests
+        run: make test-e2e
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
