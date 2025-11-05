@@ -44,6 +44,10 @@ jobs:
               echo "condition=pr-creation-maintainer" >> $GITHUB_OUTPUT
               echo "Setting condition=pr-creation-maintainer (internal PR creation)"
             fi
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            # For push events to main branch
+            echo "condition=push-to-main" >> $GITHUB_OUTPUT
+            echo "Setting condition=push-to-main (push to main branch)"
           else
             # Unknown event type
             echo "condition=skip" >> $GITHUB_OUTPUT
@@ -52,7 +56,9 @@ jobs:
 
   e2e:
     needs: check-external-pr
-    if: needs.check-external-pr.outputs.condition == 'pr-creation-maintainer'
+    if: |
+      needs.check-external-pr.outputs.condition == 'pr-creation-maintainer' ||
+      needs.check-external-pr.outputs.condition == 'push-to-main'
     uses: ./.github/workflows/e2e-tests.yml
     secrets:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
