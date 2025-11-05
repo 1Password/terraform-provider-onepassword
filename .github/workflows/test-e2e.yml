@@ -12,7 +12,7 @@ on:
 
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: ["**"] # run for PRs targeting any branch (main and others)
+    branches: ["**"] # run for PRs targeting any branch
     paths-ignore: *ignore_paths
 
 concurrency:
@@ -20,7 +20,7 @@ concurrency:
     ${{ github.event_name == 'pull_request' &&
           format('e2e-{0}', github.event.pull_request.head.ref) ||
           format('e2e-{0}', github.ref) }}
-  cancel-in-progress: true # cancel previous job runs for the same branch
+  cancel-in-progress: true
 
 jobs:
   check-external-pr:
