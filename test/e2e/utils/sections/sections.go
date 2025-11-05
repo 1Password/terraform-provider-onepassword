@@ -15,6 +15,7 @@ type TestSectionData struct {
 	Sections []TestSection
 }
 
+// MapSections converts a list of TestSection to a list of maps that can be used in Terraform configuration
 func MapSections(sections []TestSection) []map[string]any {
 	mappedSections := make([]map[string]any, len(sections))
 
@@ -32,6 +33,7 @@ func MapSections(sections []TestSection) []map[string]any {
 	return mappedSections
 }
 
+// mapFields converts a list of TestField to a list of maps that can be used in Terraform configuration
 func mapFields(fields []TestField) []map[string]any {
 	var mappedFields []map[string]any
 
