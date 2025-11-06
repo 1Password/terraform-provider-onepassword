@@ -1,7 +1,7 @@
 export MAIN_BRANCH ?= main
 
 .DEFAULT_GOAL := help
-.PHONY: test testacc build clean test/coverage release/prepare release/tag .check_bump_type .check_git_clean help
+.PHONY: test testacc build clean test/coverage release/prepare release/tag .check_bump_type .check_git_clean help test-e2e test-e2e-service-account test-e2e-connect
 
 GIT_BRANCH := $(shell git symbolic-ref --short HEAD)
 WORKTREE_CLEAN := $(shell git status --porcelain 1>/dev/null 2>&1; echo $$?)
@@ -20,8 +20,18 @@ test/coverage:	## Runs integration and unit tests with coverage report
 testacc: ## Run acceptance tests
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
-test-e2e: ## Run e2e tests
-	TF_ACC=1 go test -v ./test/e2e/... -timeout 30m
+test-e2e: test-e2e-service-account test-e2e-connect ## Run all e2e tests (service account and Connect)
+
+test-e2e-service-account: ## Run e2e tests using service account (requires OP_SERVICE_ACCOUNT_TOKEN)
+	@test -n "$(OP_SERVICE_ACCOUNT_TOKEN)" || (echo "[ERROR] OP_SERVICE_ACCOUNT_TOKEN environment variable is not set."; exit 1)
+	@echo "[INFO] Running e2e tests with service account authentication..."
+	@sh -c 'unset OP_CONNECT_TOKEN OP_CONNECT_HOST; OP_SERVICE_ACCOUNT_TOKEN="$(OP_SERVICE_ACCOUNT_TOKEN)" TF_ACC=1 go test -v ./test/e2e/... -timeout 30m'
+
+test-e2e-connect: ## Run e2e tests using Connect (requires OP_CONNECT_TOKEN and OP_CONNECT_HOST)
+	@test -n "$(OP_CONNECT_TOKEN)" || (echo "[ERROR] OP_CONNECT_TOKEN environment variable is not set."; exit 1)
+	@test -n "$(OP_CONNECT_HOST)" || (echo "[ERROR] OP_CONNECT_HOST environment variable is not set."; exit 1)
+	@echo "[INFO] Running e2e tests with Connect authentication..."
+	@sh -c 'unset OP_SERVICE_ACCOUNT_TOKEN; OP_CONNECT_TOKEN="$(OP_CONNECT_TOKEN)" OP_CONNECT_HOST="$(OP_CONNECT_HOST)" TF_ACC=1 go test -v ./test/e2e/... -timeout 30m'
 
 build: clean	## Build project
 	go build -o ./dist/terraform-provider-onepassword .
