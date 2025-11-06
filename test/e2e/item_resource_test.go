@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
-	"slices"
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
@@ -243,62 +242,36 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 func TestAccItemResourceTags(t *testing.T) {
 	item := testItemsToCreate[op.Login]
 
-	itemWith3Tags := item
-	itemWith3Tags.Attrs = maps.Clone(item.Attrs)
-	tags := slices.Clone(item.Attrs["tags"].([]string))
-	itemWith3Tags.Attrs["tags"] = append(tags, "thirdTestTag")
-
-	itemWith1Tags := itemWith3Tags
-	itemWith1Tags.Attrs = maps.Clone(itemWith3Tags.Attrs)
-	tags = slices.Clone(itemWith3Tags.Attrs["tags"].([]string))
-	itemWith1Tags.Attrs["tags"] = []string{tags[0]}
-
-	// Build check functions for each step
-	createChecks := []resource.TestCheckFunc{
-		logStep(t, "CREATE_ITEM_WITH_2_TAGS"),
+	testCases := []struct {
+		name string
+		tags []string
+	}{
+		{"CREATE_ITEM_WITH_2_TAGS", []string{"firstTestTag", "secondTestTag"}},
+		{"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
+		{"REMOVE_2_TAGS", []string{"firstTestTag"}},
 	}
-	createChecks = append(createChecks, checks.BuildItemChecks("onepassword_item.test_item", item.Attrs)...)
 
-	addThirdTagChecks := []resource.TestCheckFunc{
-		logStep(t, "ADD_3RD_TAG"),
-	}
-	addThirdTagChecks = append(addThirdTagChecks, checks.BuildItemChecks("onepassword_item.test_item", itemWith3Tags.Attrs)...)
+	var testSteps []resource.TestStep
 
-	removeTagsChecks := []resource.TestCheckFunc{
-		logStep(t, "REMOVE_2_TAGS"),
+	for _, step := range testCases {
+		attrs := maps.Clone(item.Attrs)
+		attrs["tags"] = step.tags
+
+		testChecks := []resource.TestCheckFunc{logStep(t, step.name)}
+		testChecks = append(testChecks, checks.BuildItemChecks("onepassword_item.test_item", attrs)...)
+
+		testSteps = append(testSteps, resource.TestStep{
+			Config: tfconfig.CreateConfigBuilder()(
+				tfconfig.ProviderConfig(),
+				tfconfig.ItemResourceConfig(testVaultID, attrs),
+			),
+			Check: resource.ComposeAggregateTestCheckFunc(testChecks...),
+		})
 	}
-	removeTagsChecks = append(removeTagsChecks, checks.BuildItemChecks("onepassword_item.test_item", itemWith1Tags.Attrs)...)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			// Create item with 2 tags
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, item.Attrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(createChecks...),
-			},
-
-			// Add 3rd tag
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, itemWith3Tags.Attrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(addThirdTagChecks...),
-			},
-
-			// Remove 2 tags
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, itemWith1Tags.Attrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(removeTagsChecks...),
-			},
-		},
+		Steps:                    testSteps,
 	})
 }
 
