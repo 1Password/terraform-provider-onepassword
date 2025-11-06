@@ -13,7 +13,11 @@ func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 		resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
 
 		for key, value := range params {
-			resourceStr += formatTerraformAttribute(key, value)
+			attr, err := formatTerraformAttribute(key, value)
+			if err != nil {
+				return fmt.Sprintf("ERROR: %v", err)
+			}
+			resourceStr += attr
 		}
 
 		resourceStr += "\n}"
@@ -21,7 +25,7 @@ func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 	}
 }
 
-func formatTerraformAttribute(key string, value any) string {
+func formatTerraformAttribute(key string, value any) (string, error) {
 	rv := reflect.ValueOf(value)
 
 	switch rv.Kind() {
@@ -35,15 +39,20 @@ func formatTerraformAttribute(key string, value any) string {
 				attributes, ok := rv.Index(i).Interface().(map[string]any)
 
 				if !ok {
-					panic(fmt.Sprintf("invalid terraform config: attribute %q has unsupported type %T", key, value))
+					return "", fmt.Errorf("invalid terraform config: attribute %q has unsupported type %T", key, value)
 				}
 
 				for k, v := range attributes {
-					blockStr += formatTerraformAttribute(k, v)
+					attr, err := formatTerraformAttribute(k, v)
+					if err != nil {
+						return "", err
+					}
+					blockStr += attr
 				}
+
 				blockStr += "\n  }"
 			}
-			return blockStr
+			return blockStr, nil
 		}
 
 		// Otherwise, treat as a list attribute
@@ -51,33 +60,37 @@ func formatTerraformAttribute(key string, value any) string {
 		for i := 0; i < rv.Len(); i++ {
 			quotedItems[i] = fmt.Sprintf("%q", rv.Index(i).Interface())
 		}
-		return fmt.Sprintf("\n  %s = [%s]", key, strings.Join(quotedItems, ", "))
+		return fmt.Sprintf("\n  %s = [%s]", key, strings.Join(quotedItems, ", ")), nil
 
 	case reflect.Map:
 		blockStr := fmt.Sprintf("\n  %s {", key)
 		attributes, ok := value.(map[string]any)
 
 		if !ok {
-			panic(fmt.Sprintf("invalid terraform config: attribute %q has unsupported type %T", key, value))
+			return "", fmt.Errorf("invalid terraform config: attribute %q has unsupported type %T", key, value)
 		}
 
 		for k, v := range attributes {
-			blockStr += formatTerraformAttribute(k, v)
+			attr, err := formatTerraformAttribute(k, v)
+			if err != nil {
+				return "", err
+			}
+			blockStr += attr
 		}
 
 		blockStr += "\n  }"
-		return blockStr
+		return blockStr, nil
 
 	case reflect.Bool:
-		return fmt.Sprintf("\n  %s = %t", key, value)
+		return fmt.Sprintf("\n  %s = %t", key, value), nil
 
 	case reflect.String:
-		return fmt.Sprintf("\n  %s = %q", key, value)
+		return fmt.Sprintf("\n  %s = %q", key, value), nil
 
 	case reflect.Int:
-		return fmt.Sprintf("\n  %s = %d", key, value)
+		return fmt.Sprintf("\n  %s = %d", key, value), nil
 
 	default:
-		return fmt.Sprintf("\n  %s = %q", key, value)
+		return fmt.Sprintf("\n  %s = %q", key, value), nil
 	}
 }

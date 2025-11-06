@@ -2,6 +2,7 @@ package checks
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
@@ -26,14 +27,14 @@ func buildAttributeChecks(resourceName string, attrPath string, expectedValue an
 	switch v := expectedValue.(type) {
 	case []string:
 		// Handle string slices
-		checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attrPath), fmt.Sprintf("%d", len(v))))
+		checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attrPath), strconv.Itoa(len(v))))
 		for i, val := range v {
 			checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.%d", attrPath, i), val))
 		}
 
 	case []map[string]any:
 		// Handle nested block lists recursively
-		checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attrPath), fmt.Sprintf("%d", len(v))))
+		checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attrPath), strconv.Itoa(len(v))))
 		for i, nestedMap := range v {
 			for nestedAttr, nestedValue := range nestedMap {
 				nestedPath := fmt.Sprintf("%s.%d.%s", attrPath, i, nestedAttr)
