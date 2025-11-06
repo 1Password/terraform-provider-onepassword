@@ -2,6 +2,7 @@ package checks
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
@@ -14,16 +15,36 @@ func BuildItemChecks(resourceName string, attrs map[string]any) []resource.TestC
 	}
 
 	for attr, expectedValue := range attrs {
-		// Check if the value is a slice and iterate over it
-		if slice, ok := expectedValue.([]string); ok {
-			checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attr), fmt.Sprintf("%d", len(slice))))
+		checks = append(checks, buildAttributeChecks(resourceName, attr, expectedValue)...)
+	}
 
-			for i, val := range slice {
-				checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.%d", attr, i), val))
-			}
-		} else {
-			checks = append(checks, resource.TestCheckResourceAttr(resourceName, attr, fmt.Sprintf("%v", expectedValue)))
+	return checks
+}
+
+func buildAttributeChecks(resourceName string, attrPath string, expectedValue any) []resource.TestCheckFunc {
+	var checks []resource.TestCheckFunc
+
+	switch v := expectedValue.(type) {
+	case []string:
+		// Handle string slices
+		checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attrPath), strconv.Itoa(len(v))))
+		for i, val := range v {
+			checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.%d", attrPath, i), val))
 		}
+
+	case []map[string]any:
+		// Handle nested block lists recursively
+		checks = append(checks, resource.TestCheckResourceAttr(resourceName, fmt.Sprintf("%s.#", attrPath), strconv.Itoa(len(v))))
+		for i, nestedMap := range v {
+			for nestedAttr, nestedValue := range nestedMap {
+				nestedPath := fmt.Sprintf("%s.%d.%s", attrPath, i, nestedAttr)
+				checks = append(checks, buildAttributeChecks(resourceName, nestedPath, nestedValue)...)
+			}
+		}
+
+	default:
+		// Handle simple attributes
+		checks = append(checks, resource.TestCheckResourceAttr(resourceName, attrPath, fmt.Sprintf("%v", expectedValue)))
 	}
 
 	return checks

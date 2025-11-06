@@ -2,9 +2,13 @@ package connect
 
 import (
 	"context"
+	"strings"
+	"time"
 
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
+
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 type Client struct {
@@ -19,8 +23,34 @@ func (c *Client) GetVaultsByTitle(_ context.Context, title string) ([]onepasswor
 	return c.connectClient.GetVaultsByTitle(title)
 }
 
+// GetItem looks up an item by UUID (with retries) or by title.
+// If itemUuid is a valid UUID format, it attempts to fetch the item by UUID with retries
+// to handle eventual consistency issues in Connect (there can be a delay between item creation
+// and when it becomes available for reading). If itemUuid is not a valid UUID format, it treats
+// the parameter as a title and looks up the item by title instead.
 func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*onepassword.Item, error) {
-	return c.connectClient.GetItem(itemUuid, vaultUuid)
+	if util.IsValidUUID(itemUuid) {
+		// Try GetItemByUUID with retry for eventual consistency
+		var item *onepassword.Item
+		var err error
+		for attempt := 0; attempt < 5; attempt++ {
+			if attempt > 0 {
+				time.Sleep(time.Duration(attempt*100) * time.Millisecond)
+			}
+			item, err = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
+			if item != nil {
+				return item, nil // item is found by UUID, return
+			}
+			// If error is not 404, don't retry
+			if err != nil && !strings.Contains(err.Error(), "404") && !strings.Contains(err.Error(), "not found") {
+				return nil, err
+			}
+		}
+		return nil, err
+	}
+
+	// Not a UUID, use GetItemByTitle
+	return c.connectClient.GetItemByTitle(itemUuid, vaultUuid)
 }
 
 func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid string) (*onepassword.Item, error) {

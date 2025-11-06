@@ -13,6 +13,7 @@ import (
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 )
 
@@ -233,6 +234,171 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 				resource.Test(t, resource.TestCase{
 					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 					Steps:                    []resource.TestStep{testStep},
+				})
+			})
+		}
+	}
+}
+
+func TestAccItemResourceSectionsAndFields(t *testing.T) {
+	testCases := []struct {
+		name   string
+		create sections.TestSectionData
+		update sections.TestSectionData
+	}{
+		{
+			name: "RemoveSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section 1"},
+					{Label: "Test Section 2"},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section 1"},
+				},
+			},
+		},
+		{
+			name: "RemoveFieldFromSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "Field 1", Value: "value1", Type: "STRING"},
+							{Label: "Field 2", Value: "value2", Type: "STRING"},
+						},
+					},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "Field 1", Value: "value1", Type: "STRING"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "AddFieldToExistingSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section"},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "New Field", Value: "new value", Type: "STRING"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "MultipleSectionsWithMultipleFields",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Personal Info",
+						Fields: []sections.TestField{
+							{Label: "Email", Value: "test@example.com", Type: "EMAIL"},
+							{Label: "Date", Value: "1990-01-01", Type: "DATE"},
+						},
+					},
+					{
+						Label: "Additional Info",
+						Fields: []sections.TestField{
+							{Label: "Website", Value: "https://example.com", Type: "URL"},
+							{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
+						},
+					},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Personal Info",
+						Fields: []sections.TestField{
+							{Label: "Updated Email", Value: "updated@example.com", Type: "EMAIL"},
+							{Label: "Date", Value: "1990-01-01", Type: "DATE"},
+						},
+					},
+					{
+						Label: "Additional Info",
+						Fields: []sections.TestField{
+							{Label: "Website", Value: "https://updated.com", Type: "URL"},
+							{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
+							{Label: "Notes", Value: "Some notes", Type: "STRING"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	items := []op.ItemCategory{op.Login}
+
+	for _, tc := range testCases {
+		for _, item := range items {
+			item := testItemsToCreate[item]
+
+			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+				var itemUUID string
+
+				createAttrs := map[string]any{
+					"title":    item.Attrs["title"],
+					"category": item.Attrs["category"],
+					"section":  sections.MapSections(tc.create.Sections),
+				}
+
+				updateAttrs := map[string]any{
+					"title":    item.Attrs["title"],
+					"category": item.Attrs["category"],
+					"section":  sections.MapSections(tc.update.Sections),
+				}
+
+				// Build check functions for create step
+				createChecks := []resource.TestCheckFunc{
+					logStep(t, "CREATE"),
+					uuid.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				}
+				createChecks = append(createChecks, checks.BuildItemChecks("onepassword_item.test_item", createAttrs)...)
+
+				// Build check functions for update step
+				updateChecks := []resource.TestCheckFunc{
+					logStep(t, "UPDATE"),
+					uuid.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+				}
+				updateChecks = append(updateChecks, checks.BuildItemChecks("onepassword_item.test_item", updateAttrs)...)
+
+				resource.Test(t, resource.TestCase{
+					ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+					Steps: []resource.TestStep{
+						// Create new item
+						{
+							Config: tfconfig.CreateConfigBuilder()(
+								tfconfig.ProviderConfig(),
+								tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+							),
+							Check: resource.ComposeAggregateTestCheckFunc(createChecks...),
+						},
+						// Update new item
+						{
+							Config: tfconfig.CreateConfigBuilder()(
+								tfconfig.ProviderConfig(),
+								tfconfig.ItemResourceConfig(testVaultID, updateAttrs),
+							),
+							Check: resource.ComposeAggregateTestCheckFunc(updateChecks...),
+						},
+					},
 				})
 			})
 		}
