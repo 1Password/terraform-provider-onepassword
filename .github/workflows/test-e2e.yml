@@ -82,28 +82,28 @@ jobs:
     secrets:
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
-comment-pr:
-  needs: [check-external-pr, e2e]
-  runs-on: ubuntu-latest
-  if: always() && needs.check-external-pr.outputs.condition == 'dispatch-event'
-  permissions:
-    pull-requests: write
-  steps:
-    - name: Create URL to the run output
-      id: vars
-      run: echo "run-url=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
+  comment-pr:
+    needs: [check-external-pr, e2e]
+    runs-on: ubuntu-latest
+    if: always() && needs.check-external-pr.outputs.condition == 'dispatch-event'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Create URL to the run output
+        id: vars
+        run: echo "run-url=https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" >> $GITHUB_OUTPUT
 
-    - name: Create comment on PR
-      uses: peter-evans/create-or-update-comment@v5
-      with:
-        issue-number: ${{ github.event.client_payload.pull_request.number }}
-        body: |
-          ${{
-              needs.e2e.result == 'success' && '✅ E2E tests passed.' ||
-              needs.e2e.result == 'failure' && '❌ E2E tests failed.' ||
-              '⚠️ E2E tests completed.'
-          }}
+      - name: Create comment on PR
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          issue-number: ${{ github.event.client_payload.pull_request.number }}
+          body: |
+            ${{
+                needs.e2e.result == 'success' && '✅ E2E tests passed.' ||
+                needs.e2e.result == 'failure' && '❌ E2E tests failed.' ||
+                '⚠️ E2E tests completed.'
+            }}
 
-          [View test run output][1]
+            [View test run output][1]
 
-          [1]: ${{ steps.vars.outputs.run-url }}
+            [1]: ${{ steps.vars.outputs.run-url }}
