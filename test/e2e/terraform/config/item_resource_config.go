@@ -31,7 +31,7 @@ func formatTerraformAttribute(key string, value any) (string, error) {
 	switch rv.Kind() {
 	case reflect.Slice, reflect.Array:
 		// Handle slices of maps recursively
-		if rv.Len() > 0 && rv.Index(0).Kind() == reflect.Map {
+		if rv.Type().Elem().Kind() == reflect.Map {
 			blockStr := ""
 
 			for i := 0; i < rv.Len(); i++ {
