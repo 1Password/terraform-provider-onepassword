@@ -9,11 +9,9 @@
 ### ✅ Checklist
 
 - [ ] 🖊️ Commits are signed
-- [ ] 🧪 Tests added/updated: _(See the [Testing Guide](docs/testing.md) for when to use each type and how to run them)_
-  - [ ] 🔹 Unit
-  - [ ] 🔸 Integration
-  - [ ] 🌐 E2E (Connect)
-  - [ ] 🔑 E2E (Service Account)
+- [ ] 🧪 Tests added/updated: _(See the [Testing Guide](docs/testing/testing.md) for when to use each type and how to run them)_
+  - [ ] 🔹 Unit /🔸 Integration
+  - [ ] 🌐 E2E
 - [ ] 📚 Docs updated (if behavior changed)
 
 ### 🕵️ Review Notes & ⚠️ Risks
