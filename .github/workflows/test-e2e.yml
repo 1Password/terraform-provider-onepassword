@@ -61,6 +61,9 @@ jobs:
               echo "condition=skip" >> $GITHUB_OUTPUT
               echo "Setting condition=skip (sha does not match or empty)"
             fi
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            echo "condition=push-to-main" >> $GITHUB_OUTPUT
+            echo "Setting condition=push-to-main (push to main)"
           else
             # Unknown event type
             echo "condition=skip" >> $GITHUB_OUTPUT
