@@ -9,6 +9,7 @@ on:
       - "*.md"
       - ".gitignore"
       - "LICENSE"
+      - "scripts/**"
   pull_request:
     types: [opened, synchronize, reopened]
     branches: ["**"] # run for PRs targeting any branch
@@ -61,7 +62,7 @@ jobs:
               echo "condition=skip" >> $GITHUB_OUTPUT
               echo "Setting condition=skip (sha does not match or empty)"
             fi
-          elif [ "${{ github.event_name }}" == "push" ]; then
+          elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_name }}" == "main" ]; then
             echo "condition=push-to-main" >> $GITHUB_OUTPUT
             echo "Setting condition=push-to-main (push to main)"
           else
