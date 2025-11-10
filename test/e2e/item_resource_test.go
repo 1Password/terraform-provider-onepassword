@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"testing"
 
@@ -402,6 +403,42 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestAccItemResourceTags(t *testing.T) {
+	item := testItemsToCreate[op.Login]
+
+	testCases := []struct {
+		name string
+		tags []string
+	}{
+		{"CREATE_ITEM_WITH_2_TAGS", []string{"firstTestTag", "secondTestTag"}},
+		{"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
+		{"REMOVE_2_TAGS", []string{"firstTestTag"}},
+	}
+
+	var testSteps []resource.TestStep
+
+	for _, step := range testCases {
+		attrs := maps.Clone(item.Attrs)
+		attrs["tags"] = step.tags
+
+		testChecks := []resource.TestCheckFunc{logStep(t, step.name)}
+		testChecks = append(testChecks, checks.BuildItemChecks("onepassword_item.test_item", attrs)...)
+
+		testSteps = append(testSteps, resource.TestStep{
+			Config: tfconfig.CreateConfigBuilder()(
+				tfconfig.ProviderConfig(),
+				tfconfig.ItemResourceConfig(testVaultID, attrs),
+			),
+			Check: resource.ComposeAggregateTestCheckFunc(testChecks...),
+		})
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps:                    testSteps,
+	})
 }
 
 // logStep logs the current test step for easier test debugging
