@@ -72,8 +72,8 @@ var testItems = map[op.ItemCategory]testItem{
 		Attrs: map[string]string{
 			"category":              "document",
 			"file.0.name":           "test.txt",
-			"file.0.content":        "This is a test\n",
-			"file.0.content_base64": "VGhpcyBpcyBhIHRlc3QK",
+			"file.0.content":        "This is a test",
+			"file.0.content_base64": "VGhpcyBpcyBhIHRlc3Q=",
 		},
 	},
 	op.SSHKey: {
