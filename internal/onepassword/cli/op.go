@@ -219,6 +219,12 @@ func (op *OP) GetFileContent(ctx context.Context, file *onepassword.File, itemUu
 	if err != nil {
 		return nil, err
 	}
+
+	// The op CLI command adds a trailing newline to its output, but the Connect API
+	// returns the raw file content without any trailing newline. To ensure consistency
+	// between both APIs, we remove a single trailing newline if present.
+	// This matches the behavior of the Connect API which returns the file content as stored.
+	res = bytes.TrimSuffix(res, []byte("\n"))
 	return res, nil
 }
 
