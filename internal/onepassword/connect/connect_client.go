@@ -11,8 +11,14 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
+type Config struct {
+	EventualConsistencyDelay time.Duration
+	ProviderUserAgent        string
+}
+
 type Client struct {
 	connectClient connect.Client
+	config        Config
 }
 
 func (c *Client) GetVault(_ context.Context, uuid string) (*onepassword.Vault, error) {
@@ -58,21 +64,59 @@ func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid strin
 }
 
 func (c *Client) CreateItem(_ context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
-	return c.connectClient.CreateItem(item, vaultUuid)
+	createdItem, err := c.connectClient.CreateItem(item, vaultUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wait for Connect to propagate the create before Terraform's automatic Read runs.
+	// Connect has eventual consistency, so we need to wait to ensure the subsequent Read
+	// gets the created values and prevents refresh plan issues.
+	time.Sleep(c.config.EventualConsistencyDelay)
+
+	return createdItem, nil
 }
 
 func (c *Client) UpdateItem(_ context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
-	return c.connectClient.UpdateItem(item, vaultUuid)
+	updatedItem, err := c.connectClient.UpdateItem(item, vaultUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wait for Connect to propagate the update before Terraform's automatic Read runs.
+	// Connect has eventual consistency, so we need to wait to ensure the subsequent Read
+	// gets the updated values and prevents refresh plan issues.
+	time.Sleep(c.config.EventualConsistencyDelay)
+
+	return updatedItem, nil
 }
 
 func (c *Client) DeleteItem(_ context.Context, item *onepassword.Item, vaultUuid string) error {
-	return c.connectClient.DeleteItem(item, vaultUuid)
+	err := c.connectClient.DeleteItem(item, vaultUuid)
+	if err != nil {
+		return err
+	}
+
+	// Wait for Connect to propagate the delete to ensure eventual consistency.
+	// This helps prevent race conditions if the same item is recreated immediately
+	// or if there are parallel operations.
+	time.Sleep(c.config.EventualConsistencyDelay)
+
+	return nil
 }
 
 func (w *Client) GetFileContent(_ context.Context, file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error) {
 	return w.connectClient.GetFileContent(file)
 }
 
-func NewClient(connectHost, connectToken, providerUserAgent string) *Client {
-	return &Client{connectClient: connect.NewClientWithUserAgent(connectHost, connectToken, providerUserAgent)}
+func NewClient(connectHost, connectToken string, config Config) *Client {
+	// Set the default eventual consistency delay to 500ms if not provided
+	if config.EventualConsistencyDelay == 0 {
+		config.EventualConsistencyDelay = 500 * time.Millisecond
+	}
+
+	return &Client{
+		connectClient: connect.NewClientWithUserAgent(connectHost, connectToken, config.ProviderUserAgent),
+		config:        config,
+	}
 }

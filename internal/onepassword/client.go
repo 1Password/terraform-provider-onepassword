@@ -27,13 +27,16 @@ type ClientConfig struct {
 	ServiceAccountToken string
 	Account             string
 	OpCLIPath           string
+	ProviderUserAgent   string
 }
 
 func NewClient(config ClientConfig) (Client, error) {
 	if config.ServiceAccountToken != "" || config.Account != "" {
 		return cli.NewClient(config.ServiceAccountToken, config.Account, config.OpCLIPath), nil
 	} else if config.ConnectHost != "" && config.ConnectToken != "" {
-		return connect.NewClient(config.ConnectHost, config.ConnectToken, config.OpCLIPath), nil
+		return connect.NewClient(config.ConnectHost, config.ConnectToken, connect.Config{
+			ProviderUserAgent: config.ProviderUserAgent,
+		}), nil
 	}
 	return nil, errors.New("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\" or \"account\") credentials should be set.")
 }
