@@ -12,8 +12,17 @@ import (
 )
 
 type Config struct {
-	EventualConsistencyDelay time.Duration
-	ProviderUserAgent        string
+	// MaxWaitTime is the maximum total time to wait for Connect to propagate changes
+	// to the local SQLite database after Create, Update, or Delete operations.
+	// The wait function uses exponential backoff with up to MaxRetries attempts to verify
+	// that changes have propagated. If not set, defaults to 5 seconds.
+	// This ensures eventual consistency - the sync service needs time to sync changes
+	// from the remote service to the local database that the API reads from.
+	MaxWaitTime time.Duration
+	// MaxRetries is the maximum number of retry attempts when waiting for Connect to
+	// propagate changes. The wait function uses exponential backoff between retries.
+	MaxRetries        int
+	ProviderUserAgent string
 }
 
 type Client struct {
@@ -63,44 +72,89 @@ func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid strin
 	return c.connectClient.GetItemByTitle(title, vaultUuid)
 }
 
-func (c *Client) CreateItem(_ context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+func (c *Client) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
 	createdItem, err := c.connectClient.CreateItem(item, vaultUuid)
 	if err != nil {
 		return nil, err
 	}
 
-	// Wait for Connect to propagate the create before Terraform's automatic Read runs.
-	// Connect has eventual consistency, so we need to wait to ensure the subsequent Read
-	// gets the created values and prevents refresh plan issues.
-	time.Sleep(c.config.EventualConsistencyDelay)
+	// Wait for Connect to propagate the create to the local SQLite database.
+	// The sync service needs time to sync changes from the remote service to the local database.
+	// Verify the item exists (newly created items have version 1).
+	// Ignore errors from wait - if create succeeded, we return the created item even if wait times out
+	_ = c.wait(ctx, createdItem.ID, vaultUuid, func(fetchedItem *onepassword.Item, err error) (bool, error) {
+		if err != nil {
+			// If error is 404, item not available yet, continue retrying
+			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
+				return false, nil
+			}
+			// Other errors are not retryable
+			return false, err
+		}
+		// Item exists, check if it has version 1 (newly created)
+		if fetchedItem != nil && fetchedItem.Version == 1 {
+			return true, nil
+		}
+		// Item exists but version doesn't match yet, continue retrying
+		return false, nil
+	})
 
 	return createdItem, nil
 }
 
-func (c *Client) UpdateItem(_ context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+func (c *Client) UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
 	updatedItem, err := c.connectClient.UpdateItem(item, vaultUuid)
 	if err != nil {
 		return nil, err
 	}
 
-	// Wait for Connect to propagate the update before Terraform's automatic Read runs.
-	// Connect has eventual consistency, so we need to wait to ensure the subsequent Read
-	// gets the updated values and prevents refresh plan issues.
-	time.Sleep(c.config.EventualConsistencyDelay)
+	expectedVersion := updatedItem.Version + 1 // UpdateItem doesn't return increased item version. Need to increase it manually.
+
+	// Wait for Connect to propagate the update to the local SQLite database.
+	// The sync service needs time to sync changes from the remote service to the local database.
+	// Verify the item version matches the expected version.
+	err = c.wait(ctx, updatedItem.ID, vaultUuid, func(fetchedItem *onepassword.Item, err error) (bool, error) {
+		if err != nil {
+			// For updates, any error (including 404) means something is wrong since the item should exist
+			// Return error immediately - don't retry
+			return false, err
+		}
+		// Compare versions to verify the update has propagated
+		if fetchedItem != nil && fetchedItem.Version == expectedVersion {
+			return true, nil
+		}
+		// Version doesn't match yet, continue retrying
+		return false, nil
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	return updatedItem, nil
 }
 
-func (c *Client) DeleteItem(_ context.Context, item *onepassword.Item, vaultUuid string) error {
+func (c *Client) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error {
 	err := c.connectClient.DeleteItem(item, vaultUuid)
 	if err != nil {
 		return err
 	}
 
-	// Wait for Connect to propagate the delete to ensure eventual consistency.
-	// This helps prevent race conditions if the same item is recreated immediately
-	// or if there are parallel operations.
-	time.Sleep(c.config.EventualConsistencyDelay)
+	// Wait for Connect to propagate the delete to the local SQLite database.
+	// The sync service needs time to sync changes from the remote service to the local database.
+	// Verify the item is deleted by checking it returns 404.
+	// Ignore errors from wait - if delete succeeded, we return nil even if wait times out
+	_ = c.wait(ctx, item.ID, vaultUuid, func(fetchedItem *onepassword.Item, err error) (bool, error) {
+		if err != nil {
+			// 404 means item is deleted, which is what we want
+			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
+				return true, nil
+			}
+			// Other errors are not retryable
+			return false, err
+		}
+		// Item still exists, deletion hasn't propagated yet
+		return false, nil
+	})
 
 	return nil
 }
@@ -109,10 +163,64 @@ func (w *Client) GetFileContent(_ context.Context, file *onepassword.File, itemU
 	return w.connectClient.GetFileContent(file)
 }
 
+// waitCondition is a function that checks if a condition is met.
+// It returns (done bool, err error) where:
+//   - done=true means the condition is met and we can stop waiting
+//   - done=false means we should continue retrying
+//   - err!=nil means a non-retryable error occurred
+type waitCondition func(fetchedItem *onepassword.Item, err error) (bool, error)
+
+// wait waits for a condition to be met by polling the item with exponential backoff.
+// The condition function is called with the fetched item (or nil) and any error from the fetch.
+// This ensures the sync service has propagated changes from the remote service to the local database.
+// Returns an error if the condition function returns a non-retryable error.
+func (c *Client) wait(ctx context.Context, itemUUID, vaultUUID string, condition waitCondition) error {
+	maxAttempts := c.config.MaxRetries
+	maxTotalWait := c.config.MaxWaitTime
+
+	startTime := time.Now()
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		// Check if we've exceeded max wait time
+		if time.Since(startTime) > maxTotalWait {
+			return nil // Timeout reached, but no error - just stop waiting
+		}
+
+		fetchedItem, err := c.connectClient.GetItemByUUID(itemUUID, vaultUUID)
+
+		// Check the condition
+		done, conditionErr := condition(fetchedItem, err)
+		if conditionErr != nil {
+			// Non-retryable error, return it
+			return conditionErr
+		}
+		if done {
+			// Condition met, stop waiting
+			return nil
+		}
+
+		// Condition not met yet, continue retrying
+		// Exponential backoff: 50ms, 100ms, 200ms, 400ms, etc., capped at 500ms
+		backoff := time.Duration(50*(1<<uint(attempt))) * time.Millisecond
+		if backoff > 500*time.Millisecond {
+			backoff = 500 * time.Millisecond
+		}
+
+		// Don't sleep on the last attempt
+		if attempt < maxAttempts-1 {
+			time.Sleep(backoff)
+		}
+	}
+	return nil // Max attempts reached, but no error
+}
+
 func NewClient(connectHost, connectToken string, config Config) *Client {
-	// Set the default eventual consistency delay to 500ms if not provided
-	if config.EventualConsistencyDelay == 0 {
-		config.EventualConsistencyDelay = 500 * time.Millisecond
+	// Set the default max wait time to 5 seconds if not provided
+	if config.MaxWaitTime == 0 {
+		config.MaxWaitTime = 5 * time.Second
+	}
+	// Set the default max retries to 10 if not provided
+	if config.MaxRetries == 0 {
+		config.MaxRetries = 10
 	}
 
 	return &Client{
