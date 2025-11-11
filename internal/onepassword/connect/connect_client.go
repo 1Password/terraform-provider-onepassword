@@ -64,7 +64,17 @@ func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid strin
 }
 
 func (c *Client) CreateItem(_ context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
-	return c.connectClient.CreateItem(item, vaultUuid)
+	createdItem, err := c.connectClient.CreateItem(item, vaultUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wait for Connect to propagate the create before Terraform's automatic Read runs.
+	// Connect has eventual consistency, so we need to wait to ensure the subsequent Read
+	// gets the created values and prevents refresh plan issues.
+	time.Sleep(c.config.EventualConsistencyDelay)
+
+	return createdItem, nil
 }
 
 func (c *Client) UpdateItem(_ context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
