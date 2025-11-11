@@ -82,7 +82,17 @@ func (c *Client) UpdateItem(_ context.Context, item *onepassword.Item, vaultUuid
 }
 
 func (c *Client) DeleteItem(_ context.Context, item *onepassword.Item, vaultUuid string) error {
-	return c.connectClient.DeleteItem(item, vaultUuid)
+	err := c.connectClient.DeleteItem(item, vaultUuid)
+	if err != nil {
+		return err
+	}
+
+	// Wait for Connect to propagate the delete to ensure eventual consistency.
+	// This helps prevent race conditions if the same item is recreated immediately
+	// or if there are parallel operations.
+	time.Sleep(c.config.EventualConsistencyDelay)
+
+	return nil
 }
 
 func (w *Client) GetFileContent(_ context.Context, file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error) {
