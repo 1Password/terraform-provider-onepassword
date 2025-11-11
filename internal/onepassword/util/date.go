@@ -14,8 +14,7 @@ func IsValidDateFormat(dateString string) bool {
 	return true
 }
 
-// SecondsToYYYYMMDD converts a seconds string to a (YYYY-MM-DD) formatted secondsStr string
-// The date is formatted in UTC to avoid timezone-related day shifts
+// SecondsToYYYYMMDD converts a second string to UTC and (YYYY-MM-DD) format.
 func SecondsToYYYYMMDD(secondsStr string) (string, error) {
 	seconds, err := strconv.ParseInt(secondsStr, 10, 64)
 	if err != nil {
@@ -23,4 +22,14 @@ func SecondsToYYYYMMDD(secondsStr string) (string, error) {
 	}
 	t := time.Unix(seconds, 0).UTC()
 	return t.Format(time.DateOnly), nil
+}
+
+// YYYYMMDDToSeconds converts a YYYY-MM-DD date string to a Unix timestamp (seconds) string.
+func YYYYMMDDToSeconds(dateStr string) (string, error) {
+	t, err := time.ParseInLocation(time.DateOnly, dateStr, time.Local)
+	if err != nil {
+		return "", err
+	}
+
+	return strconv.FormatInt(t.Unix(), 10), nil
 }

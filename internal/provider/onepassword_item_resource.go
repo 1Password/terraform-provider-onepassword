@@ -786,6 +786,15 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 						fmt.Sprintf("Invalid date value provided '%s'. Should be in YYYY-MM-DD format", fieldValue),
 					)}
 				}
+				// Convert date to timestamp to ensure consistent storage.
+				timestamp, err := util.YYYYMMDDToSeconds(fieldValue)
+				if err != nil {
+					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+						"Item conversion error",
+						fmt.Sprintf("Failed to convert date value '%s' to timestamp, got error: %s", fieldValue, err),
+					)}
+				}
+				fieldValue = timestamp
 			}
 
 			f := &op.ItemField{
