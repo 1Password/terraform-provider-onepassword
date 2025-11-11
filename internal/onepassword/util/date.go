@@ -15,11 +15,12 @@ func IsValidDateFormat(dateString string) bool {
 }
 
 // SecondsToYYYYMMDD converts a seconds string to a (YYYY-MM-DD) formatted secondsStr string
+// The date is formatted in UTC to avoid timezone-related day shifts
 func SecondsToYYYYMMDD(secondsStr string) (string, error) {
 	seconds, err := strconv.ParseInt(secondsStr, 10, 64)
 	if err != nil {
 		return "", err
 	}
-	t := time.Unix(seconds, 0)
+	t := time.Unix(seconds, 0).UTC()
 	return t.Format(time.DateOnly), nil
 }
