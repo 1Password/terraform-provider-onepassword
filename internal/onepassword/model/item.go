@@ -9,17 +9,17 @@ const (
 	ItemCategoryPassword      ItemCategory = "Password"
 	ItemCategoryAPICredential ItemCategory = "ApiCredential"
 	ItemCategoryDatabase      ItemCategory = "Database"
-	ItemCategorySecureNote    ItemCategory = "Secure_Note" // Underscore is used with connect -> matches current documentatation for provider https://registry.terraform.io/providers/1Password/onepassword/latest/docs/resources/item
+	ItemCategorySecureNote    ItemCategory = "Secure_Note"
 	ItemCategorySSHKey        ItemCategory = "Ssh_Key"
 	ItemCategoryDocument      ItemCategory = "Document"
 
-	FieldTypeString    ItemFieldType = "Text" // This is string with conenct
+	FieldTypeString    ItemFieldType = "Text"
 	FieldTypeConcealed ItemFieldType = "Concealed"
 	FieldTypeEmail     ItemFieldType = "Email"
 	FieldTypeURL       ItemFieldType = "Url"
 	FieldTypeDate      ItemFieldType = "Date"
 	FieldTypeMenu      ItemFieldType = "Menu"
-	FieldTypeSSHKey    ItemFieldType = "Ssh_Key" // Underscore is used with connect
+	FieldTypeSSHKey    ItemFieldType = "Ssh_Key"
 
 	FieldPurposeUsername FieldPurpose = "USERNAME"
 	FieldPurposePassword FieldPurpose = "PASSWORD"
@@ -36,7 +36,7 @@ type Item struct {
 	URLs     []ItemURL
 	Sections []*ItemSection
 	Fields   []*ItemField
-	Files    []ItemFile
+	Files    []*ItemFile
 }
 
 type ItemSection struct {

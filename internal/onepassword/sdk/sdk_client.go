@@ -2,7 +2,6 @@ package sdk
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
@@ -54,10 +53,8 @@ func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*mode
 		return nil, err
 	}
 
-	item := &model.Item{}
-	item.ConvertSDKItemToProviderItem(&sdkItem)
-
-	return item, nil
+	result := model.FromSDK(&sdkItem)
+	return result, nil
 }
 
 func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error) {
@@ -93,21 +90,44 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 }
 
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	params := item.ConvertItemToSDKItem(vaultUuid)
+	params := item.ToSDK(vaultUuid)
 
 	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
 
-	result := &model.Item{}
-	result.ConvertSDKItemToProviderItem(&sdkItem)
-
+	result := model.FromSDK(&sdkItem)
 	return result, nil
 }
 
 func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	return nil, errors.New("UpdateItem: not implemented yet")
+	currentItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, item.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get item for update: %w", err)
+	}
+
+	params := item.ToSDK(vaultUuid)
+	currentItem.Title = params.Title
+	currentItem.Category = params.Category
+	currentItem.Fields = params.Fields
+	currentItem.Sections = params.Sections
+	currentItem.Tags = params.Tags
+	currentItem.Websites = params.Websites
+	if params.Notes != nil {
+		currentItem.Notes = *params.Notes
+	}
+
+	// Call the SDK Put method
+	updatedItem, err := c.sdkClient.Items().Put(ctx, currentItem)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to update item: %w", err)
+	}
+
+	// Convert back to provider model
+	result := model.FromSDK(&updatedItem)
+	return result, nil
 }
 
 func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
@@ -134,12 +154,26 @@ func (c *Client) GetFileContent(ctx context.Context, file *model.ItemFile, itemU
 }
 
 func NewClient(ctx context.Context, providerUserAgent, serviceAccountToken string) (*Client, error) {
-	sdkClient, err := opsdk.NewClient(ctx,
-		opsdk.WithServiceAccountToken(serviceAccountToken),
-		opsdk.WithIntegrationInfo("terraform-provider", "test"),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("SDK client creation failed: %w", err)
+	var sdkClient *opsdk.Client
+	var err error
+
+	// Initialize with service account token if provided, otherwise use desktop integration
+	if serviceAccountToken != "" {
+		sdkClient, err = opsdk.NewClient(ctx,
+			opsdk.WithServiceAccountToken(serviceAccountToken),
+			opsdk.WithIntegrationInfo("terraform-provider", providerUserAgent),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("SDK client creation with service account failed: %w", err)
+		}
+	} else {
+		// Fall back to desktop/CLI integration
+		sdkClient, err = opsdk.NewClient(ctx,
+			opsdk.WithIntegrationInfo("terraform-provider", providerUserAgent),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("SDK client creation with desktop integration failed: %w", err)
+		}
 	}
 
 	return &Client{sdkClient: sdkClient}, nil

@@ -4,65 +4,69 @@ import (
 	sdk "github.com/1password/onepassword-sdk-go"
 )
 
-func (i *Item) ConvertSDKItemToProviderItem(item *sdk.Item) {
-	i.ID = item.ID
-	i.Title = item.Title
-	i.VaultID = item.VaultID
-	i.Category = populateProviderCategory(string(item.Category))
-	i.Tags = populateItemTags(item.Tags)
-	i.URLs = populateProviderItemURLs(item.Websites)
+// FromSDK creates a new Item from an SDK item
+func FromSDK(item *sdk.Item) *Item {
+	if item == nil {
+		return nil
+	}
 
-	// Sections and Fields
 	sectionMap := make(map[string]*ItemSection)
-	i.Sections = populateProviderItemSections(item, sectionMap)
-	i.Fields = populateProviderItemFields(item, sectionMap)
 
-	// Add notes as a field as it appears top level in the SDK item
+	providerItem := &Item{
+		ID:       item.ID,
+		Title:    item.Title,
+		VaultID:  item.VaultID,
+		Category: toProviderCategory(string(item.Category)),
+		Tags:     toSDKTags(item.Tags),
+		URLs:     toProviderURLs(item.Websites),
+		Sections: toProviderSections(item, sectionMap),
+		Fields:   toProviderFields(item, sectionMap),
+		Files:    toProviderFiles(item),
+	}
+
+	// Add notes as a field if present
 	if item.Notes != "" {
-		i.Fields = append(i.Fields, &ItemField{
+		providerItem.Fields = append(providerItem.Fields, &ItemField{
 			Type:    FieldTypeString,
 			Purpose: FieldPurposeNotes,
 			Value:   item.Notes,
 		})
 	}
 
-	i.Files = populateProviderFiles(item)
-
+	return providerItem
 }
 
-func (i *Item) ConvertItemToSDKItem(vaultID string) sdk.ItemCreateParams {
+func (i *Item) ToSDK(vaultID string) sdk.ItemCreateParams {
 	params := sdk.ItemCreateParams{
 		VaultID:  vaultID,
 		Title:    i.Title,
-		Category: populateSDKCategoryType(i.Category),
-		Tags:     populateItemTags(i.Tags),
+		Category: toSDKCategory(i.Category),
+		Tags:     toSDKTags(i.Tags),
 	}
 
 	// Convert fields
-	for _, f := range i.Fields {
-		if f.Purpose == FieldPurposeNotes {
-			params.Notes = &f.Value
+	for _, field := range i.Fields {
+		if field.Purpose == FieldPurposeNotes {
+			params.Notes = &field.Value
 			continue
 		}
-
-		field := populateSDKFields(f)
-		params.Fields = append(params.Fields, field)
+		params.Fields = append(params.Fields, toSDKField(field))
 	}
 
 	// Convert sections
-	for _, s := range i.Sections {
+	for _, section := range i.Sections {
 		params.Sections = append(params.Sections, sdk.ItemSection{
-			ID:    s.ID,
-			Title: s.Label,
+			ID:    section.ID,
+			Title: section.Label,
 		})
 	}
 
 	// Convert URLs
-	for _, u := range i.URLs {
-		if u.URL != "" {
+	for _, url := range i.URLs {
+		if url.URL != "" {
 			params.Websites = append(params.Websites, sdk.Website{
-				URL:   u.URL,
-				Label: u.Label,
+				URL:   url.URL,
+				Label: url.Label,
 			})
 		}
 	}
