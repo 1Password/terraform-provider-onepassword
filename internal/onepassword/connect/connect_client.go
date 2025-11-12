@@ -13,13 +13,6 @@ import (
 )
 
 type Config struct {
-	// MaxWaitTime is the maximum total time to wait for Connect to propagate changes
-	// to the local SQLite database after Create, Update, or Delete operations.
-	// The wait function uses exponential backoff with up to MaxRetries attempts to verify
-	// that changes have propagated. If not set, defaults to 5 seconds.
-	// This ensures eventual consistency - the sync service needs time to sync changes
-	// from the remote service to the local database that the API reads from.
-	MaxWaitTime time.Duration
 	// MaxRetries is the maximum number of retry attempts when waiting for Connect to
 	// propagate changes. The wait function uses exponential backoff between retries.
 	MaxRetries        int
@@ -174,19 +167,11 @@ type waitCondition func(fetchedItem *onepassword.Item, err error) (bool, error)
 // wait waits for a condition to be met by polling the item with exponential backoff.
 // The condition function is called with the fetched item (or nil) and any error from the fetch.
 // This ensures the sync service has propagated changes from the remote service to the local database.
-// Returns an error if the condition function returns a non-retryable error, if max wait time is exceeded,
-// or if max retry attempts are reached.
+// Returns an error if the condition function returns a non-retryable error or if max retry attempts are reached.
 func (c *Client) wait(ctx context.Context, itemUUID, vaultUUID string, condition waitCondition) error {
 	maxAttempts := c.config.MaxRetries
-	maxTotalWait := c.config.MaxWaitTime
 
-	startTime := time.Now()
 	for attempt := 0; attempt < maxAttempts; attempt++ {
-		// Check if we've exceeded max wait time
-		if time.Since(startTime) > maxTotalWait {
-			return fmt.Errorf("timeout waiting for Connect sync service to propagate changes to local database after %v", maxTotalWait)
-		}
-
 		fetchedItem, err := c.connectClient.GetItemByUUID(itemUUID, vaultUUID)
 
 		// Check the condition
@@ -216,10 +201,6 @@ func (c *Client) wait(ctx context.Context, itemUUID, vaultUUID string, condition
 }
 
 func NewClient(connectHost, connectToken string, config Config) *Client {
-	// Set the default max wait time to 5 seconds if not provided
-	if config.MaxWaitTime == 0 {
-		config.MaxWaitTime = 5 * time.Second
-	}
 	// Set the default max retries to 10 if not provided
 	if config.MaxRetries == 0 {
 		config.MaxRetries = 10
