@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -173,7 +174,8 @@ type waitCondition func(fetchedItem *onepassword.Item, err error) (bool, error)
 // wait waits for a condition to be met by polling the item with exponential backoff.
 // The condition function is called with the fetched item (or nil) and any error from the fetch.
 // This ensures the sync service has propagated changes from the remote service to the local database.
-// Returns an error if the condition function returns a non-retryable error.
+// Returns an error if the condition function returns a non-retryable error, if max wait time is exceeded,
+// or if max retry attempts are reached.
 func (c *Client) wait(ctx context.Context, itemUUID, vaultUUID string, condition waitCondition) error {
 	maxAttempts := c.config.MaxRetries
 	maxTotalWait := c.config.MaxWaitTime
@@ -182,7 +184,7 @@ func (c *Client) wait(ctx context.Context, itemUUID, vaultUUID string, condition
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		// Check if we've exceeded max wait time
 		if time.Since(startTime) > maxTotalWait {
-			return nil // Timeout reached, but no error - just stop waiting
+			return fmt.Errorf("timeout waiting for Connect sync service to propagate changes to local database after %v", maxTotalWait)
 		}
 
 		fetchedItem, err := c.connectClient.GetItemByUUID(itemUUID, vaultUUID)
@@ -210,7 +212,7 @@ func (c *Client) wait(ctx context.Context, itemUUID, vaultUUID string, condition
 			time.Sleep(backoff)
 		}
 	}
-	return nil // Max attempts reached, but no error
+	return fmt.Errorf("max retry attempts (%d) reached waiting for Connect sync service to propagate changes to local database", maxAttempts)
 }
 
 func NewClient(connectHost, connectToken string, config Config) *Client {
