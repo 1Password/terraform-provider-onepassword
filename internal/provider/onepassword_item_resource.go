@@ -786,7 +786,8 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 						fmt.Sprintf("Invalid date value provided '%s'. Should be in YYYY-MM-DD format", fieldValue),
 					)}
 				}
-				// Convert date to timestamp to ensure consistent storage.
+				// Convert date string to timestamp to bypass Connect's timezone-dependent parsing
+				// and ensure consistent storage regardless of where Connect is deployed.
 				timestamp, err := util.YYYYMMDDToSeconds(fieldValue)
 				if err != nil {
 					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
