@@ -5,7 +5,7 @@ import (
 )
 
 // FromSDK creates a new Item from an SDK item
-func FromSDK(item *sdk.Item) *Item {
+func FromSDKItem(item *sdk.Item) *Item {
 	if item == nil {
 		return nil
 	}
@@ -16,12 +16,12 @@ func FromSDK(item *sdk.Item) *Item {
 		ID:       item.ID,
 		Title:    item.Title,
 		VaultID:  item.VaultID,
-		Category: toProviderCategory(string(item.Category)),
-		Tags:     toSDKTags(item.Tags),
-		URLs:     toProviderURLs(item.Websites),
-		Sections: toProviderSections(item, sectionMap),
-		Fields:   toProviderFields(item, sectionMap),
-		Files:    toProviderFiles(item),
+		Category: fromSDKCategory(string(item.Category)),
+		Tags:     fromSDKTags(item.Tags),
+		URLs:     fromSDKURLs(item.Websites),
+		Sections: fromSDKSections(item, sectionMap),
+		Fields:   fromSDKFields(item, sectionMap),
+		Files:    fromSDKFiles(item),
 	}
 
 	// Add notes as a field if present
@@ -36,7 +36,7 @@ func FromSDK(item *sdk.Item) *Item {
 	return providerItem
 }
 
-func (i *Item) ToSDK(vaultID string) sdk.ItemCreateParams {
+func (i *Item) ToSDKItem(vaultID string) sdk.ItemCreateParams {
 	params := sdk.ItemCreateParams{
 		VaultID:  vaultID,
 		Title:    i.Title,
