@@ -132,12 +132,14 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	}
 
 	// Example client configuration for data sources and resources
+	providerUserAgent := fmt.Sprintf("terraform-provider-onepassword/%s", p.version)
 	client, err := onepassword.NewClient(onepassword.ClientConfig{
 		ConnectHost:         connectHost,
 		ConnectToken:        connectToken,
 		ServiceAccountToken: serviceAccountToken,
 		Account:             account,
 		OpCLIPath:           opCLIPath,
+		ProviderUserAgent:   providerUserAgent,
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Client init failure", fmt.Sprintf("Client failed to initialize, got error: %s", err))
