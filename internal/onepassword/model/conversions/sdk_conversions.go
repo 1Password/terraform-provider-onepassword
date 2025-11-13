@@ -1,14 +1,54 @@
-package model
+package conversions
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	sdk "github.com/1password/onepassword-sdk-go"
 	"github.com/hashicorp/go-uuid"
 )
 
-func toSDKFieldType(modelType ItemFieldType) sdk.ItemFieldType {
+// ToSDKItem converts internal model Item to SDK ItemCreateParams
+func ToSDKItem(i *model.Item, vaultID string) sdk.ItemCreateParams {
+	params := sdk.ItemCreateParams{
+		VaultID:  vaultID,
+		Title:    i.Title,
+		Category: toSDKCategory(i.Category),
+		Tags:     toSDKTags(i.Tags),
+	}
+
+	// Convert fields
+	for _, field := range i.Fields {
+		if field.Purpose == model.FieldPurposeNotes {
+			params.Notes = &field.Value
+			continue
+		}
+		params.Fields = append(params.Fields, toSDKField(field))
+	}
+
+	// Convert sections
+	for _, section := range i.Sections {
+		params.Sections = append(params.Sections, sdk.ItemSection{
+			ID:    section.ID,
+			Title: section.Label,
+		})
+	}
+
+	// Convert URLs
+	for _, url := range i.URLs {
+		if url.URL != "" {
+			params.Websites = append(params.Websites, sdk.Website{
+				URL:   url.URL,
+				Label: url.Label,
+			})
+		}
+	}
+
+	return params
+}
+
+func toSDKFieldType(modelType model.ItemFieldType) sdk.ItemFieldType {
 	switch modelType {
 	case "string", "STRING":
 		return "Text"
@@ -27,18 +67,18 @@ func toSDKFieldType(modelType ItemFieldType) sdk.ItemFieldType {
 	}
 }
 
-func toSDKCategory(modelType ItemCategory) sdk.ItemCategory {
+func toSDKCategory(modelType model.ItemCategory) sdk.ItemCategory {
 	switch modelType {
-	case ItemCategorySecureNote:
+	case model.ItemCategorySecureNote:
 		return "SecureNote"
-	case ItemCategorySSHKey:
+	case model.ItemCategorySSHKey:
 		return "SshKey"
 	default:
 		return sdk.ItemCategory(modelType)
 	}
 }
 
-func toSDKField(f *ItemField) sdk.ItemField {
+func toSDKField(f *model.ItemField) sdk.ItemField {
 	fieldID := f.ID
 
 	// connect generate uuid, but sdk does not
@@ -77,7 +117,7 @@ func toSDKTags(tags []string) []string {
 	return tags
 }
 
-func generatePassword(recipe *GeneratorRecipe) (string, error) {
+func generatePassword(recipe *model.GeneratorRecipe) (string, error) {
 	includeDigits := false
 	includeSymbols := false
 

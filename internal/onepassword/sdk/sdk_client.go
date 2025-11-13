@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model/conversions"
 	opsdk "github.com/1password/onepassword-sdk-go"
 )
 
@@ -53,18 +54,16 @@ func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*mode
 		return nil, err
 	}
 
-	result := model.FromSDKItem(&sdkItem)
+	result := conversions.FromSDKItem(&sdkItem)
 	return result, nil
 }
 
 func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error) {
-	// List all items in the vault
 	items, err := c.sdkClient.Items().List(ctx, vaultUuid)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list items: %w", err)
+		return nil, err
 	}
 
-	// Find item matching the title
 	var matchedID string
 	var count int
 
@@ -75,39 +74,28 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 		}
 	}
 
-	// Handle no matches
-	if count == 0 {
-		return nil, fmt.Errorf("no item found with title %q in vault %s", title, vaultUuid)
-	}
-
-	// Handle multiple matches
-	if count > 1 {
-		return nil, fmt.Errorf("multiple items found with title %q in vault %s, use uuid instead", title, vaultUuid)
-	}
-
-	// Get the full item details
 	return c.GetItem(ctx, matchedID, vaultUuid)
 }
 
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	params := item.ToSDKItem(vaultUuid)
+	params := conversions.ToSDKItem(item, vaultUuid)
 
 	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
 
-	result := model.FromSDKItem(&sdkItem)
+	result := conversions.FromSDKItem(&sdkItem)
 	return result, nil
 }
 
 func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	currentItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, item.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get item for update: %w", err)
+		return nil, err
 	}
 
-	params := item.ToSDKItem(vaultUuid)
+	params := conversions.ToSDKItem(item, vaultUuid)
 	currentItem.Title = params.Title
 	currentItem.Category = params.Category
 	currentItem.Fields = params.Fields
@@ -118,23 +106,22 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		currentItem.Notes = *params.Notes
 	}
 
-	// Call the SDK Put method
 	updatedItem, err := c.sdkClient.Items().Put(ctx, currentItem)
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to update item: %w", err)
+		return nil, err
 	}
 
 	// Convert back to provider model
-	result := model.FromSDKItem(&updatedItem)
+	result := conversions.FromSDKItem(&updatedItem)
 	return result, nil
 }
 
 func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
 	err := c.sdkClient.Items().Delete(ctx, vaultUuid, item.ID)
 	if err != nil {
-		return fmt.Errorf("failed to delete item: %w", err)
+		return err
 	}
+
 	return nil
 }
 
@@ -147,13 +134,13 @@ func (c *Client) GetFileContent(ctx context.Context, file *model.ItemFile, itemU
 
 	content, err := c.sdkClient.Items().Files().Read(ctx, vaultUUID, itemUUID, fileAttributes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get file content: %w", err)
+		return nil, err
 	}
 
 	return content, nil
 }
 
-func NewClient(ctx context.Context, providerUserAgent, serviceAccountToken string) (*Client, error) {
+func NewClient(ctx context.Context, providerUserAgent, serviceAccountToken string, accountToken string) (*Client, error) {
 	var sdkClient *opsdk.Client
 	var err error
 
@@ -169,6 +156,7 @@ func NewClient(ctx context.Context, providerUserAgent, serviceAccountToken strin
 	} else {
 		// Fall back to desktop/CLI integration
 		sdkClient, err = opsdk.NewClient(ctx,
+			opsdk.WithDesktopAppIntegration(accountToken),
 			opsdk.WithIntegrationInfo("terraform-provider", providerUserAgent),
 		)
 		if err != nil {
