@@ -3,7 +3,7 @@ export MAIN_BRANCH ?= main
 .DEFAULT_GOAL := help
 .PHONY: test testacc build clean test/coverage release/prepare release/tag .check_bump_type .check_git_clean help test-e2e test-e2e-service-account test-e2e-connect
 
-GIT_BRANCH := $(shell git symbolic-ref --short HEAD)
+GIT_BRANCH := $(shell git symbolic-ref --short HEAD 2>/dev/null || echo "")
 WORKTREE_CLEAN := $(shell git status --porcelain 1>/dev/null 2>&1; echo $$?)
 SCRIPTS_DIR := $(CURDIR)/scripts
 
