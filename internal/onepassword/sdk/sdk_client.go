@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model/conversions"
 	opsdk "github.com/1password/onepassword-sdk-go"
 )
 
@@ -54,7 +53,7 @@ func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*mode
 		return nil, err
 	}
 
-	result := conversions.FromSDKItem(&sdkItem)
+	result := model.FromSDKItem(&sdkItem)
 	return result, nil
 }
 
@@ -78,14 +77,14 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 }
 
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	params := conversions.ToSDKItem(item, vaultUuid)
+	params := model.ToSDKItem(item, vaultUuid)
 
 	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
 
-	result := conversions.FromSDKItem(&sdkItem)
+	result := model.FromSDKItem(&sdkItem)
 	return result, nil
 }
 
@@ -95,7 +94,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		return nil, err
 	}
 
-	params := conversions.ToSDKItem(item, vaultUuid)
+	params := model.ToSDKItem(item, vaultUuid)
 	currentItem.Title = params.Title
 	currentItem.Category = params.Category
 	currentItem.Fields = params.Fields
@@ -112,7 +111,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 	}
 
 	// Convert back to provider model
-	result := conversions.FromSDKItem(&updatedItem)
+	result := model.FromSDKItem(&updatedItem)
 	return result, nil
 }
 
@@ -148,7 +147,7 @@ func NewClient(ctx context.Context, providerUserAgent, serviceAccountToken strin
 	if serviceAccountToken != "" {
 		sdkClient, err = opsdk.NewClient(ctx,
 			opsdk.WithServiceAccountToken(serviceAccountToken),
-			opsdk.WithIntegrationInfo("terraform-provider", providerUserAgent),
+			opsdk.WithIntegrationInfo("terraform-provider", "1.0.0"),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("SDK client creation with service account failed: %w", err)
