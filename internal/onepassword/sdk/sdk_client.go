@@ -53,8 +53,9 @@ func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*mode
 		return nil, err
 	}
 
-	result := model.FromSDKItem(&sdkItem)
-	return result, nil
+	modelItem := &model.Item{}
+	modelItem.FromSDKItem(&sdkItem)
+	return modelItem, nil
 }
 
 func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error) {
@@ -77,15 +78,16 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 }
 
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	params := model.ToSDKItem(item, vaultUuid)
+	params := item.ToSDKItem(vaultUuid)
 
 	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
 
-	result := model.FromSDKItem(&sdkItem)
-	return result, nil
+	modelItem := &model.Item{}
+	modelItem.FromSDKItem(&sdkItem)
+	return modelItem, nil
 }
 
 func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
@@ -94,7 +96,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		return nil, err
 	}
 
-	params := model.ToSDKItem(item, vaultUuid)
+	params := item.ToSDKItem(vaultUuid)
 	currentItem.Title = params.Title
 	currentItem.Category = params.Category
 	currentItem.Fields = params.Fields
@@ -111,8 +113,9 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 	}
 
 	// Convert back to provider model
-	result := model.FromSDKItem(&updatedItem)
-	return result, nil
+	modelItem := &model.Item{}
+	modelItem.FromSDKItem(&updatedItem)
+	return modelItem, nil
 }
 
 func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {

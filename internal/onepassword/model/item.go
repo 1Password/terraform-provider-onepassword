@@ -3,43 +3,24 @@ package model
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	sdk "github.com/1password/onepassword-sdk-go"
 	"github.com/hashicorp/go-uuid"
 )
 
-type ItemCategory string
-type ItemFieldType string
-type FieldPurpose string
+type ItemFieldPurpose string
 
 const (
-	ItemCategoryLogin         ItemCategory = "Login"
-	ItemCategoryPassword      ItemCategory = "Password"
-	ItemCategoryAPICredential ItemCategory = "ApiCredential"
-	ItemCategoryDatabase      ItemCategory = "Database"
-	ItemCategorySecureNote    ItemCategory = "Secure_Note"
-	ItemCategorySSHKey        ItemCategory = "Ssh_Key"
-	ItemCategoryDocument      ItemCategory = "Document"
-
-	FieldTypeString    ItemFieldType = "Text"
-	FieldTypeConcealed ItemFieldType = "Concealed"
-	FieldTypeEmail     ItemFieldType = "Email"
-	FieldTypeURL       ItemFieldType = "Url"
-	FieldTypeDate      ItemFieldType = "Date"
-	FieldTypeMenu      ItemFieldType = "Menu"
-	FieldTypeSSHKey    ItemFieldType = "Ssh_Key"
-
-	FieldPurposeUsername FieldPurpose = "USERNAME"
-	FieldPurposePassword FieldPurpose = "PASSWORD"
-	FieldPurposeNotes    FieldPurpose = "NOTES"
+	FieldPurposeUsername ItemFieldPurpose = "USERNAME"
+	FieldPurposePassword ItemFieldPurpose = "PASSWORD"
+	FieldPurposeNotes    ItemFieldPurpose = "NOTES"
 )
 
 type Item struct {
 	ID       string
 	Title    string
 	VaultID  string
-	Category ItemCategory
+	Category sdk.ItemCategory
 	Version  int
 	Tags     []string
 	URLs     []ItemURL
@@ -56,9 +37,9 @@ type ItemSection struct {
 type ItemField struct {
 	ID       string
 	Label    string
-	Type     ItemFieldType
+	Type     sdk.ItemFieldType
 	Value    string
-	Purpose  FieldPurpose
+	Purpose  ItemFieldPurpose
 	Section  *ItemSection
 	Recipe   *GeneratorRecipe
 	Generate bool
@@ -75,66 +56,69 @@ type ItemURL struct {
 	Primary bool
 }
 
-type ItemFile struct {
-	ID      string
-	Name    string
-	Size    int
-	Section *ItemSection
-	content []byte
-}
-
 // FromSDK creates a new Item from an SDK item
-func FromSDKItem(item *sdk.Item) *Item {
+func (i *Item) FromSDKItem(item *sdk.Item) {
 	if item == nil {
-		return nil
+		return
 	}
 
 	sectionMap := make(map[string]*ItemSection)
 
-	providerItem := &Item{
-		ID:       item.ID,
-		Title:    item.Title,
-		VaultID:  item.VaultID,
-		Category: fromSDKCategory(string(item.Category)),
-		Tags:     fromSDKTags(item.Tags),
-		URLs:     fromSDKURLs(item.Websites),
-		Sections: fromSDKSections(item, sectionMap),
-		Fields:   fromSDKFields(item, sectionMap),
-		Files:    fromSDKFiles(item),
-	}
+	i.ID = item.ID
+	i.Title = item.Title
+	i.VaultID = item.VaultID
+	i.Category = item.Category
+	i.Tags = fromSDKTags(item.Tags)
+	i.URLs = fromSDKURLs(item.Websites)
+	i.Sections = fromSDKSections(item, sectionMap)
+	i.Fields = fromSDKFields(item, sectionMap)
+	i.Files = fromSDKFiles(item)
 
-	// Add notes as a field if present
 	if item.Notes != "" {
-		providerItem.Fields = append(providerItem.Fields, &ItemField{
-			Type:    FieldTypeString,
+		i.Fields = append(i.Fields, &ItemField{
+			Type:    sdk.ItemFieldTypeText,
 			Purpose: FieldPurposeNotes,
 			Value:   item.Notes,
 		})
 	}
-
-	return providerItem
 }
 
-func fromSDKFieldType(sdkType sdk.ItemFieldType) ItemFieldType {
-	switch sdkType {
-	case "Text":
-		return "STRING"
-	case "SshKey":
-		return "SSH_KEY"
-	default:
-		return ItemFieldType(strings.ToUpper(string(sdkType)))
+func (i *Item) ToSDKItem(vaultID string) sdk.ItemCreateParams {
+	params := sdk.ItemCreateParams{
+		VaultID:  vaultID,
+		Title:    i.Title,
+		Category: i.Category,
+		Tags:     i.Tags,
 	}
-}
 
-func fromSDKCategory(category string) ItemCategory {
-	switch category {
-	case "SecureNote":
-		return ItemCategorySecureNote
-	case "SshKey":
-		return ItemCategorySSHKey
-	default:
-		return ItemCategory(category)
+	// Convert fields
+	for _, field := range i.Fields {
+		if field.Purpose == FieldPurposeNotes {
+			params.Notes = &field.Value
+			continue
+		}
+		params.Fields = append(params.Fields, toSDKField(field))
 	}
+
+	// Convert sections
+	for _, section := range i.Sections {
+		params.Sections = append(params.Sections, sdk.ItemSection{
+			ID:    section.ID,
+			Title: section.Label,
+		})
+	}
+
+	// Convert URLs
+	for _, url := range i.URLs {
+		if url.URL != "" {
+			params.Websites = append(params.Websites, sdk.Website{
+				URL:   url.URL,
+				Label: url.Label,
+			})
+		}
+	}
+
+	return params
 }
 
 func fromSDKURLs(websites []sdk.Website) []ItemURL {
@@ -178,7 +162,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemFi
 		field := &ItemField{
 			ID:    f.ID,
 			Label: f.Title,
-			Type:  fromSDKFieldType(f.FieldType),
+			Type:  f.FieldType,
 			Value: f.Value,
 		}
 
@@ -200,12 +184,12 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemFi
 		fields = append(fields, field)
 
 		// Add SSH public key as separate field
-		if f.Details != nil && f.FieldType == "SshKey" {
+		if f.Details != nil && f.FieldType == sdk.ItemFieldTypeSSHKey {
 			if sshKey := f.Details.SSHKey(); sshKey != nil {
 				fields = append(fields, &ItemField{
 					ID:    "public_key",
 					Label: "public key",
-					Type:  FieldTypeString,
+					Type:  sdk.ItemFieldTypeText,
 					Value: sshKey.PublicKey,
 				})
 			}
@@ -238,78 +222,6 @@ func fromSDKFiles(item *sdk.Item) []*ItemFile {
 	return files
 }
 
-// +++++++++++ SDK
-// +++++++++++++
-// ++++++++++++
-// ToSDKItem converts internal model Item to SDK ItemCreateParams
-func ToSDKItem(i *Item, vaultID string) sdk.ItemCreateParams {
-	params := sdk.ItemCreateParams{
-		VaultID:  vaultID,
-		Title:    i.Title,
-		Category: toSDKCategory(i.Category),
-		Tags:     toSDKTags(i.Tags),
-	}
-
-	// Convert fields
-	for _, field := range i.Fields {
-		if field.Purpose == FieldPurposeNotes {
-			params.Notes = &field.Value
-			continue
-		}
-		params.Fields = append(params.Fields, toSDKField(field))
-	}
-
-	// Convert sections
-	for _, section := range i.Sections {
-		params.Sections = append(params.Sections, sdk.ItemSection{
-			ID:    section.ID,
-			Title: section.Label,
-		})
-	}
-
-	// Convert URLs
-	for _, url := range i.URLs {
-		if url.URL != "" {
-			params.Websites = append(params.Websites, sdk.Website{
-				URL:   url.URL,
-				Label: url.Label,
-			})
-		}
-	}
-
-	return params
-}
-
-func toSDKFieldType(modelType ItemFieldType) sdk.ItemFieldType {
-	switch modelType {
-	case "string", "STRING":
-		return "Text"
-	case "concealed", "CONCEALED":
-		return "Concealed"
-	case "email", "EMAIL":
-		return "Email"
-	case "url", "URL":
-		return "Url"
-	case "date", "DATE":
-		return "Date"
-	case "SSH_KEY":
-		return "SshKey"
-	default:
-		return sdk.ItemFieldType(modelType)
-	}
-}
-
-func toSDKCategory(modelType ItemCategory) sdk.ItemCategory {
-	switch modelType {
-	case ItemCategorySecureNote:
-		return "SecureNote"
-	case ItemCategorySSHKey:
-		return "SshKey"
-	default:
-		return sdk.ItemCategory(modelType)
-	}
-}
-
 func toSDKField(f *ItemField) sdk.ItemField {
 	fieldID := f.ID
 
@@ -330,7 +242,7 @@ func toSDKField(f *ItemField) sdk.ItemField {
 	field := sdk.ItemField{
 		ID:        fieldID,
 		Title:     f.Label,
-		FieldType: toSDKFieldType(f.Type),
+		FieldType: f.Type,
 		Value:     f.Value,
 	}
 
