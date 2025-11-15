@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	sdk "github.com/1password/onepassword-sdk-go"
-	"github.com/hashicorp/go-uuid"
 )
 
 type ItemFieldPurpose string
@@ -56,24 +55,26 @@ type ItemURL struct {
 	Primary bool
 }
 
-// FromSDK creates a new Item from an SDK item
-func (i *Item) FromSDKItem(item *sdk.Item) {
+// FromSDKItemToModel creates a new Item from an SDK item
+func (i *Item) FromSDKItemToModel(item *sdk.Item) {
 	if item == nil {
 		return
 	}
-
-	sectionMap := make(map[string]*ItemSection)
 
 	i.ID = item.ID
 	i.Title = item.Title
 	i.VaultID = item.VaultID
 	i.Category = item.Category
-	i.Tags = fromSDKTags(item.Tags)
+	i.Tags = item.Tags
 	i.URLs = fromSDKURLs(item.Websites)
-	i.Sections = fromSDKSections(item, sectionMap)
-	i.Fields = fromSDKFields(item, sectionMap)
 	i.Files = fromSDKFiles(item)
 
+	// Convert sections and fields
+	sectionMap := make(map[string]*ItemSection)
+	i.Sections = fromSDKSections(item, sectionMap)
+	i.Fields = fromSDKFields(item, sectionMap)
+
+	// Notes are stored top level in an item from the SDK
 	if item.Notes != "" {
 		i.Fields = append(i.Fields, &ItemField{
 			Type:    sdk.ItemFieldTypeText,
@@ -83,40 +84,18 @@ func (i *Item) FromSDKItem(item *sdk.Item) {
 	}
 }
 
-func (i *Item) ToSDKItem(vaultID string) sdk.ItemCreateParams {
+// FromModelItemToSDKCreateParams creates an SDK item create params from an Item
+func (i *Item) FromModelItemToSDKCreateParams() sdk.ItemCreateParams {
 	params := sdk.ItemCreateParams{
-		VaultID:  vaultID,
+		VaultID:  i.VaultID,
 		Title:    i.Title,
 		Category: i.Category,
 		Tags:     i.Tags,
+		Sections: toSDKSections(i.Sections),
+		Websites: toSDKWebsites(i.URLs),
 	}
 
-	// Convert fields
-	for _, field := range i.Fields {
-		if field.Purpose == FieldPurposeNotes {
-			params.Notes = &field.Value
-			continue
-		}
-		params.Fields = append(params.Fields, toSDKField(field))
-	}
-
-	// Convert sections
-	for _, section := range i.Sections {
-		params.Sections = append(params.Sections, sdk.ItemSection{
-			ID:    section.ID,
-			Title: section.Label,
-		})
-	}
-
-	// Convert URLs
-	for _, url := range i.URLs {
-		if url.URL != "" {
-			params.Websites = append(params.Websites, sdk.Website{
-				URL:   url.URL,
-				Label: url.Label,
-			})
-		}
-	}
+	params.Fields, params.Notes = toSDKFields(i.Fields)
 
 	return params
 }
@@ -131,13 +110,6 @@ func fromSDKURLs(websites []sdk.Website) []ItemURL {
 		})
 	}
 	return urls
-}
-
-func fromSDKTags(tags []string) []string {
-	if len(tags) == 0 {
-		return nil
-	}
-	return tags
 }
 
 func fromSDKSections(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemSection {
@@ -183,6 +155,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemFi
 
 		fields = append(fields, field)
 
+		// The SDK SSH keys under a details section of the private key field
 		// Add SSH public key as separate field
 		if f.Details != nil && f.FieldType == sdk.ItemFieldTypeSSHKey {
 			if sshKey := f.Details.SSHKey(); sshKey != nil {
@@ -222,13 +195,23 @@ func fromSDKFiles(item *sdk.Item) []*ItemFile {
 	return files
 }
 
+func toSDKFields(fields []*ItemField) ([]sdk.ItemField, *string) {
+	var notes *string
+	sdkFields := make([]sdk.ItemField, 0, len(fields))
+
+	for _, field := range fields {
+		if field.Purpose == FieldPurposeNotes {
+			notes = &field.Value
+			continue
+		}
+		sdkFields = append(sdkFields, toSDKField(field))
+	}
+
+	return sdkFields, notes
+}
+
 func toSDKField(f *ItemField) sdk.ItemField {
 	fieldID := f.ID
-
-	// connect generate uuid, but sdk does not
-	if fieldID == "" {
-		fieldID, _ = uuid.GenerateUUID()
-	}
 
 	if f.Generate && f.Recipe != nil {
 		password, err := generatePassword(f.Recipe)
@@ -254,11 +237,28 @@ func toSDKField(f *ItemField) sdk.ItemField {
 	return field
 }
 
-func toSDKTags(tags []string) []string {
-	if len(tags) == 0 {
-		return nil
+func toSDKSections(sections []*ItemSection) []sdk.ItemSection {
+	sdkSections := make([]sdk.ItemSection, 0, len(sections))
+	for _, section := range sections {
+		sdkSections = append(sdkSections, sdk.ItemSection{
+			ID:    section.ID,
+			Title: section.Label,
+		})
 	}
-	return tags
+	return sdkSections
+}
+
+func toSDKWebsites(urls []ItemURL) []sdk.Website {
+	websites := make([]sdk.Website, 0, len(urls))
+	for _, url := range urls {
+		if url.URL != "" {
+			websites = append(websites, sdk.Website{
+				URL:   url.URL,
+				Label: url.Label,
+			})
+		}
+	}
+	return websites
 }
 
 func generatePassword(recipe *GeneratorRecipe) (string, error) {

@@ -3,13 +3,20 @@ package sdk
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
-	opsdk "github.com/1password/onepassword-sdk-go"
+	sdk "github.com/1password/onepassword-sdk-go"
 )
 
 type Client struct {
-	sdkClient *opsdk.Client
+	sdkClient *sdk.Client
+}
+
+type SDKConfig struct {
+	ProviderUserAgent   string
+	ServiceAccountToken string
+	Account             string
 }
 
 func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error) {
@@ -54,7 +61,7 @@ func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*mode
 	}
 
 	modelItem := &model.Item{}
-	modelItem.FromSDKItem(&sdkItem)
+	modelItem.FromSDKItemToModel(&sdkItem)
 	return modelItem, nil
 }
 
@@ -77,8 +84,8 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 	return c.GetItem(ctx, matchedID, vaultUuid)
 }
 
-func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	params := item.ToSDKItem(vaultUuid)
+func (c *Client) CreateItem(ctx context.Context, item *model.Item) (*model.Item, error) {
+	params := item.FromModelItemToSDKCreateParams()
 
 	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
 	if err != nil {
@@ -86,7 +93,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	}
 
 	modelItem := &model.Item{}
-	modelItem.FromSDKItem(&sdkItem)
+	modelItem.FromSDKItemToModel(&sdkItem)
 	return modelItem, nil
 }
 
@@ -96,7 +103,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		return nil, err
 	}
 
-	params := item.ToSDKItem(vaultUuid)
+	params := item.FromModelItemToSDKCreateParams()
 	currentItem.Title = params.Title
 	currentItem.Category = params.Category
 	currentItem.Fields = params.Fields
@@ -114,7 +121,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	// Convert back to provider model
 	modelItem := &model.Item{}
-	modelItem.FromSDKItem(&updatedItem)
+	modelItem.FromSDKItemToModel(&updatedItem)
 	return modelItem, nil
 }
 
@@ -128,7 +135,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 }
 
 func (c *Client) GetFileContent(ctx context.Context, file *model.ItemFile, itemUUID, vaultUUID string) ([]byte, error) {
-	fileAttributes := opsdk.FileAttributes{
+	fileAttributes := sdk.FileAttributes{
 		Name: file.Name,
 		ID:   file.ID,
 		Size: uint32(file.Size),
@@ -142,24 +149,26 @@ func (c *Client) GetFileContent(ctx context.Context, file *model.ItemFile, itemU
 	return content, nil
 }
 
-func NewClient(ctx context.Context, providerUserAgent, serviceAccountToken string, accountToken string) (*Client, error) {
-	var sdkClient *opsdk.Client
+func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {
+	var sdkClient *sdk.Client
 	var err error
 
+	integrationName, integrationVersion, _ := strings.Cut(config.ProviderUserAgent, "/")
+
 	// Initialize with service account token if provided, otherwise use desktop integration
-	if serviceAccountToken != "" {
-		sdkClient, err = opsdk.NewClient(ctx,
-			opsdk.WithServiceAccountToken(serviceAccountToken),
-			opsdk.WithIntegrationInfo("terraform-provider", "1.0.0"),
+	if config.ServiceAccountToken != "" {
+		sdkClient, err = sdk.NewClient(ctx,
+			sdk.WithServiceAccountToken(config.ServiceAccountToken),
+			sdk.WithIntegrationInfo(integrationName, integrationVersion),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("SDK client creation with service account failed: %w", err)
 		}
 	} else {
 		// Fall back to desktop/CLI integration
-		sdkClient, err = opsdk.NewClient(ctx,
-			opsdk.WithDesktopAppIntegration(accountToken),
-			opsdk.WithIntegrationInfo("terraform-provider", providerUserAgent),
+		sdkClient, err = sdk.NewClient(ctx,
+			sdk.WithDesktopAppIntegration(config.Account),
+			sdk.WithIntegrationInfo(integrationName, integrationVersion),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("SDK client creation with desktop integration failed: %w", err)
