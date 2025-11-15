@@ -81,6 +81,8 @@ jobs:
       needs.check-external-pr.outputs.condition == 'push-to-main'
     uses: ./.github/workflows/e2e-tests.yml
     secrets:
+      OP_CONNECT_CREDENTIALS: ${{ secrets.OP_CONNECT_CREDENTIALS }}
+      OP_CONNECT_TOKEN: ${{ secrets.OP_CONNECT_TOKEN }}
       OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
   comment-pr:
