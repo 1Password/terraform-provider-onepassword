@@ -4,22 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
-)
-
-type ItemFieldPurpose string
-
-const (
-	FieldPurposeUsername ItemFieldPurpose = "USERNAME"
-	FieldPurposePassword ItemFieldPurpose = "PASSWORD"
-	FieldPurposeNotes    ItemFieldPurpose = "NOTES"
 )
 
 type Item struct {
 	ID       string
 	Title    string
 	VaultID  string
-	Category sdk.ItemCategory
+	Category connect.ItemCategory
 	Version  int
 	Tags     []string
 	URLs     []ItemURL
@@ -36,9 +29,9 @@ type ItemSection struct {
 type ItemField struct {
 	ID       string
 	Label    string
-	Type     sdk.ItemFieldType
+	Type     connect.ItemFieldType
 	Value    string
-	Purpose  ItemFieldPurpose
+	Purpose  connect.ItemFieldPurpose
 	Section  *ItemSection
 	Recipe   *GeneratorRecipe
 	Generate bool
@@ -64,7 +57,7 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) {
 	i.ID = item.ID
 	i.Title = item.Title
 	i.VaultID = item.VaultID
-	i.Category = item.Category
+	i.Category = connect.ItemCategory(item.Category)
 	i.Tags = item.Tags
 	i.URLs = fromSDKURLs(item.Websites)
 	i.Files = fromSDKFiles(item)
@@ -77,8 +70,8 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) {
 	// Notes are stored top level in an item from the SDK
 	if item.Notes != "" {
 		i.Fields = append(i.Fields, &ItemField{
-			Type:    sdk.ItemFieldTypeText,
-			Purpose: FieldPurposeNotes,
+			Type:    connect.FieldTypeString,
+			Purpose: connect.FieldPurposeNotes,
 			Value:   item.Notes,
 		})
 	}
@@ -89,7 +82,7 @@ func (i *Item) FromModelItemToSDKCreateParams() sdk.ItemCreateParams {
 	params := sdk.ItemCreateParams{
 		VaultID:  i.VaultID,
 		Title:    i.Title,
-		Category: i.Category,
+		Category: sdk.ItemCategory(i.Category),
 		Tags:     i.Tags,
 		Sections: toSDKSections(i.Sections),
 		Websites: toSDKWebsites(i.URLs),
@@ -134,16 +127,16 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemFi
 		field := &ItemField{
 			ID:    f.ID,
 			Label: f.Title,
-			Type:  f.FieldType,
+			Type:  connect.ItemFieldType(f.FieldType),
 			Value: f.Value,
 		}
 
 		// Set purpose based on field ID
 		switch f.ID {
 		case "username":
-			field.Purpose = FieldPurposeUsername
+			field.Purpose = connect.FieldPurposeUsername
 		case "password":
-			field.Purpose = FieldPurposePassword
+			field.Purpose = connect.FieldPurposePassword
 		}
 
 		// Associate field with section if applicable
@@ -162,7 +155,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemFi
 				fields = append(fields, &ItemField{
 					ID:    "public_key",
 					Label: "public key",
-					Type:  sdk.ItemFieldTypeText,
+					Type:  connect.FieldTypeString,
 					Value: sshKey.PublicKey,
 				})
 			}
@@ -200,7 +193,7 @@ func toSDKFields(fields []*ItemField) ([]sdk.ItemField, *string) {
 	sdkFields := make([]sdk.ItemField, 0, len(fields))
 
 	for _, field := range fields {
-		if field.Purpose == FieldPurposeNotes {
+		if field.Purpose == connect.FieldPurposeNotes {
 			notes = &field.Value
 			continue
 		}
@@ -225,7 +218,7 @@ func toSDKField(f *ItemField) sdk.ItemField {
 	field := sdk.ItemField{
 		ID:        fieldID,
 		Title:     f.Label,
-		FieldType: f.Type,
+		FieldType: sdk.ItemFieldType(f.Type),
 		Value:     f.Value,
 	}
 

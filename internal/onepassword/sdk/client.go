@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	sdk "github.com/1password/onepassword-sdk-go"
+
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 type Client struct {
@@ -165,7 +166,7 @@ func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {
 			return nil, fmt.Errorf("SDK client creation with service account failed: %w", err)
 		}
 	} else {
-		// Fall back to desktop/CLI integration
+		// Fall back to desktop integration
 		sdkClient, err = sdk.NewClient(ctx,
 			sdk.WithDesktopAppIntegration(config.Account),
 			sdk.WithIntegrationInfo(integrationName, integrationVersion),
