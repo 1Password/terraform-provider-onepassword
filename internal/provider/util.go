@@ -6,15 +6,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
-func vaultTerraformID(vault *op.Vault) string {
+func vaultTerraformID(vault *model.Vault) string {
 	return fmt.Sprintf("vaults/%s", vault.ID)
 }
 
-func itemTerraformID(item *op.Item) string {
-	return fmt.Sprintf("vaults/%s/items/%s", item.Vault.ID, item.ID)
+func itemTerraformID(item *model.Item) string {
+	return fmt.Sprintf("vaults/%s/items/%s", item.VaultID, item.ID)
 }
 
 func setStringValue(value string) basetypes.StringValue {

@@ -4,21 +4,20 @@ import (
 	"context"
 	"errors"
 
-	"github.com/1Password/connect-sdk-go/onepassword"
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/cli"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/connect"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 // Client is a subset of connect.Client with context added.
 type Client interface {
-	GetVault(ctx context.Context, uuid string) (*onepassword.Vault, error)
-	GetVaultsByTitle(ctx context.Context, title string) ([]onepassword.Vault, error)
-	GetItem(ctx context.Context, itemUuid, vaultUuid string) (*onepassword.Item, error)
-	GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*onepassword.Item, error)
-	CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error)
-	UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error)
-	DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error
-	GetFileContent(ctx context.Context, file *onepassword.File, itemUUid, vaultUuid string) ([]byte, error)
+	GetVault(ctx context.Context, uuid string) (*model.Vault, error)
+	GetVaultsByTitle(ctx context.Context, title string) ([]*model.Vault, error)
+	GetItem(ctx context.Context, itemUuid, vaultUuid string) (*model.Item, error)
+	GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error)
+	CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error)
+	UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error)
+	DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error
+	GetFileContent(ctx context.Context, file *model.ItemFile, itemUUid, vaultUuid string) ([]byte, error)
 }
 
 type ClientConfig struct {
@@ -31,9 +30,11 @@ type ClientConfig struct {
 }
 
 func NewClient(config ClientConfig) (Client, error) {
-	if config.ServiceAccountToken != "" || config.Account != "" {
-		return cli.NewClient(config.ServiceAccountToken, config.Account, config.OpCLIPath), nil
-	} else if config.ConnectHost != "" && config.ConnectToken != "" {
+	// if config.ServiceAccountToken != "" || config.Account != "" {
+	// 	return cli.NewClient(config.ServiceAccountToken, config.Account, config.OpCLIPath), nil
+	// } else
+
+	if config.ConnectHost != "" && config.ConnectToken != "" {
 		return connect.NewClient(config.ConnectHost, config.ConnectToken, connect.Config{
 			ProviderUserAgent: config.ProviderUserAgent,
 		}), nil

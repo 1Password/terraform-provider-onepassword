@@ -281,3 +281,209 @@ func generatePassword(recipe *GeneratorRecipe) (string, error) {
 
 	return passwordResponse.Password, nil
 }
+
+/////////////////////////////////
+////////////////////////////////
+
+// FromConnectItemToModel creates a new Item from a Connect SDK item
+func (i *Item) FromConnectItemToModel(item *connect.Item) {
+	if item == nil {
+		return
+	}
+
+	i.ID = item.ID
+	i.Title = item.Title
+	i.VaultID = item.Vault.ID
+	i.Category = item.Category
+	i.Version = item.Version
+	i.Tags = item.Tags
+
+	// Convert URLs
+	i.URLs = fromConnectURLs(item.URLs)
+
+	// Convert sections
+	sectionMap := make(map[string]*ItemSection)
+	i.Sections = fromConnectSections(item.Sections, sectionMap)
+
+	// Convert fields
+	i.Fields = fromConnectFields(item.Fields, sectionMap)
+
+	// Convert files
+	i.Files = fromConnectFiles(item.Files)
+}
+
+// FromModelItemToConnect creates a Connect SDK item from a model Item
+func (i *Item) FromModelItemToConnect() *connect.Item {
+	return &connect.Item{
+		ID:       i.ID,
+		Title:    i.Title,
+		Vault:    connect.ItemVault{ID: i.VaultID},
+		Category: i.Category,
+		Version:  i.Version,
+		Tags:     i.Tags,
+		URLs:     toConnectURLs(i.URLs),
+		Sections: toConnectSections(i.Sections),
+		Fields:   toConnectFields(i.Fields),
+		Files:    toConnectFiles(i.Files),
+	}
+}
+
+func fromConnectURLs(urls []connect.ItemURL) []ItemURL {
+	itemURLs := make([]ItemURL, 0, len(urls))
+	for _, u := range urls {
+		itemURLs = append(itemURLs, ItemURL{
+			URL:     u.URL,
+			Label:   u.Label,
+			Primary: u.Primary,
+		})
+	}
+	return itemURLs
+}
+
+func fromConnectSections(sections []*connect.ItemSection, sectionMap map[string]*ItemSection) []*ItemSection {
+	modelSections := make([]*ItemSection, 0, len(sections))
+	for _, s := range sections {
+		if s != nil {
+			section := &ItemSection{
+				ID:    s.ID,
+				Label: s.Label,
+			}
+			modelSections = append(modelSections, section)
+			sectionMap[s.ID] = section
+		}
+	}
+	return modelSections
+}
+
+func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]*ItemSection) []*ItemField {
+	modelFields := make([]*ItemField, 0, len(fields))
+	for _, f := range fields {
+		if f == nil {
+			continue
+		}
+
+		field := &ItemField{
+			ID:      f.ID,
+			Label:   f.Label,
+			Type:    f.Type,
+			Value:   f.Value,
+			Purpose: f.Purpose,
+		}
+
+		// Associate field with section if applicable
+		if f.Section != nil && f.Section.ID != "" {
+			if section, exists := sectionMap[f.Section.ID]; exists {
+				field.Section = section
+			}
+		}
+
+		// Handle password recipe if present
+		if f.Recipe != nil {
+			field.Recipe = &GeneratorRecipe{
+				Length:        f.Recipe.Length,
+				CharacterSets: f.Recipe.CharacterSets,
+			}
+		}
+
+		modelFields = append(modelFields, field)
+	}
+	return modelFields
+}
+
+func fromConnectFiles(files []*connect.File) []*ItemFile {
+	modelFiles := make([]*ItemFile, 0, len(files))
+	for _, f := range files {
+		if f != nil {
+			modelFiles = append(modelFiles, &ItemFile{
+				ID:   f.ID,
+				Name: f.Name,
+				Size: f.Size,
+			})
+		}
+	}
+	return modelFiles
+}
+
+func toConnectURLs(urls []ItemURL) []connect.ItemURL {
+	connectURLs := make([]connect.ItemURL, 0, len(urls))
+	for _, u := range urls {
+		connectURLs = append(connectURLs, connect.ItemURL{
+			URL:     u.URL,
+			Label:   u.Label,
+			Primary: u.Primary,
+		})
+	}
+	return connectURLs
+}
+
+func toConnectSections(sections []*ItemSection) []*connect.ItemSection {
+	connectSections := make([]*connect.ItemSection, 0, len(sections))
+	for _, s := range sections {
+		if s != nil {
+			connectSections = append(connectSections, &connect.ItemSection{
+				ID:    s.ID,
+				Label: s.Label,
+			})
+		}
+	}
+	return connectSections
+}
+
+func toConnectFields(fields []*ItemField) []*connect.ItemField {
+	connectFields := make([]*connect.ItemField, 0, len(fields))
+	for _, f := range fields {
+		if f == nil {
+			continue
+		}
+
+		if f.Generate && f.Recipe != nil {
+			password, err := generatePassword(f.Recipe)
+			if err == nil {
+				f.Value = password
+			} else {
+				fmt.Printf("Error generating password: %v\n", err)
+			}
+		}
+
+		field := &connect.ItemField{
+			ID:      f.ID,
+			Label:   f.Label,
+			Type:    f.Type,
+			Value:   f.Value,
+			Purpose: f.Purpose,
+		}
+
+		// Associate with section
+		if f.Section != nil {
+			field.Section = &connect.ItemSection{
+				ID:    f.Section.ID,
+				Label: f.Section.Label,
+			}
+		}
+
+		// Include recipe if present
+		if f.Recipe != nil {
+			field.Recipe = &connect.GeneratorRecipe{
+				Length:        f.Recipe.Length,
+				CharacterSets: f.Recipe.CharacterSets,
+			}
+		}
+
+		connectFields = append(connectFields, field)
+	}
+	return connectFields
+}
+
+func toConnectFiles(files []*ItemFile) []*connect.File {
+	connectFiles := make([]*connect.File, 0, len(files))
+	for _, f := range files {
+		if f != nil {
+			connectFiles = append(connectFiles, &connect.File{
+				ID:   f.ID,
+				Name: f.Name,
+				Size: f.Size,
+			})
+		}
+	}
+	return connectFiles
+}

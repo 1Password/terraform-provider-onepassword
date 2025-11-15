@@ -29,6 +29,7 @@ import (
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
@@ -335,7 +336,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	createdItem, err := r.client.CreateItem(ctx, item, item.Vault.ID)
+	createdItem, err := r.client.CreateItem(ctx, item, item.VaultID)
 	if err != nil {
 		resp.Diagnostics.AddError("1Password Item create error", fmt.Sprintf("Error creating 1Password item, got error %s", err))
 		return
@@ -456,10 +457,10 @@ func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
 	return elements[1], elements[3]
 }
 
-func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
+func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
 	data.ID = setStringValue(itemTerraformID(item))
 	data.UUID = setStringValue(item.ID)
-	data.Vault = setStringValue(item.Vault.ID)
+	data.Vault = setStringValue(item.VaultID)
 	data.Title = setStringValue(item.Title)
 
 	for _, u := range item.URLs {
@@ -612,14 +613,12 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 	return nil
 }
 
-func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Item, diag.Diagnostics) {
-	item := &op.Item{
-		ID: data.UUID.ValueString(),
-		Vault: op.ItemVault{
-			ID: data.Vault.ValueString(),
-		},
-		Title: data.Title.ValueString(),
-		URLs: []op.ItemURL{
+func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.Item, diag.Diagnostics) {
+	item := &model.Item{
+		ID:      data.UUID.ValueString(),
+		VaultID: data.Vault.ValueString(),
+		Title:   data.Title.ValueString(),
+		URLs: []model.ItemURL{
 			{
 				Primary: true,
 				URL:     data.URL.ValueString(),
@@ -646,7 +645,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 	switch data.Category.ValueString() {
 	case "login":
 		item.Category = op.Login
-		item.Fields = []*op.ItemField{
+		item.Fields = []*model.ItemField{
 			{
 				ID:      "username",
 				Label:   "username",
@@ -673,7 +672,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 		}
 	case "password":
 		item.Category = op.Password
-		item.Fields = []*op.ItemField{
+		item.Fields = []*model.ItemField{
 			{
 				ID:       "password",
 				Label:    "password",
@@ -693,7 +692,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 		}
 	case "database":
 		item.Category = op.Database
-		item.Fields = []*op.ItemField{
+		item.Fields = []*model.ItemField{
 			{
 				ID:    "username",
 				Label: "username",
@@ -742,7 +741,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 		}
 	case "secure_note":
 		item.Category = op.SecureNote
-		item.Fields = []*op.ItemField{
+		item.Fields = []*model.ItemField{
 			{
 				ID:      "notesPlain",
 				Label:   "notesPlain",
@@ -768,7 +767,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			sectionID = sid
 		}
 
-		s := &op.ItemSection{
+		s := &model.ItemSection{
 			ID:    sectionID,
 			Label: section.Label.ValueString(),
 		}
@@ -798,7 +797,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				fieldValue = timestamp
 			}
 
-			f := &op.ItemField{
+			f := &model.ItemField{
 				Section: s,
 				ID:      fieldID,
 				Type:    fieldType,
@@ -826,14 +825,14 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 	return item, nil
 }
 
-func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*op.GeneratorRecipe, error) {
+func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {
 	if recipeObject == nil || len(recipeObject) == 0 {
 		return nil, nil
 	}
 
 	recipe := recipeObject[0]
 
-	parsed := &op.GeneratorRecipe{
+	parsed := &model.GeneratorRecipe{
 		Length:        32,
 		CharacterSets: []string{},
 	}
@@ -860,7 +859,7 @@ func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*op.GeneratorReci
 	return parsed, nil
 }
 
-func addRecipe(f *op.ItemField, r *op.GeneratorRecipe) {
+func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {
 	f.Recipe = r
 
 	// Check to see if the current value adheres to the recipe

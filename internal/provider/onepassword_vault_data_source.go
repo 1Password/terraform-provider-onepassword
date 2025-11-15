@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -106,7 +106,7 @@ func (d *OnePasswordVaultDataSource) Read(ctx context.Context, req datasource.Re
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	var vault *op.Vault
+	var vault *model.Vault
 	if data.UUID.ValueString() != "" {
 		vaultByUUID, err := d.client.GetVault(ctx, data.UUID.ValueString())
 		if err != nil {
