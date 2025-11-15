@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
@@ -14,7 +15,7 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
-	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
+	uuidutil "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 )
 
 type testResourceItem struct {
@@ -114,23 +115,34 @@ func TestAccItemResource(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Generate unique identifier for this test run to avoid conflicts in parallel execution
+			uniqueID := uuid.New().String()
+
 			item := testItemsToCreate[tc.category]
+			// Create a copy of item attributes and update title with unique ID
+			createAttrs := maps.Clone(item.Attrs)
+			createAttrs["title"] = addUniqueIDToTitle(createAttrs["title"].(string), uniqueID)
+
+			// Create a copy of updated attributes and update title with unique ID
+			updatedAttrs := maps.Clone(testItemsUpdatedAttrs[tc.category])
+			updatedAttrs["title"] = addUniqueIDToTitle(updatedAttrs["title"].(string), uniqueID)
+
 			var itemUUID string
 
 			// Build check functions for create step
 			createChecks := []resource.TestCheckFunc{
 				logStep(t, "CREATE"),
-				uuid.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
 			}
-			bcCreate := checks.BuildItemChecks("onepassword_item.test_item", item.Attrs)
+			bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 			createChecks = append(createChecks, bcCreate...)
 
 			// Build checks for update step
 			updateChecks := []resource.TestCheckFunc{
 				logStep(t, "UPDATE"),
-				uuid.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+				uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
 			}
-			bcUpdate := checks.BuildItemChecks("onepassword_item.test_item", testItemsUpdatedAttrs[tc.category])
+			bcUpdate := checks.BuildItemChecks("onepassword_item.test_item", updatedAttrs)
 			updateChecks = append(updateChecks, bcUpdate...)
 
 			resource.Test(t, resource.TestCase{
@@ -140,7 +152,7 @@ func TestAccItemResource(t *testing.T) {
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, item.Attrs),
+							tfconfig.ItemResourceConfig(testVaultID, createAttrs),
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(createChecks...),
 					},
@@ -148,7 +160,7 @@ func TestAccItemResource(t *testing.T) {
 					{
 						ResourceName:      "onepassword_item.test_item",
 						ImportState:       true,
-						ImportStateId:     fmt.Sprintf("vaults/%s/items/%s", testVaultID, item.Attrs["title"]),
+						ImportStateId:     fmt.Sprintf("vaults/%s/items/%s", testVaultID, createAttrs["title"]),
 						ImportStateVerify: true,
 						ImportStateCheck: func(states []*terraform.InstanceState) error {
 							t.Log("READ")
@@ -159,7 +171,7 @@ func TestAccItemResource(t *testing.T) {
 					{
 						Config: tfconfig.CreateConfigBuilder()(
 							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, testItemsUpdatedAttrs[tc.category]),
+							tfconfig.ItemResourceConfig(testVaultID, updatedAttrs),
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(updateChecks...),
 					},
@@ -170,7 +182,7 @@ func TestAccItemResource(t *testing.T) {
 							tfconfig.ItemDataSourceConfig(
 								map[string]string{
 									"vault": testVaultID,
-									"title": fmt.Sprintf("%v", testItemsUpdatedAttrs[tc.category]["title"]),
+									"title": fmt.Sprintf("%v", updatedAttrs["title"]),
 								},
 							),
 						),
@@ -209,10 +221,13 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 			item := testItemsToCreate[item]
 
 			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+				// Generate unique identifier for this test run to avoid conflicts in parallel execution
+				uniqueID := uuid.New().String()
+
 				recipeMap := password.BuildPasswordRecipeMap(tc.recipe)
 
 				attrs := map[string]any{
-					"title":           item.Attrs["title"],
+					"title":           addUniqueIDToTitle(item.Attrs["title"].(string), uniqueID),
 					"category":        item.Attrs["category"],
 					"password_recipe": recipeMap,
 				}
@@ -351,16 +366,19 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 			item := testItemsToCreate[item]
 
 			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+				// Generate unique identifier for this test run to avoid conflicts in parallel execution
+				uniqueID := uuid.New().String()
+
 				var itemUUID string
 
 				createAttrs := map[string]any{
-					"title":    item.Attrs["title"],
+					"title":    addUniqueIDToTitle(item.Attrs["title"].(string), uniqueID),
 					"category": item.Attrs["category"],
 					"section":  sections.MapSections(tc.create.Sections),
 				}
 
 				updateAttrs := map[string]any{
-					"title":    item.Attrs["title"],
+					"title":    addUniqueIDToTitle(item.Attrs["title"].(string), uniqueID),
 					"category": item.Attrs["category"],
 					"section":  sections.MapSections(tc.update.Sections),
 				}
@@ -368,14 +386,14 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 				// Build check functions for create step
 				createChecks := []resource.TestCheckFunc{
 					logStep(t, "CREATE"),
-					uuid.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
 				}
 				createChecks = append(createChecks, checks.BuildItemChecks("onepassword_item.test_item", createAttrs)...)
 
 				// Build check functions for update step
 				updateChecks := []resource.TestCheckFunc{
 					logStep(t, "UPDATE"),
-					uuid.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
 				}
 				updateChecks = append(updateChecks, checks.BuildItemChecks("onepassword_item.test_item", updateAttrs)...)
 
@@ -406,6 +424,9 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 }
 
 func TestAccItemResourceTags(t *testing.T) {
+	// Generate unique identifier for this test run to avoid conflicts in parallel execution
+	uniqueID := uuid.New().String()
+
 	item := testItemsToCreate[op.Login]
 
 	testCases := []struct {
@@ -421,6 +442,7 @@ func TestAccItemResourceTags(t *testing.T) {
 
 	for _, step := range testCases {
 		attrs := maps.Clone(item.Attrs)
+		attrs["title"] = addUniqueIDToTitle(attrs["title"].(string), uniqueID)
 		attrs["tags"] = step.tags
 
 		testChecks := []resource.TestCheckFunc{logStep(t, step.name)}
@@ -439,6 +461,11 @@ func TestAccItemResourceTags(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps:                    testSteps,
 	})
+}
+
+// addUniqueIDToTitle appends a UUID to the title to avoid conflicts in parallel test execution
+func addUniqueIDToTitle(title string, uniqueID string) string {
+	return fmt.Sprintf("%s-%s", title, uniqueID)
 }
 
 // logStep logs the current test step for easier test debugging
