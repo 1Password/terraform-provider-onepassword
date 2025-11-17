@@ -93,6 +93,43 @@ func (i *Item) FromModelItemToSDKCreateParams() sdk.ItemCreateParams {
 	return params
 }
 
+// FromConnectItemToModel creates a new Item from a Connect SDK item
+func (i *Item) FromConnectItemToModel(item *connect.Item) {
+	if item == nil {
+		return
+	}
+
+	i.ID = item.ID
+	i.Title = item.Title
+	i.VaultID = item.Vault.ID
+	i.Category = item.Category
+	i.Version = item.Version
+	i.Tags = item.Tags
+	i.URLs = fromConnectURLs(item.URLs)
+	i.Files = fromConnectFiles(item.Files)
+
+	// Convert sections and fields
+	sectionMap := make(map[string]*ItemSection)
+	i.Sections = fromConnectSections(item.Sections, sectionMap)
+	i.Fields = fromConnectFields(item.Fields, sectionMap)
+}
+
+// FromModelItemToConnect creates a Connect SDK item from a model Item
+func (i *Item) FromModelItemToConnect() *connect.Item {
+	return &connect.Item{
+		ID:       i.ID,
+		Title:    i.Title,
+		Vault:    connect.ItemVault{ID: i.VaultID},
+		Category: i.Category,
+		Version:  i.Version,
+		Tags:     i.Tags,
+		URLs:     toConnectURLs(i.URLs),
+		Sections: toConnectSections(i.Sections),
+		Fields:   toConnectFields(i.Fields),
+		Files:    toConnectFiles(i.Files),
+	}
+}
+
 func fromSDKURLs(websites []sdk.Website) []ItemURL {
 	urls := make([]ItemURL, 0, len(websites))
 	for idx, w := range websites {
@@ -282,62 +319,16 @@ func generatePassword(recipe *GeneratorRecipe) (string, error) {
 	return passwordResponse.Password, nil
 }
 
-/////////////////////////////////
-////////////////////////////////
-
-// FromConnectItemToModel creates a new Item from a Connect SDK item
-func (i *Item) FromConnectItemToModel(item *connect.Item) {
-	if item == nil {
-		return
-	}
-
-	i.ID = item.ID
-	i.Title = item.Title
-	i.VaultID = item.Vault.ID
-	i.Category = item.Category
-	i.Version = item.Version
-	i.Tags = item.Tags
-
-	// Convert URLs
-	i.URLs = fromConnectURLs(item.URLs)
-
-	// Convert sections
-	sectionMap := make(map[string]*ItemSection)
-	i.Sections = fromConnectSections(item.Sections, sectionMap)
-
-	// Convert fields
-	i.Fields = fromConnectFields(item.Fields, sectionMap)
-
-	// Convert files
-	i.Files = fromConnectFiles(item.Files)
-}
-
-// FromModelItemToConnect creates a Connect SDK item from a model Item
-func (i *Item) FromModelItemToConnect() *connect.Item {
-	return &connect.Item{
-		ID:       i.ID,
-		Title:    i.Title,
-		Vault:    connect.ItemVault{ID: i.VaultID},
-		Category: i.Category,
-		Version:  i.Version,
-		Tags:     i.Tags,
-		URLs:     toConnectURLs(i.URLs),
-		Sections: toConnectSections(i.Sections),
-		Fields:   toConnectFields(i.Fields),
-		Files:    toConnectFiles(i.Files),
-	}
-}
-
 func fromConnectURLs(urls []connect.ItemURL) []ItemURL {
-	itemURLs := make([]ItemURL, 0, len(urls))
+	modelURLs := make([]ItemURL, 0, len(urls))
 	for _, u := range urls {
-		itemURLs = append(itemURLs, ItemURL{
+		modelURLs = append(modelURLs, ItemURL{
 			URL:     u.URL,
 			Label:   u.Label,
 			Primary: u.Primary,
 		})
 	}
-	return itemURLs
+	return modelURLs
 }
 
 func fromConnectSections(sections []*connect.ItemSection, sectionMap map[string]*ItemSection) []*ItemSection {

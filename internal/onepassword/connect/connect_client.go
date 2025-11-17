@@ -56,31 +56,6 @@ func (c *Client) GetVaultsByTitle(_ context.Context, title string) ([]*model.Vau
 // to handle eventual consistency issues in Connect (there can be a delay between item creation
 // and when it becomes available for reading). If itemUuid is not a valid UUID format, it treats
 // the parameter as a title and looks up the item by title instead.
-// func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
-// 	if util.IsValidUUID(itemUuid) {
-// 		// Try GetItemByUUID with retry for eventual consistency
-// 		var item *onepassword.Item
-// 		var err error
-// 		for attempt := 0; attempt < 5; attempt++ {
-// 			if attempt > 0 {
-// 				time.Sleep(time.Duration(attempt*100) * time.Millisecond)
-// 			}
-// 			item, err = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
-// 			if item != nil {
-// 				return item, nil // item is found by UUID, return
-// 			}
-// 			// If error is not 404, don't retry
-// 			if err != nil && !strings.Contains(err.Error(), "404") && !strings.Contains(err.Error(), "not found") {
-// 				return nil, err
-// 			}
-// 		}
-// 		return nil, err
-// 	}
-
-// 	// Not a UUID, use GetItemByTitle
-// 	return c.connectClient.GetItemByTitle(itemUuid, vaultUuid)
-// }
-
 func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
 	var connectItem *onepassword.Item
 	var err error
@@ -93,7 +68,7 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 			}
 			connectItem, err = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
 			if connectItem != nil {
-				// Convert to model Item and return
+				// Convert to model Item
 				modelItem := &model.Item{}
 				modelItem.FromConnectItemToModel(connectItem)
 				return modelItem, nil
@@ -130,36 +105,6 @@ func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid strin
 	return modelItem, nil
 }
 
-// func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-// 	createdItem, err := c.connectClient.CreateItem(item, vaultUuid)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	// Wait for Connect to propagate the create to the local SQLite database.
-// 	// The sync service needs time to sync changes from the remote service to the local database.
-// 	// Verify the item exists (newly created items have version 1).
-// 	// Ignore errors from wait - if create succeeded, we return the created item even if wait times out
-// 	_ = c.wait(ctx, createdItem.ID, vaultUuid, func(fetchedItem *onepassword.Item, err error) (bool, error) {
-// 		if err != nil {
-// 			// If error is 404, item not available yet, continue retrying
-// 			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
-// 				return false, nil
-// 			}
-// 			// Other errors are not retryable
-// 			return false, err
-// 		}
-// 		// Item exists, check if it has version 1 (newly created)
-// 		if fetchedItem != nil && fetchedItem.Version == 1 {
-// 			return true, nil
-// 		}
-// 		// Item exists but version doesn't match yet, continue retrying
-// 		return false, nil
-// 	})
-
-// 	return createdItem, nil
-// }
-
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	// Convert model Item to Connect Item
 	connectItem := item.FromModelItemToConnect()
@@ -195,37 +140,6 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	modelItem.FromConnectItemToModel(createdItem)
 	return modelItem, nil
 }
-
-// func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-// 	updatedItem, err := c.connectClient.UpdateItem(item, vaultUuid)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	expectedVersion := updatedItem.Version + 1 // UpdateItem doesn't return increased item version. Need to increase it manually.
-
-// 	// Wait for Connect to propagate the update to the local SQLite database.
-// 	// The sync service needs time to sync changes from the remote service to the local database.
-// 	// Verify the item version matches the expected version.
-// 	err = c.wait(ctx, updatedItem.ID, vaultUuid, func(fetchedItem *onepassword.Item, err error) (bool, error) {
-// 		if err != nil {
-// 			// For updates, any error (including 404) means something is wrong since the item should exist
-// 			// Return error immediately - don't retry
-// 			return false, err
-// 		}
-// 		// Compare versions to verify the update has propagated
-// 		if fetchedItem != nil && fetchedItem.Version == expectedVersion {
-// 			return true, nil
-// 		}
-// 		// Version doesn't match yet, continue retrying
-// 		return false, nil
-// 	})
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return updatedItem, nil
-// }
 
 func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	// Convert model Item to Connect Item
