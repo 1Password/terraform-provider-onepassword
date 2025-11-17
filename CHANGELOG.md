@@ -12,6 +12,18 @@
 
 ---
 
+[//]: # (START/v2.2.1)
+# v2.2.1
+
+## Fixes
+ * Add testing documentation. {#242}
+ * Eventual consistency for Connect client. {#246}
+ * Fix eventual consultancy issue in Connect's item get implementation. {#244}
+ * Fix item creation with incorrect date when using Connect. {#247}
+ * Trimming trailing newline from `op read` command output. {#245}
+
+---
+
 [//]: # (START/v2.2.0)
 # v2.2.0
 
