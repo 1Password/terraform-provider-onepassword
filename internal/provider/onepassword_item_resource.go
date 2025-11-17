@@ -68,7 +68,6 @@ type OnePasswordItemResourceModel struct {
 
 type PasswordRecipeModel struct {
 	Length  types.Int64 `tfsdk:"length"`
-	Letters types.Bool  `tfsdk:"letters"`
 	Digits  types.Bool  `tfsdk:"digits"`
 	Symbols types.Bool  `tfsdk:"symbols"`
 }
@@ -109,12 +108,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					Validators: []validator.Int64{
 						int64validator.Between(1, 64),
 					},
-				},
-				"letters": schema.BoolAttribute{
-					MarkdownDescription: passwordLettersDescription,
-					Optional:            true,
-					Computed:            true,
-					Default:             booldefault.StaticBool(true),
 				},
 				"digits": schema.BoolAttribute{
 					MarkdownDescription: passwordDigitsDescription,
@@ -554,7 +547,6 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 
 					dataField.Recipe = []PasswordRecipeModel{{
 						Length:  types.Int64Value(int64(f.Recipe.Length)),
-						Letters: types.BoolValue(charSets["letters"]),
 						Digits:  types.BoolValue(charSets["digits"]),
 						Symbols: types.BoolValue(charSets["symbols"]),
 					}}
@@ -846,9 +838,6 @@ func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorR
 		parsed.Length = int(length)
 	}
 
-	if recipe.Letters.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, "LETTERS")
-	}
 	if recipe.Digits.ValueBool() {
 		parsed.CharacterSets = append(parsed.CharacterSets, "DIGITS")
 	}
@@ -864,15 +853,12 @@ func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {
 
 	// Check to see if the current value adheres to the recipe
 
-	var recipeLetters, recipeDigits, recipeSymbols bool
-	hasLetters, _ := regexp.MatchString("[a-zA-Z]", f.Value)
+	var recipeDigits, recipeSymbols bool
 	hasDigits, _ := regexp.MatchString("[0-9]", f.Value)
 	hasSymbols, _ := regexp.MatchString("[^a-zA-Z0-9]", f.Value)
 
 	for _, s := range r.CharacterSets {
 		switch s {
-		case "LETTERS":
-			recipeLetters = true
 		case "DIGITS":
 			recipeDigits = true
 		case "SYMBOLS":
@@ -880,8 +866,7 @@ func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {
 		}
 	}
 
-	if hasLetters != recipeLetters ||
-		hasDigits != recipeDigits ||
+	if hasDigits != recipeDigits ||
 		hasSymbols != recipeSymbols ||
 		len(f.Value) != r.Length {
 		f.Generate = true

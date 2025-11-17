@@ -12,7 +12,6 @@ type PasswordRecipe struct {
 	Length  int
 	Symbols bool
 	Digits  bool
-	Letters bool
 }
 
 // BuildPasswordRecipeChecks creates a list of test assertions to verify password recipe attributes
@@ -21,12 +20,9 @@ func BuildPasswordRecipeChecks(resourceName string, recipe PasswordRecipe) []res
 		resource.TestCheckResourceAttr(resourceName, "password_recipe.#", "1"),
 	}
 
-	length, symbols, digits, letters := recipe.Length, recipe.Symbols, recipe.Digits, recipe.Letters
-
-	// If all are false, default all to true (invalid recipe)
-	if !symbols && !digits && !letters {
-		symbols, digits, letters = true, true, true
-	}
+	length := recipe.Length
+	symbols := recipe.Symbols
+	digits := recipe.Digits
 
 	// If length is not provided (0), the default is 32
 	if recipe.Length == 0 {
@@ -49,12 +45,6 @@ func BuildPasswordRecipeChecks(resourceName string, recipe PasswordRecipe) []res
 		checks = append(checks, checkPasswordPattern(resourceName, `^[^0-9]+$`, "digits"))
 	}
 
-	if letters {
-		checks = append(checks, checkPasswordPattern(resourceName, `[a-zA-Z]`, "letters"))
-	} else {
-		checks = append(checks, checkPasswordPattern(resourceName, `^[^a-zA-Z]+$`, "letters"))
-	}
-
 	return checks
 }
 
@@ -63,7 +53,6 @@ func BuildPasswordRecipeMap(pr PasswordRecipe) map[string]any {
 		"length":  pr.Length,
 		"symbols": pr.Symbols,
 		"digits":  pr.Digits,
-		"letters": pr.Letters,
 	}
 }
 
