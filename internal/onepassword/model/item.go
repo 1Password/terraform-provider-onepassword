@@ -382,17 +382,30 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]*ItemS
 }
 
 func fromConnectFiles(files []*connect.File) []*ItemFile {
-	modelFiles := make([]*ItemFile, 0, len(files))
+	result := make([]*ItemFile, 0, len(files))
 	for _, f := range files {
-		if f != nil {
-			modelFiles = append(modelFiles, &ItemFile{
-				ID:   f.ID,
-				Name: f.Name,
-				Size: f.Size,
-			})
+		if f == nil {
+			continue
 		}
+
+		itemFile := &ItemFile{
+			ID:          f.ID,
+			Name:        f.Name,
+			Size:        f.Size,
+			ContentPath: f.ContentPath,
+		}
+
+		// Only set Section if it exists
+		if f.Section != nil {
+			itemFile.Section = &ItemSection{
+				ID:    f.Section.ID,
+				Label: f.Section.Label,
+			}
+		}
+
+		result = append(result, itemFile)
 	}
-	return modelFiles
+	return result
 }
 
 func toConnectURLs(urls []ItemURL) []connect.ItemURL {
@@ -466,15 +479,28 @@ func toConnectFields(fields []*ItemField) []*connect.ItemField {
 }
 
 func toConnectFiles(files []*ItemFile) []*connect.File {
-	connectFiles := make([]*connect.File, 0, len(files))
+	result := make([]*connect.File, 0, len(files))
 	for _, f := range files {
-		if f != nil {
-			connectFiles = append(connectFiles, &connect.File{
-				ID:   f.ID,
-				Name: f.Name,
-				Size: f.Size,
-			})
+		if f == nil {
+			continue
 		}
+
+		connectFile := &connect.File{
+			ID:          f.ID,
+			Name:        f.Name,
+			Size:        f.Size,
+			ContentPath: f.ContentPath,
+		}
+
+		// Only set Section if it exists
+		if f.Section != nil {
+			connectFile.Section = &connect.ItemSection{
+				ID:    f.Section.ID,
+				Label: f.Section.Label,
+			}
+		}
+
+		result = append(result, connectFile)
 	}
-	return connectFiles
+	return result
 }

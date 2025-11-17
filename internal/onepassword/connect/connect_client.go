@@ -208,14 +208,23 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 }
 
 func (w *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUID, vaultUUID string) ([]byte, error) {
-	// Convert model ItemFile to Connect File
 	connectFile := &onepassword.File{
-		ID:   file.ID,
-		Name: file.Name,
-		Size: file.Size,
+		ID:          file.ID,
+		Name:        file.Name,
+		Size:        file.Size,
+		ContentPath: file.ContentPath,
 	}
 
-	return w.connectClient.GetFileContent(connectFile)
+	// Only set Section if it exists
+	if file.Section != nil {
+		connectFile.Section = &onepassword.ItemSection{
+			ID:    file.Section.ID,
+			Label: file.Section.Label,
+		}
+	}
+
+	content, err := w.connectClient.GetFileContent(connectFile)
+	return content, err
 }
 
 // waitCondition is a function that checks if a condition is met.
