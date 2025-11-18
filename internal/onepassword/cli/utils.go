@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 type opArg interface {
@@ -52,23 +51,23 @@ func parseCliError(stderr []byte) error {
 	return fmt.Errorf("op error: %s", subMatches[2])
 }
 
-func passwordField(item *model.Item) *model.ItemField {
-	for i, f := range item.Fields {
+func passwordField(item *onepassword.Item) *onepassword.ItemField {
+	for _, f := range item.Fields {
 		if f.Purpose == onepassword.FieldPurposePassword {
-			return &item.Fields[i]
+			return f
 		}
 	}
 	return nil
 }
 
-func passwordRecipe(item *model.Item) string {
+func passwordRecipe(item *onepassword.Item) string {
 	if pf := passwordField(item); pf != nil {
 		return passwordRecipeToString(pf.Recipe, pf.Generate)
 	}
 	return ""
 }
 
-func passwordRecipeToString(recipe *model.GeneratorRecipe, shouldGenerate bool) string {
+func passwordRecipeToString(recipe *onepassword.GeneratorRecipe, shouldGenerate bool) string {
 	str := ""
 	if shouldGenerate && recipe != nil {
 		str += strings.Join(recipe.CharacterSets, ",")

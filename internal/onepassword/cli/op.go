@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
+	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/version"
 	"github.com/Masterminds/semver/v3"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -63,12 +63,12 @@ func (op *OP) checkCliVersion(ctx context.Context) error {
 	return nil
 }
 
-func (op *OP) GetVault(ctx context.Context, uuid string) (*model.Vault, error) {
+func (op *OP) GetVault(ctx context.Context, uuid string) (*onepassword.Vault, error) {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
 		return nil, versionErr
 	}
-	var res *model.Vault
+	var res *onepassword.Vault
 	err := op.execJson(ctx, &res, nil, p("vault"), p("get"), p(uuid))
 	if err != nil {
 		return nil, err
@@ -76,71 +76,65 @@ func (op *OP) GetVault(ctx context.Context, uuid string) (*model.Vault, error) {
 	return res, nil
 }
 
-func (op *OP) GetVaultsByTitle(ctx context.Context, title string) ([]*model.Vault, error) {
+func (op *OP) GetVaultsByTitle(ctx context.Context, title string) ([]onepassword.Vault, error) {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
 		return nil, versionErr
 	}
-	var allVaults []*model.Vault
+	var allVaults []onepassword.Vault
 	err := op.execJson(ctx, &allVaults, nil, p("vault"), p("list"))
 	if err != nil {
 		return nil, err
 	}
 
-	var res []*model.Vault
+	var res []onepassword.Vault
 	for _, v := range allVaults {
 		if v.Name == title {
 			res = append(res, v)
 		}
 	}
-
 	return res, nil
 }
 
-func (op *OP) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
+func (op *OP) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*onepassword.Item, error) {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
 		return nil, versionErr
 	}
-	var res *model.Item
+	var res *onepassword.Item
 	err := op.execJson(ctx, &res, nil, p("item"), p("get"), p(itemUuid), f("vault", vaultUuid))
 	if err != nil {
 		return nil, err
 	}
-
-	if res.VaultID == "" {
-		res.VaultID = vaultUuid
-	}
-
 	return res, nil
 }
 
-func (op *OP) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error) {
+func (op *OP) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*onepassword.Item, error) {
 	return op.GetItem(ctx, title, vaultUuid)
 }
 
-func (op *OP) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
+func (op *OP) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
 		return nil, versionErr
 	}
-	return op.withRetry(func() (*model.Item, error) {
+	return op.withRetry(func() (*onepassword.Item, error) {
 		return op.create(ctx, item, vaultUuid)
 	})
 }
 
-func (op *OP) create(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	if item.VaultID != "" && item.VaultID != vaultUuid {
+func (op *OP) create(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
 		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
-	item.VaultID = vaultUuid
+	item.Vault.ID = vaultUuid
 
 	payload, err := json.Marshal(item)
 	if err != nil {
 		return nil, err
 	}
 
-	var res *model.Item
+	var res *onepassword.Item
 	args := []opArg{p("item"), p("create"), p("-")}
 	// 'op item create' command doesn't support generating passwords when using templates
 	// therefore need to use --generate-password flag to set it
@@ -153,36 +147,31 @@ func (op *OP) create(ctx context.Context, item *model.Item, vaultUuid string) (*
 	if err != nil {
 		return nil, err
 	}
-
-	if res.VaultID == "" {
-		res.VaultID = vaultUuid
-	}
-
 	return res, nil
 }
 
-func (op *OP) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
+func (op *OP) UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
 		return nil, versionErr
 	}
-	return op.withRetry(func() (*model.Item, error) {
+	return op.withRetry(func() (*onepassword.Item, error) {
 		return op.update(ctx, item, vaultUuid)
 	})
 }
 
-func (op *OP) update(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	if item.VaultID != "" && item.VaultID != vaultUuid {
+func (op *OP) update(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
 		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
-	item.VaultID = vaultUuid
+	item.Vault.ID = vaultUuid
 
 	payload, err := json.Marshal(item)
 	if err != nil {
 		return nil, err
 	}
 
-	var res *model.Item
+	var res *onepassword.Item
 	args := []opArg{p("item"), p("edit"), p(item.ID), f("vault", vaultUuid)}
 	recipe := passwordRecipe(item)
 	if recipe != "" {
@@ -193,19 +182,15 @@ func (op *OP) update(ctx context.Context, item *model.Item, vaultUuid string) (*
 	if err != nil {
 		return nil, err
 	}
-
-	if res.VaultID == "" {
-		res.VaultID = vaultUuid
-	}
 	return res, nil
 }
 
-func (op *OP) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
+func (op *OP) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
 		return versionErr
 	}
-	_, err := op.withRetry(func() (*model.Item, error) {
+	_, err := op.withRetry(func() (*onepassword.Item, error) {
 		return op.delete(ctx, item, vaultUuid)
 	})
 	if err != nil {
@@ -214,21 +199,20 @@ func (op *OP) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string
 	return nil
 }
 
-func (op *OP) delete(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
-	if item.VaultID != "" && item.VaultID != vaultUuid {
+func (op *OP) delete(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
+	if item.Vault.ID != "" && item.Vault.ID != vaultUuid {
 		return nil, errors.New("item payload contains vault id that does not match vault uuid")
 	}
-	item.VaultID = vaultUuid
+	item.Vault.ID = vaultUuid
 
 	return nil, op.execJson(ctx, nil, nil, p("item"), p("delete"), p(item.ID), f("vault", vaultUuid))
 }
 
-func (op *OP) GetFileContent(ctx context.Context, file *model.ItemFile, itemUuid, vaultUuid string) ([]byte, error) {
+func (op *OP) GetFileContent(ctx context.Context, file *onepassword.File, itemUuid, vaultUuid string) ([]byte, error) {
 	versionErr := op.checkCliVersion(ctx)
 	if versionErr != nil {
 		return nil, versionErr
 	}
-	fmt.Printf("JILL VAULT: %s", vaultUuid)
 	ref := fmt.Sprintf("op://%s/%s/%s", vaultUuid, itemUuid, file.ID)
 	tflog.Debug(ctx, "reading file content from: "+ref)
 	res, err := op.execRaw(ctx, nil, p("read"), p(ref))
@@ -298,7 +282,7 @@ func (op *OP) execRaw(ctx context.Context, stdin []byte, args ...opArg) ([]byte,
 	return result, nil
 }
 
-func (op *OP) withRetry(action func() (*model.Item, error)) (*model.Item, error) {
+func (op *OP) withRetry(action func() (*onepassword.Item, error)) (*onepassword.Item, error) {
 	attempt := 0
 	item, err := action()
 	if err != nil {

@@ -4,20 +4,20 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
+	"github.com/1Password/connect-sdk-go/onepassword"
 )
 
 func TestWithRetry(t *testing.T) {
 	op := &OP{}
 	tests := map[string]struct {
-		fakeAction func() (*model.Item, error)
-		validate   func(item *model.Item, err error)
+		fakeAction func() (*onepassword.Item, error)
+		validate   func(item *onepassword.Item, err error)
 	}{
 		"should fail when error other than 409": {
-			fakeAction: func() (*model.Item, error) {
+			fakeAction: func() (*onepassword.Item, error) {
 				return nil, errors.New("failed to perform action")
 			},
-			validate: func(item *model.Item, err error) {
+			validate: func(item *onepassword.Item, err error) {
 				if err == nil {
 					t.Error("Action should fail when error is other than 409")
 				}
@@ -27,10 +27,10 @@ func TestWithRetry(t *testing.T) {
 			},
 		},
 		"should fail when error is 409": {
-			fakeAction: func() (*model.Item, error) {
+			fakeAction: func() (*onepassword.Item, error) {
 				return nil, errors.New("409 Conflict error")
 			},
-			validate: func(item *model.Item, err error) {
+			validate: func(item *onepassword.Item, err error) {
 				if err == nil {
 					t.Error("Action should fail when error is 409")
 				}
@@ -40,10 +40,10 @@ func TestWithRetry(t *testing.T) {
 			},
 		},
 		"should succeed": {
-			fakeAction: func() (*model.Item, error) {
-				return &model.Item{}, nil
+			fakeAction: func() (*onepassword.Item, error) {
+				return &onepassword.Item{}, nil
 			},
-			validate: func(item *model.Item, err error) {
+			validate: func(item *onepassword.Item, err error) {
 				if err != nil {
 					t.Errorf("Action should succeed, but got an error: %s", err.Error())
 				}

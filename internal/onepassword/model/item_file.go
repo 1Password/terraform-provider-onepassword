@@ -5,12 +5,13 @@ import (
 )
 
 type ItemFile struct {
-	ID          string
-	Name        string
-	Size        int
-	Section     *ItemSection
-	content     []byte
-	ContentPath string
+	ID           string
+	Name         string
+	Size         int
+	SectionID    string
+	SectionLabel string
+	content      []byte
+	ContentPath  string
 }
 
 func (f *ItemFile) Content() ([]byte, error) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/cli"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/connect"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
@@ -31,9 +30,10 @@ type ClientConfig struct {
 }
 
 func NewClient(config ClientConfig) (Client, error) {
-	if config.ServiceAccountToken != "" || config.Account != "" {
-		return cli.NewClient(config.ServiceAccountToken, config.Account, config.OpCLIPath), nil
-	} else if config.ConnectHost != "" && config.ConnectToken != "" {
+	// if config.ServiceAccountToken != "" || config.Account != "" {
+	// 	return cli.NewClient(config.ServiceAccountToken, config.Account, config.OpCLIPath), nil
+	// } else
+	if config.ConnectHost != "" && config.ConnectToken != "" {
 		return connect.NewClient(config.ConnectHost, config.ConnectToken, connect.Config{
 			ProviderUserAgent: config.ProviderUserAgent,
 		}), nil

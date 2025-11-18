@@ -8,17 +8,47 @@ import (
 	sdk "github.com/1password/onepassword-sdk-go"
 )
 
+type CharacterSet string
+type ItemCategory string
+type ItemFieldPurpose string
+type ItemFieldType string
+
+const (
+	CharacterSetDigits  CharacterSet = "DIGITS"
+	CharacterSetSymbols CharacterSet = "SYMBOLS"
+
+	Login      ItemCategory = "LOGIN"
+	Password   ItemCategory = "PASSWORD"
+	SecureNote ItemCategory = "SECURE_NOTE"
+	Document   ItemCategory = "DOCUMENT"
+	SSHKey     ItemCategory = "SSH_KEY"
+	Database   ItemCategory = "DATABASE"
+
+	FieldPurposeUsername ItemFieldPurpose = "USERNAME"
+	FieldPurposePassword ItemFieldPurpose = "PASSWORD"
+	FieldPurposeNotes    ItemFieldPurpose = "NOTES"
+
+	FieldTypeConcealed ItemFieldType = "CONCEALED"
+	FieldTypeDate      ItemFieldType = "DATE"
+	FieldTypeEmail     ItemFieldType = "EMAIL"
+	FieldTypeMenu      ItemFieldType = "MENU"
+	FieldTypeMonthYear ItemFieldType = "MONTH_YEAR"
+	FieldTypeOTP       ItemFieldType = "OTP"
+	FieldTypeString    ItemFieldType = "STRING"
+	FieldTypeURL       ItemFieldType = "URL"
+)
+
 type Item struct {
-	ID       string               `json:"id"`
-	Title    string               `json:"title"`
-	VaultID  string               `json:"vaultId"`
-	Category connect.ItemCategory `json:"category,omitempty"`
-	Version  int                  `json:"version,omitempty"`
-	Tags     []string             `json:"tags,omitempty"`
-	URLs     []ItemURL            `json:"urls,omitempty"`
-	Sections []ItemSection        `json:"sections,omitempty"`
-	Fields   []ItemField          `json:"fields,omitempty"`
-	Files    []ItemFile           `json:"files,omitempty"`
+	ID       string        `json:"id"`
+	Title    string        `json:"title"`
+	VaultID  string        `json:"vaultId"`
+	Category ItemCategory  `json:"category,omitempty"`
+	Version  int           `json:"version,omitempty"`
+	Tags     []string      `json:"tags,omitempty"`
+	URLs     []ItemURL     `json:"urls,omitempty"`
+	Sections []ItemSection `json:"sections,omitempty"`
+	Fields   []ItemField   `json:"fields,omitempty"`
+	Files    []ItemFile    `json:"files,omitempty"`
 }
 
 type ItemSection struct {
@@ -27,19 +57,20 @@ type ItemSection struct {
 }
 
 type ItemField struct {
-	ID       string                   `json:"id"`
-	Label    string                   `json:"label,omitempty"`
-	Type     connect.ItemFieldType    `json:"type"`
-	Value    string                   `json:"value,omitempty"`
-	Purpose  connect.ItemFieldPurpose `json:"purpose,omitempty"`
-	Section  ItemSection              `json:"section,omitempty"`
-	Recipe   *GeneratorRecipe         `json:"recipe,omitempty"`
-	Generate bool                     `json:"generate,omitempty"`
+	ID           string           `json:"id"`
+	Label        string           `json:"label,omitempty"`
+	Type         ItemFieldType    `json:"type"`
+	Value        string           `json:"value,omitempty"`
+	Purpose      ItemFieldPurpose `json:"purpose,omitempty"`
+	SectionID    string
+	SectionLabel string           `json:"section,omitempty"`
+	Recipe       *GeneratorRecipe `json:"recipe,omitempty"`
+	Generate     bool             `json:"generate,omitempty"`
 }
 
 type GeneratorRecipe struct {
-	Length        int      `json:"length,omitempty"`
-	CharacterSets []string `json:"characterSets,omitempty"`
+	Length        int            `json:"length,omitempty"`
+	CharacterSets []CharacterSet `json:"characterSets,omitempty"`
 }
 
 type ItemURL struct {
@@ -49,32 +80,33 @@ type ItemURL struct {
 }
 
 // FromSDKItemToModel creates a new Item from an SDK item
-func (i *Item) FromSDKItemToModel(item *sdk.Item) {
+func (i *Item) FromSDKItemToModel(item *sdk.Item) error {
 	if item == nil {
-		return
+		return fmt.Errorf("cannot convert nil SDK item to model")
 	}
-
 	i.ID = item.ID
 	i.Title = item.Title
 	i.VaultID = item.VaultID
-	i.Category = connect.ItemCategory(item.Category)
+	i.Category = ItemCategory(item.Category)
 	i.Tags = item.Tags
 	i.URLs = fromSDKURLs(item.Websites)
-	i.Files = fromSDKFiles(item)
 
-	// Convert sections and fields
-	sectionMap := make(map[string]ItemSection)
-	i.Sections = fromSDKSections(item, sectionMap)
+	// Convert sections/fields/files
+	sectionMap := buildSectionMap(item)
+	i.Sections = fromSDKSections(sectionMap)
+	i.Files = fromSDKFiles(item, sectionMap)
 	i.Fields = fromSDKFields(item, sectionMap)
 
 	// Notes are stored top level in an item from the SDK
 	if item.Notes != "" {
 		i.Fields = append(i.Fields, ItemField{
-			Type:    connect.FieldTypeString,
-			Purpose: connect.FieldPurposeNotes,
+			Type:    FieldTypeString,
+			Purpose: FieldPurposeNotes,
 			Value:   item.Notes,
 		})
 	}
+
+	return nil
 }
 
 // FromModelItemToSDKCreateParams creates an SDK item create params from an Item
@@ -102,15 +134,15 @@ func (i *Item) FromConnectItemToModel(item *connect.Item) {
 	i.ID = item.ID
 	i.Title = item.Title
 	i.VaultID = item.Vault.ID
-	i.Category = item.Category
+	i.Category = ItemCategory(item.Category)
 	i.Version = item.Version
 	i.Tags = item.Tags
 	i.URLs = fromConnectURLs(item.URLs)
-	i.Files = fromConnectFiles(item.Files)
 
-	// Convert sections and fields
+	// Convert sections/fields/files
 	sectionMap := make(map[string]ItemSection)
 	i.Sections = fromConnectSections(item.Sections, sectionMap)
+	i.Files = fromConnectFiles(item.Files, sectionMap)
 	i.Fields = fromConnectFields(item.Fields, sectionMap)
 }
 
@@ -120,7 +152,7 @@ func (i *Item) FromModelItemToConnect() *connect.Item {
 		ID:       i.ID,
 		Title:    i.Title,
 		Vault:    connect.ItemVault{ID: i.VaultID},
-		Category: i.Category,
+		Category: connect.ItemCategory(i.Category),
 		Version:  i.Version,
 		Tags:     i.Tags,
 		URLs:     toConnectURLs(i.URLs),
@@ -142,17 +174,10 @@ func fromSDKURLs(websites []sdk.Website) []ItemURL {
 	return urls
 }
 
-func fromSDKSections(item *sdk.Item, sectionMap map[string]ItemSection) []ItemSection {
-	var sections []ItemSection
-	for _, s := range item.Sections {
-		if s.ID != "" {
-			section := ItemSection{
-				ID:    s.ID,
-				Label: s.Title,
-			}
-			sections = append(sections, section)
-			sectionMap[s.ID] = section
-		}
+func fromSDKSections(sectionMap map[string]ItemSection) []ItemSection {
+	sections := make([]ItemSection, 0, len(sectionMap))
+	for _, section := range sectionMap {
+		sections = append(sections, section)
 	}
 	return sections
 }
@@ -164,22 +189,23 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 		field := ItemField{
 			ID:    f.ID,
 			Label: f.Title,
-			Type:  connect.ItemFieldType(f.FieldType),
+			Type:  ItemFieldType(f.FieldType),
 			Value: f.Value,
 		}
 
 		// Set purpose based on field ID
 		switch f.ID {
 		case "username":
-			field.Purpose = connect.FieldPurposeUsername
+			field.Purpose = FieldPurposeUsername
 		case "password":
-			field.Purpose = connect.FieldPurposePassword
+			field.Purpose = FieldPurposePassword
 		}
 
 		// Associate field with section if applicable
 		if f.SectionID != nil && *f.SectionID != "" {
 			if section, exists := sectionMap[*f.SectionID]; exists {
-				field.Section = section
+				field.SectionID = section.ID
+				field.SectionLabel = section.Label
 			}
 		}
 
@@ -192,7 +218,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 				fields = append(fields, ItemField{
 					ID:    "public_key",
 					Label: "public key",
-					Type:  connect.FieldTypeString,
+					Type:  FieldTypeString,
 					Value: sshKey.PublicKey,
 				})
 			}
@@ -202,15 +228,26 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 	return fields
 }
 
-func fromSDKFiles(item *sdk.Item) []ItemFile {
+func fromSDKFiles(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFile {
+	// +1 to account for the document that may be appended at the end
 	files := make([]ItemFile, 0, len(item.Files)+1)
 
 	for _, f := range item.Files {
-		files = append(files, ItemFile{
+		file := ItemFile{
 			ID:   f.Attributes.ID,
 			Name: f.Attributes.Name,
 			Size: int(f.Attributes.Size),
-		})
+		}
+
+		// Look up section by ID
+		if f.SectionID != "" {
+			if section, exists := sectionMap[f.SectionID]; exists {
+				file.SectionID = section.ID
+				file.SectionLabel = section.Label
+			}
+		}
+
+		files = append(files, file)
 	}
 
 	// Append the document if it exists
@@ -230,7 +267,7 @@ func toSDKFields(fields []ItemField) ([]sdk.ItemField, *string) {
 	sdkFields := make([]sdk.ItemField, 0, len(fields))
 
 	for _, field := range fields {
-		if field.Purpose == connect.FieldPurposeNotes {
+		if field.Purpose == FieldPurposeNotes {
 			notes = &field.Value
 			continue
 		}
@@ -259,8 +296,8 @@ func toSDKField(f ItemField) sdk.ItemField {
 		Value:     f.Value,
 	}
 
-	if f.Section.ID != "" {
-		field.SectionID = &f.Section.ID
+	if f.SectionID != "" {
+		field.SectionID = &f.SectionID
 	}
 
 	return field
@@ -296,9 +333,9 @@ func generatePassword(recipe *GeneratorRecipe) (string, error) {
 
 	for _, characterSet := range recipe.CharacterSets {
 		switch characterSet {
-		case "DIGITS":
+		case CharacterSetDigits:
 			includeDigits = true
-		case "SYMBOLS":
+		case CharacterSetSymbols:
 			includeSymbols = true
 		}
 	}
@@ -316,6 +353,19 @@ func generatePassword(recipe *GeneratorRecipe) (string, error) {
 	}
 
 	return passwordResponse.Password, nil
+}
+
+func buildSectionMap(item *sdk.Item) map[string]ItemSection {
+	sectionMap := make(map[string]ItemSection, len(item.Sections))
+	for _, s := range item.Sections {
+		if s.ID != "" {
+			sectionMap[s.ID] = ItemSection{
+				ID:    s.ID,
+				Label: s.Title,
+			}
+		}
+	}
+	return sectionMap
 }
 
 func fromConnectURLs(urls []connect.ItemURL) []ItemURL {
@@ -355,23 +405,29 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 		field := ItemField{
 			ID:      f.ID,
 			Label:   f.Label,
-			Type:    f.Type,
+			Type:    ItemFieldType(f.Type),
 			Value:   f.Value,
-			Purpose: f.Purpose,
+			Purpose: ItemFieldPurpose(f.Purpose),
 		}
 
 		// Associate field with section if applicable
 		if f.Section != nil && f.Section.ID != "" {
 			if section, exists := sectionMap[f.Section.ID]; exists {
-				field.Section = section
+				field.SectionID = section.ID
+				field.SectionLabel = section.Label
 			}
 		}
 
 		// Handle password recipe if present
 		if f.Recipe != nil {
+			characterSets := make([]CharacterSet, len(f.Recipe.CharacterSets))
+			for i, cs := range f.Recipe.CharacterSets {
+				characterSets[i] = CharacterSet(cs)
+			}
+
 			field.Recipe = &GeneratorRecipe{
 				Length:        f.Recipe.Length,
-				CharacterSets: f.Recipe.CharacterSets,
+				CharacterSets: characterSets,
 			}
 		}
 
@@ -380,7 +436,7 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 	return modelFields
 }
 
-func fromConnectFiles(files []*connect.File) []ItemFile {
+func fromConnectFiles(files []*connect.File, sectionMap map[string]ItemSection) []ItemFile {
 	result := make([]ItemFile, 0, len(files))
 	for _, f := range files {
 		if f == nil {
@@ -395,10 +451,10 @@ func fromConnectFiles(files []*connect.File) []ItemFile {
 		}
 
 		// Only set Section if it exists
-		if f.Section != nil {
-			itemFile.Section = &ItemSection{
-				ID:    f.Section.ID,
-				Label: f.Section.Label,
+		if f.Section != nil && f.Section.ID != "" {
+			if section, exists := sectionMap[f.Section.ID]; exists {
+				itemFile.SectionID = section.ID
+				itemFile.SectionLabel = section.Label
 			}
 		}
 
@@ -445,24 +501,29 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 		field := &connect.ItemField{
 			ID:      f.ID,
 			Label:   f.Label,
-			Type:    f.Type,
+			Type:    connect.ItemFieldType(f.Type),
 			Value:   f.Value,
-			Purpose: f.Purpose,
+			Purpose: connect.ItemFieldPurpose(f.Purpose),
 		}
 
 		// Associate with section
-		if f.Section.ID != "" {
+		if f.SectionID != "" {
 			field.Section = &connect.ItemSection{
-				ID:    f.Section.ID,
-				Label: f.Section.Label,
+				ID:    f.SectionID,
+				Label: f.SectionLabel,
 			}
 		}
 
 		// Include recipe if present
 		if f.Recipe != nil {
+			characterSets := make([]string, len(f.Recipe.CharacterSets))
+			for i, cs := range f.Recipe.CharacterSets {
+				characterSets[i] = string(cs)
+			}
+
 			field.Recipe = &connect.GeneratorRecipe{
 				Length:        f.Recipe.Length,
-				CharacterSets: f.Recipe.CharacterSets,
+				CharacterSets: characterSets,
 			}
 		}
 
@@ -482,10 +543,10 @@ func toConnectFiles(files []ItemFile) []*connect.File {
 		}
 
 		// Only set Section if it exists
-		if f.Section != nil {
+		if f.SectionID != "" {
 			connectFile.Section = &connect.ItemSection{
-				ID:    f.Section.ID,
-				Label: f.Section.Label,
+				ID:    f.SectionID,
+				Label: f.SectionLabel,
 			}
 		}
 

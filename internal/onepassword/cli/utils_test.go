@@ -5,35 +5,34 @@ import (
 	"testing"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 func TestPasswordField(t *testing.T) {
 	tests := map[string]struct {
-		item          *model.Item
-		expectedField *model.ItemField
+		item          *onepassword.Item
+		expectedField *onepassword.ItemField
 	}{
 		"should return nil if item has no fields": {
-			item:          &model.Item{},
+			item:          &onepassword.Item{},
 			expectedField: nil,
 		},
 		"should return nil if no password field": {
-			item: &model.Item{
-				Fields: []model.ItemField{
+			item: &onepassword.Item{
+				Fields: []*onepassword.ItemField{
 					{Purpose: onepassword.FieldPurposeNotes},
 				},
 			},
 			expectedField: nil,
 		},
 		"should return password field": {
-			item: &model.Item{
-				Fields: []model.ItemField{
+			item: &onepassword.Item{
+				Fields: []*onepassword.ItemField{
 					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
 					{ID: "password", Purpose: onepassword.FieldPurposePassword},
 					{ID: "notes", Purpose: onepassword.FieldPurposeNotes},
 				},
 			},
-			expectedField: &model.ItemField{
+			expectedField: &onepassword.ItemField{
 				ID:      "password",
 				Purpose: onepassword.FieldPurposePassword,
 			},
@@ -53,24 +52,24 @@ func TestPasswordField(t *testing.T) {
 
 func TestPasswordRecipeExtraction(t *testing.T) {
 	tests := map[string]struct {
-		item           *model.Item
+		item           *onepassword.Item
 		expectedString string
 	}{
 		"should return empty string if item has no fields": {
-			item:           &model.Item{},
+			item:           &onepassword.Item{},
 			expectedString: "",
 		},
 		"should return empty string if no password field": {
-			item: &model.Item{
-				Fields: []model.ItemField{
+			item: &onepassword.Item{
+				Fields: []*onepassword.ItemField{
 					{Purpose: onepassword.FieldPurposeNotes},
 				},
 			},
 			expectedString: "",
 		},
 		"should return empty string if no password recipe": {
-			item: &model.Item{
-				Fields: []model.ItemField{
+			item: &onepassword.Item{
+				Fields: []*onepassword.ItemField{
 					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
 					{ID: "password", Purpose: onepassword.FieldPurposePassword},
 				},
@@ -78,10 +77,10 @@ func TestPasswordRecipeExtraction(t *testing.T) {
 			expectedString: "",
 		},
 		"should return recipe string": {
-			item: &model.Item{
-				Fields: []model.ItemField{
+			item: &onepassword.Item{
+				Fields: []*onepassword.ItemField{
 					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
-					{ID: "password", Purpose: onepassword.FieldPurposePassword, Generate: true, Recipe: &model.GeneratorRecipe{
+					{ID: "password", Purpose: onepassword.FieldPurposePassword, Generate: true, Recipe: &onepassword.GeneratorRecipe{
 						Length: 30,
 					}},
 				},
@@ -102,7 +101,7 @@ func TestPasswordRecipeExtraction(t *testing.T) {
 
 func TestPasswordRecipeToString(t *testing.T) {
 	tests := map[string]struct {
-		recipe         *model.GeneratorRecipe
+		recipe         *onepassword.GeneratorRecipe
 		expectedString string
 	}{
 		"should return empty string if recipe is nil": {
@@ -110,29 +109,29 @@ func TestPasswordRecipeToString(t *testing.T) {
 			expectedString: "",
 		},
 		"should return empty string if recipe is default": {
-			recipe:         &model.GeneratorRecipe{},
+			recipe:         &onepassword.GeneratorRecipe{},
 			expectedString: "",
 		},
 		"should contain expected length": {
-			recipe: &model.GeneratorRecipe{
+			recipe: &onepassword.GeneratorRecipe{
 				Length: 30,
 			},
 			expectedString: "30",
 		},
 		"should contain letters charset": {
-			recipe: &model.GeneratorRecipe{
+			recipe: &onepassword.GeneratorRecipe{
 				CharacterSets: []string{"letters"},
 			},
 			expectedString: "letters",
 		},
 		"should contain letters and digits charsets": {
-			recipe: &model.GeneratorRecipe{
+			recipe: &onepassword.GeneratorRecipe{
 				CharacterSets: []string{"letters", "digits"},
 			},
 			expectedString: "letters,digits",
 		},
 		"should contain letters and digits charsets and length": {
-			recipe: &model.GeneratorRecipe{
+			recipe: &onepassword.GeneratorRecipe{
 				Length:        30,
 				CharacterSets: []string{"letters", "digits"},
 			},
