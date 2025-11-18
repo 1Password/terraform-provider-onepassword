@@ -23,7 +23,7 @@ type SDKConfig struct {
 func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error) {
 	vault, err := c.sdkClient.Vaults().GetOverview(ctx, uuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get vault using sdk: %w", err)
 	}
 
 	v := &model.Vault{}
@@ -32,23 +32,18 @@ func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error
 	return v, nil
 }
 
-func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]*model.Vault, error) {
+func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]model.Vault, error) {
 	vaultList, err := c.sdkClient.Vaults().List(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get vaults using sdk: %w", err)
 	}
 
-	var result []*model.Vault
-	for _, vaultOverview := range vaultList {
-		fullVault, err := c.sdkClient.Vaults().GetOverview(ctx, vaultOverview.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		if fullVault.Title == title {
-			vault := &model.Vault{}
-			vault.FromSDKVault(&fullVault)
-			result = append(result, vault)
+	var result []model.Vault
+	for _, vault := range vaultList {
+		if vault.Title == title {
+			var modelVault model.Vault
+			modelVault.FromSDKVault(&vault)
+			result = append(result, modelVault)
 		}
 	}
 
@@ -58,7 +53,7 @@ func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]*model.V
 func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
 	sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, itemUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get item using sdk: %w", err)
 	}
 
 	modelItem := &model.Item{}
@@ -69,7 +64,7 @@ func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*mode
 func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error) {
 	items, err := c.sdkClient.Items().List(ctx, vaultUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get item using sdk: %w", err)
 	}
 
 	var matchedID string
@@ -82,6 +77,10 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 		}
 	}
 
+	if count != 1 {
+		return nil, fmt.Errorf("found %d item(s) in vault %q with title %q", count, vaultUuid, title)
+	}
+
 	return c.GetItem(ctx, matchedID, vaultUuid)
 }
 
@@ -90,7 +89,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item) (*model.Item,
 
 	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create item: %w", err)
+		return nil, fmt.Errorf("failed to create item using sdk: %w", err)
 	}
 
 	modelItem := &model.Item{}
@@ -117,7 +116,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	updatedItem, err := c.sdkClient.Items().Put(ctx, currentItem)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update item using sdk: %w", err)
 	}
 
 	// Convert back to provider model
@@ -129,7 +128,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
 	err := c.sdkClient.Items().Delete(ctx, vaultUuid, item.ID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete item using sdk: %w", err)
 	}
 
 	return nil
@@ -144,7 +143,7 @@ func (c *Client) GetFileContent(ctx context.Context, file *model.ItemFile, itemU
 
 	content, err := c.sdkClient.Items().Files().Read(ctx, vaultUUID, itemUUID, fileAttributes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read file using sdk: %w", err)
 	}
 
 	return content, nil
@@ -154,7 +153,10 @@ func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {
 	var sdkClient *sdk.Client
 	var err error
 
-	integrationName, integrationVersion, _ := strings.Cut(config.ProviderUserAgent, "/")
+	integrationName, integrationVersion, found := strings.Cut(config.ProviderUserAgent, "/")
+	if !found {
+		return nil, fmt.Errorf("invalid ProviderUserAgent format: expected 'name/version', got %q", config.ProviderUserAgent)
+	}
 
 	// Initialize with service account token if provided, otherwise use desktop integration
 	if config.ServiceAccountToken != "" {

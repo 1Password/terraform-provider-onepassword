@@ -16,9 +16,9 @@ type Item struct {
 	Version  int
 	Tags     []string
 	URLs     []ItemURL
-	Sections []*ItemSection
-	Fields   []*ItemField
-	Files    []*ItemFile
+	Sections []ItemSection
+	Fields   []ItemField
+	Files    []ItemFile
 }
 
 type ItemSection struct {
@@ -32,7 +32,7 @@ type ItemField struct {
 	Type     connect.ItemFieldType
 	Value    string
 	Purpose  connect.ItemFieldPurpose
-	Section  *ItemSection
+	Section  ItemSection
 	Recipe   *GeneratorRecipe
 	Generate bool
 }
@@ -63,13 +63,13 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) {
 	i.Files = fromSDKFiles(item)
 
 	// Convert sections and fields
-	sectionMap := make(map[string]*ItemSection)
+	sectionMap := make(map[string]ItemSection)
 	i.Sections = fromSDKSections(item, sectionMap)
 	i.Fields = fromSDKFields(item, sectionMap)
 
 	// Notes are stored top level in an item from the SDK
 	if item.Notes != "" {
-		i.Fields = append(i.Fields, &ItemField{
+		i.Fields = append(i.Fields, ItemField{
 			Type:    connect.FieldTypeString,
 			Purpose: connect.FieldPurposeNotes,
 			Value:   item.Notes,
@@ -105,11 +105,11 @@ func fromSDKURLs(websites []sdk.Website) []ItemURL {
 	return urls
 }
 
-func fromSDKSections(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemSection {
-	var sections []*ItemSection
+func fromSDKSections(item *sdk.Item, sectionMap map[string]ItemSection) []ItemSection {
+	var sections []ItemSection
 	for _, s := range item.Sections {
 		if s.ID != "" {
-			section := &ItemSection{
+			section := ItemSection{
 				ID:    s.ID,
 				Label: s.Title,
 			}
@@ -120,11 +120,11 @@ func fromSDKSections(item *sdk.Item, sectionMap map[string]*ItemSection) []*Item
 	return sections
 }
 
-func fromSDKFields(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemField {
-	fields := make([]*ItemField, 0, len(item.Fields))
+func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemField {
+	fields := make([]ItemField, 0, len(item.Fields))
 
 	for _, f := range item.Fields {
-		field := &ItemField{
+		field := ItemField{
 			ID:    f.ID,
 			Label: f.Title,
 			Type:  connect.ItemFieldType(f.FieldType),
@@ -152,7 +152,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemFi
 		// Add SSH public key as separate field
 		if f.Details != nil && f.FieldType == sdk.ItemFieldTypeSSHKey {
 			if sshKey := f.Details.SSHKey(); sshKey != nil {
-				fields = append(fields, &ItemField{
+				fields = append(fields, ItemField{
 					ID:    "public_key",
 					Label: "public key",
 					Type:  connect.FieldTypeString,
@@ -165,11 +165,11 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]*ItemSection) []*ItemFi
 	return fields
 }
 
-func fromSDKFiles(item *sdk.Item) []*ItemFile {
-	files := make([]*ItemFile, 0, len(item.Files)+1)
+func fromSDKFiles(item *sdk.Item) []ItemFile {
+	files := make([]ItemFile, 0, len(item.Files)+1)
 
 	for _, f := range item.Files {
-		files = append(files, &ItemFile{
+		files = append(files, ItemFile{
 			ID:   f.Attributes.ID,
 			Name: f.Attributes.Name,
 			Size: int(f.Attributes.Size),
@@ -178,7 +178,7 @@ func fromSDKFiles(item *sdk.Item) []*ItemFile {
 
 	// Append the document if it exists
 	if item.Document != nil {
-		files = append(files, &ItemFile{
+		files = append(files, ItemFile{
 			ID:   item.Document.ID,
 			Name: item.Document.Name,
 			Size: int(item.Document.Size),
@@ -188,7 +188,7 @@ func fromSDKFiles(item *sdk.Item) []*ItemFile {
 	return files
 }
 
-func toSDKFields(fields []*ItemField) ([]sdk.ItemField, *string) {
+func toSDKFields(fields []ItemField) ([]sdk.ItemField, *string) {
 	var notes *string
 	sdkFields := make([]sdk.ItemField, 0, len(fields))
 
@@ -203,7 +203,7 @@ func toSDKFields(fields []*ItemField) ([]sdk.ItemField, *string) {
 	return sdkFields, notes
 }
 
-func toSDKField(f *ItemField) sdk.ItemField {
+func toSDKField(f ItemField) sdk.ItemField {
 	fieldID := f.ID
 
 	if f.Generate && f.Recipe != nil {
@@ -222,15 +222,14 @@ func toSDKField(f *ItemField) sdk.ItemField {
 		Value:     f.Value,
 	}
 
-	if f.Section != nil {
-		sectionID := f.Section.ID
-		field.SectionID = &sectionID
+	if f.Section.ID != "" {
+		field.SectionID = &f.Section.ID
 	}
 
 	return field
 }
 
-func toSDKSections(sections []*ItemSection) []sdk.ItemSection {
+func toSDKSections(sections []ItemSection) []sdk.ItemSection {
 	sdkSections := make([]sdk.ItemSection, 0, len(sections))
 	for _, section := range sections {
 		sdkSections = append(sdkSections, sdk.ItemSection{
