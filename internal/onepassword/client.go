@@ -33,7 +33,6 @@ func NewClient(config ClientConfig) (Client, error) {
 	// if config.ServiceAccountToken != "" || config.Account != "" {
 	// 	return cli.NewClient(config.ServiceAccountToken, config.Account, config.OpCLIPath), nil
 	// } else
-
 	if config.ConnectHost != "" && config.ConnectToken != "" {
 		return connect.NewClient(config.ConnectHost, config.ConnectToken, connect.Config{
 			ProviderUserAgent: config.ProviderUserAgent,

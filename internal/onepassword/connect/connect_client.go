@@ -216,10 +216,10 @@ func (w *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUI
 	}
 
 	// Only set Section if it exists
-	if file.Section != nil {
+	if file.SectionID != "" {
 		connectFile.Section = &onepassword.ItemSection{
-			ID:    file.Section.ID,
-			Label: file.Section.Label,
+			ID:    file.SectionID,
+			Label: file.SectionLabel,
 		}
 	}
 
