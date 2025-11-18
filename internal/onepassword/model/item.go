@@ -32,7 +32,7 @@ type ItemField struct {
 	Type     connect.ItemFieldType
 	Value    string
 	Purpose  connect.ItemFieldPurpose
-	Section  ItemSection
+	Section  *ItemSection
 	Recipe   *GeneratorRecipe
 	Generate bool
 }
@@ -60,10 +60,10 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) {
 	i.Category = connect.ItemCategory(item.Category)
 	i.Tags = item.Tags
 	i.URLs = fromSDKURLs(item.Websites)
-	i.Files = fromSDKFiles(item)
 
-	// Convert sections and fields
+	// Convert sections/fields/files
 	sectionMap := make(map[string]ItemSection)
+	i.Files = fromSDKFiles(item, sectionMap)
 	i.Sections = fromSDKSections(item, sectionMap)
 	i.Fields = fromSDKFields(item, sectionMap)
 
@@ -142,7 +142,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 		// Associate field with section if applicable
 		if f.SectionID != nil && *f.SectionID != "" {
 			if section, exists := sectionMap[*f.SectionID]; exists {
-				field.Section = section
+				field.Section = &section
 			}
 		}
 
@@ -165,15 +165,24 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 	return fields
 }
 
-func fromSDKFiles(item *sdk.Item) []ItemFile {
+func fromSDKFiles(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFile {
 	files := make([]ItemFile, 0, len(item.Files)+1)
 
 	for _, f := range item.Files {
-		files = append(files, ItemFile{
+		file := ItemFile{
 			ID:   f.Attributes.ID,
 			Name: f.Attributes.Name,
 			Size: int(f.Attributes.Size),
-		})
+		}
+
+		// Look up section by ID
+		if f.SectionID != "" {
+			if section, exists := sectionMap[f.SectionID]; exists {
+				file.Section = &section
+			}
+		}
+
+		files = append(files, file)
 	}
 
 	// Append the document if it exists
