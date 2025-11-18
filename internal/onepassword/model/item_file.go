@@ -8,7 +8,7 @@ type ItemFile struct {
 	ID      string
 	Name    string
 	Size    int
-	Section ItemSection
+	Section *ItemSection
 	content []byte
 }
 
