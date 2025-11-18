@@ -204,7 +204,8 @@ func fromSDKFiles(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFile 
 		// Look up section by ID
 		if f.SectionID != "" {
 			if section, exists := sectionMap[f.SectionID]; exists {
-				file.Section = &section
+				file.SectionID = section.ID
+				file.SectionLabel = section.Label
 			}
 		}
 
