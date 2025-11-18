@@ -19,7 +19,7 @@ func TestPasswordField(t *testing.T) {
 		},
 		"should return nil if no password field": {
 			item: &model.Item{
-				Fields: []*model.ItemField{
+				Fields: []model.ItemField{
 					{Purpose: onepassword.FieldPurposeNotes},
 				},
 			},
@@ -27,7 +27,7 @@ func TestPasswordField(t *testing.T) {
 		},
 		"should return password field": {
 			item: &model.Item{
-				Fields: []*model.ItemField{
+				Fields: []model.ItemField{
 					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
 					{ID: "password", Purpose: onepassword.FieldPurposePassword},
 					{ID: "notes", Purpose: onepassword.FieldPurposeNotes},
@@ -62,7 +62,7 @@ func TestPasswordRecipeExtraction(t *testing.T) {
 		},
 		"should return empty string if no password field": {
 			item: &model.Item{
-				Fields: []*model.ItemField{
+				Fields: []model.ItemField{
 					{Purpose: onepassword.FieldPurposeNotes},
 				},
 			},
@@ -70,7 +70,7 @@ func TestPasswordRecipeExtraction(t *testing.T) {
 		},
 		"should return empty string if no password recipe": {
 			item: &model.Item{
-				Fields: []*model.ItemField{
+				Fields: []model.ItemField{
 					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
 					{ID: "password", Purpose: onepassword.FieldPurposePassword},
 				},
@@ -79,7 +79,7 @@ func TestPasswordRecipeExtraction(t *testing.T) {
 		},
 		"should return recipe string": {
 			item: &model.Item{
-				Fields: []*model.ItemField{
+				Fields: []model.ItemField{
 					{ID: "username", Purpose: onepassword.FieldPurposeUsername},
 					{ID: "password", Purpose: onepassword.FieldPurposePassword, Generate: true, Recipe: &model.GeneratorRecipe{
 						Length: 30,

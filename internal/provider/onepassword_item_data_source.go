@@ -322,7 +322,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 
 		for _, f := range item.Fields {
-			if f.Section != nil && f.Section.ID == s.ID {
+			if f.Section.ID == s.ID {
 				section.Field = append(section.Field, OnePasswordItemFieldModel{
 					ID:      types.StringValue(f.ID),
 					Label:   types.StringValue(f.Label),

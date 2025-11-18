@@ -53,9 +53,9 @@ func parseCliError(stderr []byte) error {
 }
 
 func passwordField(item *model.Item) *model.ItemField {
-	for _, f := range item.Fields {
+	for i, f := range item.Fields {
 		if f.Purpose == onepassword.FieldPurposePassword {
-			return f
+			return &item.Fields[i]
 		}
 	}
 	return nil
