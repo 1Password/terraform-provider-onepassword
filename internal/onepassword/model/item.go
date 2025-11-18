@@ -4,15 +4,44 @@ import (
 	"context"
 	"fmt"
 
-	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
+)
+
+type CharacterSet string
+type ItemCategory string
+type ItemFieldPurpose string
+type ItemFieldType string
+
+const (
+	CharacterSetDigits  CharacterSet = "DIGITS"
+	CharacterSetSymbols CharacterSet = "SYMBOLS"
+
+	Login      ItemCategory = "LOGIN"
+	Password   ItemCategory = "PASSWORD"
+	SecureNote ItemCategory = "SECURE_NOTE"
+	Document   ItemCategory = "DOCUMENT"
+	SSHKey     ItemCategory = "SSH_KEY"
+	Database   ItemCategory = "DATABASE"
+
+	FieldPurposeUsername ItemFieldPurpose = "USERNAME"
+	FieldPurposePassword ItemFieldPurpose = "PASSWORD"
+	FieldPurposeNotes    ItemFieldPurpose = "NOTES"
+
+	FieldTypeConcealed ItemFieldType = "CONCEALED"
+	FieldTypeDate      ItemFieldType = "DATE"
+	FieldTypeEmail     ItemFieldType = "EMAIL"
+	FieldTypeMenu      ItemFieldType = "MENU"
+	FieldTypeMonthYear ItemFieldType = "MONTH_YEAR"
+	FieldTypeOTP       ItemFieldType = "OTP"
+	FieldTypeString    ItemFieldType = "STRING"
+	FieldTypeURL       ItemFieldType = "URL"
 )
 
 type Item struct {
 	ID       string
 	Title    string
 	VaultID  string
-	Category connect.ItemCategory
+	Category ItemCategory
 	Version  int
 	Tags     []string
 	URLs     []ItemURL
@@ -27,19 +56,20 @@ type ItemSection struct {
 }
 
 type ItemField struct {
-	ID       string
-	Label    string
-	Type     connect.ItemFieldType
-	Value    string
-	Purpose  connect.ItemFieldPurpose
-	Section  *ItemSection
-	Recipe   *GeneratorRecipe
-	Generate bool
+	ID           string
+	Label        string
+	Type         ItemFieldType
+	Value        string
+	Purpose      ItemFieldPurpose
+	SectionID    string
+	SectionLabel string
+	Recipe       *GeneratorRecipe
+	Generate     bool
 }
 
 type GeneratorRecipe struct {
 	Length        int
-	CharacterSets []string
+	CharacterSets []CharacterSet
 }
 
 type ItemURL struct {
@@ -49,32 +79,33 @@ type ItemURL struct {
 }
 
 // FromSDKItemToModel creates a new Item from an SDK item
-func (i *Item) FromSDKItemToModel(item *sdk.Item) {
+func (i *Item) FromSDKItemToModel(item *sdk.Item) error {
 	if item == nil {
-		return
+		return fmt.Errorf("cannot convert nil SDK item to model")
 	}
-
 	i.ID = item.ID
 	i.Title = item.Title
 	i.VaultID = item.VaultID
-	i.Category = connect.ItemCategory(item.Category)
+	i.Category = ItemCategory(item.Category)
 	i.Tags = item.Tags
 	i.URLs = fromSDKURLs(item.Websites)
 
 	// Convert sections/fields/files
-	sectionMap := make(map[string]ItemSection)
+	sectionMap := buildSectionMap(item)
+	i.Sections = fromSDKSections(sectionMap)
 	i.Files = fromSDKFiles(item, sectionMap)
-	i.Sections = fromSDKSections(item, sectionMap)
 	i.Fields = fromSDKFields(item, sectionMap)
 
 	// Notes are stored top level in an item from the SDK
 	if item.Notes != "" {
 		i.Fields = append(i.Fields, ItemField{
-			Type:    connect.FieldTypeString,
-			Purpose: connect.FieldPurposeNotes,
+			Type:    FieldTypeString,
+			Purpose: FieldPurposeNotes,
 			Value:   item.Notes,
 		})
 	}
+
+	return nil
 }
 
 // FromModelItemToSDKCreateParams creates an SDK item create params from an Item
@@ -105,17 +136,10 @@ func fromSDKURLs(websites []sdk.Website) []ItemURL {
 	return urls
 }
 
-func fromSDKSections(item *sdk.Item, sectionMap map[string]ItemSection) []ItemSection {
-	var sections []ItemSection
-	for _, s := range item.Sections {
-		if s.ID != "" {
-			section := ItemSection{
-				ID:    s.ID,
-				Label: s.Title,
-			}
-			sections = append(sections, section)
-			sectionMap[s.ID] = section
-		}
+func fromSDKSections(sectionMap map[string]ItemSection) []ItemSection {
+	sections := make([]ItemSection, 0, len(sectionMap))
+	for _, section := range sectionMap {
+		sections = append(sections, section)
 	}
 	return sections
 }
@@ -127,22 +151,23 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 		field := ItemField{
 			ID:    f.ID,
 			Label: f.Title,
-			Type:  connect.ItemFieldType(f.FieldType),
+			Type:  ItemFieldType(f.FieldType),
 			Value: f.Value,
 		}
 
 		// Set purpose based on field ID
 		switch f.ID {
 		case "username":
-			field.Purpose = connect.FieldPurposeUsername
+			field.Purpose = FieldPurposeUsername
 		case "password":
-			field.Purpose = connect.FieldPurposePassword
+			field.Purpose = FieldPurposePassword
 		}
 
 		// Associate field with section if applicable
 		if f.SectionID != nil && *f.SectionID != "" {
 			if section, exists := sectionMap[*f.SectionID]; exists {
-				field.Section = &section
+				field.SectionID = section.ID
+				field.SectionLabel = section.Label
 			}
 		}
 
@@ -155,7 +180,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 				fields = append(fields, ItemField{
 					ID:    "public_key",
 					Label: "public key",
-					Type:  connect.FieldTypeString,
+					Type:  FieldTypeString,
 					Value: sshKey.PublicKey,
 				})
 			}
@@ -166,6 +191,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 }
 
 func fromSDKFiles(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFile {
+	// +1 to account for the document that may be appended at the end
 	files := make([]ItemFile, 0, len(item.Files)+1)
 
 	for _, f := range item.Files {
@@ -202,7 +228,7 @@ func toSDKFields(fields []ItemField) ([]sdk.ItemField, *string) {
 	sdkFields := make([]sdk.ItemField, 0, len(fields))
 
 	for _, field := range fields {
-		if field.Purpose == connect.FieldPurposeNotes {
+		if field.Purpose == FieldPurposeNotes {
 			notes = &field.Value
 			continue
 		}
@@ -231,8 +257,8 @@ func toSDKField(f ItemField) sdk.ItemField {
 		Value:     f.Value,
 	}
 
-	if f.Section.ID != "" {
-		field.SectionID = &f.Section.ID
+	if f.SectionID != "" {
+		field.SectionID = &f.SectionID
 	}
 
 	return field
@@ -268,9 +294,9 @@ func generatePassword(recipe *GeneratorRecipe) (string, error) {
 
 	for _, characterSet := range recipe.CharacterSets {
 		switch characterSet {
-		case "DIGITS":
+		case CharacterSetDigits:
 			includeDigits = true
-		case "SYMBOLS":
+		case CharacterSetSymbols:
 			includeSymbols = true
 		}
 	}
@@ -288,4 +314,17 @@ func generatePassword(recipe *GeneratorRecipe) (string, error) {
 	}
 
 	return passwordResponse.Password, nil
+}
+
+func buildSectionMap(item *sdk.Item) map[string]ItemSection {
+	sectionMap := make(map[string]ItemSection, len(item.Sections))
+	for _, s := range item.Sections {
+		if s.ID != "" {
+			sectionMap[s.ID] = ItemSection{
+				ID:    s.ID,
+				Label: s.Title,
+			}
+		}
+	}
+	return sectionMap
 }
