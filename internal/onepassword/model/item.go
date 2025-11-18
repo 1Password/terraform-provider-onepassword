@@ -39,44 +39,44 @@ const (
 )
 
 type Item struct {
-	ID       string        `json:"id"`
-	Title    string        `json:"title"`
-	VaultID  string        `json:"vaultId"`
-	Category ItemCategory  `json:"category,omitempty"`
-	Version  int           `json:"version,omitempty"`
-	Tags     []string      `json:"tags,omitempty"`
-	URLs     []ItemURL     `json:"urls,omitempty"`
-	Sections []ItemSection `json:"sections,omitempty"`
-	Fields   []ItemField   `json:"fields,omitempty"`
-	Files    []ItemFile    `json:"files,omitempty"`
+	ID       string
+	Title    string
+	VaultID  string
+	Category ItemCategory
+	Version  int
+	Tags     []string
+	URLs     []ItemURL
+	Sections []ItemSection
+	Fields   []ItemField
+	Files    []ItemFile
 }
 
 type ItemSection struct {
-	ID    string `json:"id,omitempty"`
-	Label string `json:"label,omitempty"`
+	ID    string
+	Label string
 }
 
 type ItemField struct {
-	ID           string           `json:"id"`
-	Label        string           `json:"label,omitempty"`
-	Type         ItemFieldType    `json:"type"`
-	Value        string           `json:"value,omitempty"`
-	Purpose      ItemFieldPurpose `json:"purpose,omitempty"`
+	ID           string
+	Label        string
+	Type         ItemFieldType
+	Value        string
+	Purpose      ItemFieldPurpose
 	SectionID    string
-	SectionLabel string           `json:"section,omitempty"`
-	Recipe       *GeneratorRecipe `json:"recipe,omitempty"`
-	Generate     bool             `json:"generate,omitempty"`
+	SectionLabel string
+	Recipe       *GeneratorRecipe
+	Generate     bool
 }
 
 type GeneratorRecipe struct {
-	Length        int            `json:"length,omitempty"`
-	CharacterSets []CharacterSet `json:"characterSets,omitempty"`
+	Length        int
+	CharacterSets []CharacterSet
 }
 
 type ItemURL struct {
-	URL     string `json:"href"`
-	Label   string `json:"label,omitempty"`
-	Primary bool   `json:"primary,omitempty"`
+	URL     string
+	Label   string
+	Primary bool
 }
 
 // FromSDKItemToModel creates a new Item from an SDK item
