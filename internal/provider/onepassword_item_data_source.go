@@ -337,6 +337,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			if f.Section != nil && f.Section.ID == s.ID {
 				content, err := f.Content()
 				if err != nil {
+					fmt.Printf("JILL VAULT ID 1: %s", item.VaultID)
 					// content has not yet been loaded, fetch it
 					content, err = d.client.GetFileContent(ctx, f, item.ID, item.VaultID)
 				}
@@ -401,6 +402,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		if f.Section == nil {
 			content, err := f.Content()
 			if err != nil {
+				fmt.Printf("JILL VAULT ID 2: %s", item.VaultID)
 				// content has not yet been loaded, fetch it
 				content, err = d.client.GetFileContent(ctx, f, item.ID, item.VaultID)
 			}

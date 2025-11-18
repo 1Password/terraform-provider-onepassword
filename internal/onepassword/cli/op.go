@@ -107,6 +107,11 @@ func (op *OP) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*model.I
 	if err != nil {
 		return nil, err
 	}
+
+	if res.VaultID == "" {
+		res.VaultID = vaultUuid
+	}
+
 	return res, nil
 }
 
@@ -148,6 +153,11 @@ func (op *OP) create(ctx context.Context, item *model.Item, vaultUuid string) (*
 	if err != nil {
 		return nil, err
 	}
+
+	if res.VaultID == "" {
+		res.VaultID = vaultUuid
+	}
+
 	return res, nil
 }
 
@@ -183,6 +193,10 @@ func (op *OP) update(ctx context.Context, item *model.Item, vaultUuid string) (*
 	if err != nil {
 		return nil, err
 	}
+
+	if res.VaultID == "" {
+		res.VaultID = vaultUuid
+	}
 	return res, nil
 }
 
@@ -214,6 +228,7 @@ func (op *OP) GetFileContent(ctx context.Context, file *model.ItemFile, itemUuid
 	if versionErr != nil {
 		return nil, versionErr
 	}
+	fmt.Printf("JILL VAULT: %s", vaultUuid)
 	ref := fmt.Sprintf("op://%s/%s/%s", vaultUuid, itemUuid, file.ID)
 	tflog.Debug(ctx, "reading file content from: "+ref)
 	res, err := op.execRaw(ctx, nil, p("read"), p(ref))

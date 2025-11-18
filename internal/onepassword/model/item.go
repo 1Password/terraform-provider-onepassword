@@ -9,43 +9,43 @@ import (
 )
 
 type Item struct {
-	ID       string
-	Title    string
-	VaultID  string
-	Category connect.ItemCategory
-	Version  int
-	Tags     []string
-	URLs     []ItemURL
-	Sections []*ItemSection
-	Fields   []*ItemField
-	Files    []*ItemFile
+	ID       string               `json:"id"`
+	Title    string               `json:"title"`
+	VaultID  string               `json:"vaultId"`
+	Category connect.ItemCategory `json:"category,omitempty"`
+	Version  int                  `json:"version,omitempty"`
+	Tags     []string             `json:"tags,omitempty"`
+	URLs     []ItemURL            `json:"urls,omitempty"`
+	Sections []*ItemSection       `json:"sections,omitempty"`
+	Fields   []*ItemField         `json:"fields,omitempty"`
+	Files    []*ItemFile          `json:"files,omitempty"`
 }
 
 type ItemSection struct {
-	ID    string
-	Label string
+	ID    string `json:"id,omitempty"`
+	Label string `json:"label,omitempty"`
 }
 
 type ItemField struct {
-	ID       string
-	Label    string
-	Type     connect.ItemFieldType
-	Value    string
-	Purpose  connect.ItemFieldPurpose
-	Section  *ItemSection
-	Recipe   *GeneratorRecipe
-	Generate bool
+	ID       string                   `json:"id"`
+	Label    string                   `json:"label,omitempty"`
+	Type     connect.ItemFieldType    `json:"type"`
+	Value    string                   `json:"value,omitempty"`
+	Purpose  connect.ItemFieldPurpose `json:"purpose,omitempty"`
+	Section  *ItemSection             `json:"section,omitempty"`
+	Recipe   *GeneratorRecipe         `json:"recipe,omitempty"`
+	Generate bool                     `json:"generate,omitempty"`
 }
 
 type GeneratorRecipe struct {
-	Length        int
-	CharacterSets []string
+	Length        int      `json:"length,omitempty"`
+	CharacterSets []string `json:"characterSets,omitempty"`
 }
 
 type ItemURL struct {
-	URL     string
-	Label   string
-	Primary bool
+	URL     string `json:"href"`
+	Label   string `json:"label,omitempty"`
+	Primary bool   `json:"primary,omitempty"`
 }
 
 // FromSDKItemToModel creates a new Item from an SDK item
