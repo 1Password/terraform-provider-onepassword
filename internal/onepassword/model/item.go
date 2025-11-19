@@ -126,9 +126,9 @@ func (i *Item) FromModelItemToSDKCreateParams() sdk.ItemCreateParams {
 }
 
 // FromConnectItemToModel creates a new Item from a Connect SDK item
-func (i *Item) FromConnectItemToModel(item *connect.Item) {
+func (i *Item) FromConnectItemToModel(item *connect.Item) error {
 	if item == nil {
-		return
+		return fmt.Errorf("cannot convert nil Connect item to model")
 	}
 
 	i.ID = item.ID
@@ -144,6 +144,8 @@ func (i *Item) FromConnectItemToModel(item *connect.Item) {
 	i.Sections = fromConnectSections(item.Sections, sectionMap)
 	i.Files = fromConnectFiles(item.Files, sectionMap)
 	i.Fields = fromConnectFields(item.Fields, sectionMap)
+
+	return nil
 }
 
 // FromModelItemToConnect creates a Connect SDK item from a model Item

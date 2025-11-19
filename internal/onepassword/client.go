@@ -11,7 +11,7 @@ import (
 // Client is a subset of connect.Client with context added.
 type Client interface {
 	GetVault(ctx context.Context, uuid string) (*model.Vault, error)
-	GetVaultsByTitle(ctx context.Context, title string) ([]*model.Vault, error)
+	GetVaultsByTitle(ctx context.Context, title string) ([]model.Vault, error)
 	GetItem(ctx context.Context, itemUuid, vaultUuid string) (*model.Item, error)
 	GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error)
 	CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error)
@@ -30,9 +30,9 @@ type ClientConfig struct {
 }
 
 func NewClient(config ClientConfig) (Client, error) {
-	// if config.ServiceAccountToken != "" || config.Account != "" {
-	// 	return cli.NewClient(config.ServiceAccountToken, config.Account, config.OpCLIPath), nil
-	// } else
+
+	// TODO: Add support for SDK to replace CLI
+
 	if config.ConnectHost != "" && config.ConnectToken != "" {
 		return connect.NewClient(config.ConnectHost, config.ConnectToken, connect.Config{
 			ProviderUserAgent: config.ProviderUserAgent,
