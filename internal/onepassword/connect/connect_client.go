@@ -28,7 +28,7 @@ type Client struct {
 func (c *Client) GetVault(_ context.Context, uuid string) (*model.Vault, error) {
 	connectVault, err := c.connectClient.GetVault(uuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get vault using connect: %w", err)
 	}
 
 	modelVault := &model.Vault{}
@@ -36,15 +36,15 @@ func (c *Client) GetVault(_ context.Context, uuid string) (*model.Vault, error) 
 	return modelVault, nil
 }
 
-func (c *Client) GetVaultsByTitle(_ context.Context, title string) ([]*model.Vault, error) {
+func (c *Client) GetVaultsByTitle(_ context.Context, title string) ([]model.Vault, error) {
 	connectVaults, err := c.connectClient.GetVaultsByTitle(title)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get vault using connect: %w", err)
 	}
 
-	modelVaults := make([]*model.Vault, len(connectVaults))
+	modelVaults := make([]model.Vault, len(connectVaults))
 	for i, connectVault := range connectVaults {
-		modelVault := &model.Vault{}
+		modelVault := model.Vault{}
 		modelVault.FromConnectVault(&connectVault)
 		modelVaults[i] = modelVault
 	}
@@ -67,6 +67,10 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 				time.Sleep(time.Duration(attempt*100) * time.Millisecond)
 			}
 			connectItem, err = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get item using connect: %w", err)
+			}
+
 			if connectItem != nil {
 				// Convert to model Item
 				modelItem := &model.Item{}
@@ -84,7 +88,7 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 	// Not a UUID, use GetItemByTitle
 	connectItem, err = c.connectClient.GetItemByTitle(itemUuid, vaultUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get item using connect: %w", err)
 	}
 
 	// Convert to model Item
@@ -96,7 +100,7 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid string) (*model.Item, error) {
 	connectItem, err := c.connectClient.GetItemByTitle(title, vaultUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get item using connect: %w", err)
 	}
 
 	// Convert to model Item
@@ -111,7 +115,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	createdItem, err := c.connectClient.CreateItem(connectItem, vaultUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create item using connect: %w", err)
 	}
 
 	// Wait for Connect to propagate the create to the local SQLite database.
@@ -147,7 +151,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	updatedItem, err := c.connectClient.UpdateItem(connectItem, vaultUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update item using connect: %w", err)
 	}
 
 	expectedVersion := updatedItem.Version + 1 // UpdateItem doesn't return increased item version. Need to increase it manually.
@@ -184,7 +188,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	err := c.connectClient.DeleteItem(connectItem, vaultUuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete item using connect: %w", err)
 	}
 
 	// Wait for Connect to propagate the delete to the local SQLite database.

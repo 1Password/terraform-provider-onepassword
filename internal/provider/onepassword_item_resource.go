@@ -513,7 +513,7 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 			existingFields = section.Field
 		}
 		for _, f := range item.Fields {
-			if f.SectionID == s.ID {
+			if f.SectionID != "" && f.SectionID == s.ID {
 				dataField := OnePasswordItemResourceFieldModel{}
 				posField := -1
 				newField := true
