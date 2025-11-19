@@ -84,8 +84,12 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 	return c.GetItem(ctx, matchedID, vaultUuid)
 }
 
-func (c *Client) CreateItem(ctx context.Context, item *model.Item) (*model.Item, error) {
+func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	params := item.FromModelItemToSDKCreateParams()
+
+	if params.VaultID != vaultUuid {
+		return nil, fmt.Errorf("vault UUID mismatch: item has %s but %s was provided", params.VaultID, vaultUuid)
+	}
 
 	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
 	if err != nil {
