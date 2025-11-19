@@ -20,7 +20,7 @@ test/coverage:	## Runs integration and unit tests with coverage report
 testacc: ## Run acceptance tests
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
-test-e2e: test-e2e-service-account test-e2e-connect ## Run all e2e tests (service account and Connect)
+test-e2e: test-e2e-connect test-e2e-service-account  ## Run all e2e tests (service account and Connect)
 
 test-e2e-service-account: ## Run e2e tests using service account (requires OP_SERVICE_ACCOUNT_TOKEN)
 	@test -n "$(OP_SERVICE_ACCOUNT_TOKEN)" || (echo "[ERROR] OP_SERVICE_ACCOUNT_TOKEN environment variable is not set."; exit 1)
