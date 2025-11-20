@@ -1,6 +1,7 @@
 # Creating Login, Password, and Database 1Password Items
 
 This example demonstrates creating the currently supported types of 1Password Items (Logins, Passwords, and Databases).
+
 ## Prerequisites
 
 The 1Password Terraform provider supports using both [1Password Connect Server](https://developer.1password.com/docs/secrets-automation/#1password-connect-server)
@@ -17,6 +18,7 @@ Retry mechanism is implemented when using the provider with 1Password CLI. The r
 Note that each retry fast forwards to the [service account rate limit](https://developer.1password.com/docs/service-accounts/rate-limits/) if use with service account.
 
 It's recommended to limit the number of parallel resource operations. It can be done by using `-parallelism=n` flag when running `terraform apply`, where `n` is the number of parallel resource operations (the default is `10`).
+
 ```
 terraform apply `-parallelism=n`
 ```
@@ -24,25 +26,30 @@ terraform apply `-parallelism=n`
 ### Authenticate CLI with service account
 
 To authenticate CLI with service account:
+
 1. [Create a service account](https://developer.1password.com/docs/service-accounts/get-started#create-a-service-account)
 2. Set `OP_SERVICE_ACCOUNT_TOKEN` environment variable or `service_account_token` in the provider configuration.
 
 ### Authenticate the CLI with user account using biometric unlock
 
 To authenticate the CLI with user account using biometric unlock:
+
 1. [Turn on the app integration](https://developer.1password.com/docs/cli/app-integration/#step-1-turn-on-the-app-integration)
 2. In the terminal run `op account ls` to find sign-in address or account ID. It will print similar output in the console:
+
 ```
 URL                        EMAIL                                         USER ID
 acme.dev.com               test.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
 acme.prod.com              prod.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
 ```
+
 3. Set `OP_ACCOUNT` environment variable or `account` in the provider configuration with the `URL` or `USER ID` value from the previous step.
 4. When the biometric unlock popup appears while running terraform command, [authenticate it using fingerprint or password](https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in).
 
 ## Use with 1Password Connect
 
 To use the provider with 1Password Connect you need to
+
 1. [Deploy your Connect server](https://developer.1password.com/docs/connect/get-started#deployment)
 2. Set `OP_CONNECT_HOST` environment variable or `url` in the provider configuration.
 3. Set `OP_CONNECT_TOKEN` environment variable or `token` in the provider configuration.
@@ -127,7 +134,6 @@ Terraform will perform the following actions:
       + password_recipe {
           + digits  = true
           + length  = 40
-          + letters = true
           + symbols = false
         }
     }
@@ -201,7 +207,6 @@ Terraform will perform the following actions:
       - password_recipe {
           - digits  = true -> null
           - length  = 40 -> null
-          - letters = true -> null
           - symbols = false -> null
         }
     }
