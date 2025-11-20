@@ -556,8 +556,8 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 					dataField.Recipe = []PasswordRecipeModel{{
 						Length:  types.Int64Value(int64(f.Recipe.Length)),
 						Letters: types.BoolValue(charSets["letters"]),
-						Digits:  types.BoolValue(charSets["digits"]),
-						Symbols: types.BoolValue(charSets["symbols"]),
+						Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
+						Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
 					}}
 				}
 
@@ -851,10 +851,10 @@ func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorR
 		parsed.CharacterSets = append(parsed.CharacterSets, "LETTERS")
 	}
 	if recipe.Digits.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, "DIGITS")
+		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetDigits)
 	}
 	if recipe.Symbols.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, "SYMBOLS")
+		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetSymbols)
 	}
 
 	return parsed, nil

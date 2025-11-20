@@ -491,21 +491,13 @@ func toConnectSections(sections []ItemSection) []*connect.ItemSection {
 func toConnectFields(fields []ItemField) []*connect.ItemField {
 	connectFields := make([]*connect.ItemField, 0, len(fields))
 	for _, f := range fields {
-		if f.Generate && f.Recipe != nil {
-			password, err := generatePassword(f.Recipe)
-			if err == nil {
-				f.Value = password
-			} else {
-				fmt.Printf("Error generating password: %v\n", err)
-			}
-		}
-
 		field := &connect.ItemField{
-			ID:      f.ID,
-			Label:   f.Label,
-			Type:    connect.ItemFieldType(f.Type),
-			Value:   f.Value,
-			Purpose: connect.ItemFieldPurpose(f.Purpose),
+			ID:       f.ID,
+			Label:    f.Label,
+			Value:    f.Value,
+			Generate: f.Generate,
+			Type:     connect.ItemFieldType(f.Type),
+			Purpose:  connect.ItemFieldPurpose(f.Purpose),
 		}
 
 		// Associate with section
@@ -530,6 +522,7 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 		}
 
 		connectFields = append(connectFields, field)
+
 	}
 	return connectFields
 }
