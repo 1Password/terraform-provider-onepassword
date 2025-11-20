@@ -67,19 +67,20 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 				time.Sleep(time.Duration(attempt*100) * time.Millisecond)
 			}
 			connectItem, err = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get item using connect: %w", err)
-			}
 
-			if connectItem != nil {
+			if err == nil && connectItem != nil {
 				// Convert to model Item
 				modelItem := &model.Item{}
-				modelItem.FromConnectItemToModel(connectItem)
+				err := modelItem.FromConnectItemToModel(connectItem)
+				if err != nil {
+					return nil, err
+				}
+
 				return modelItem, nil
 			}
 			// If error is not 404, don't retry
 			if err != nil && !strings.Contains(err.Error(), "404") && !strings.Contains(err.Error(), "not found") {
-				return nil, err
+				return nil, fmt.Errorf("failed to get item using connect: %w", err)
 			}
 		}
 		return nil, err
@@ -93,7 +94,11 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 
 	// Convert to model Item
 	modelItem := &model.Item{}
-	modelItem.FromConnectItemToModel(connectItem)
+	err = modelItem.FromConnectItemToModel(connectItem)
+	if err != nil {
+		return nil, err
+	}
+
 	return modelItem, nil
 }
 
@@ -105,7 +110,11 @@ func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid strin
 
 	// Convert to model Item
 	modelItem := &model.Item{}
-	modelItem.FromConnectItemToModel(connectItem)
+	err = modelItem.FromConnectItemToModel(connectItem)
+	if err != nil {
+		return nil, err
+	}
+
 	return modelItem, nil
 }
 
