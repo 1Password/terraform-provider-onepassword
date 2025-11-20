@@ -11,6 +11,7 @@ type ItemFile struct {
 	SectionID    string
 	SectionLabel string
 	content      []byte
+	ContentPath  string
 }
 
 func (f *ItemFile) Content() ([]byte, error) {

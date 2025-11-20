@@ -28,7 +28,9 @@ import (
 	"github.com/hashicorp/go-uuid"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
+
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
@@ -335,7 +337,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	createdItem, err := r.client.CreateItem(ctx, item, item.Vault.ID)
+	createdItem, err := r.client.CreateItem(ctx, item, item.VaultID)
 	if err != nil {
 		resp.Diagnostics.AddError("1Password Item create error", fmt.Sprintf("Error creating 1Password item, got error %s", err))
 		return
@@ -456,10 +458,10 @@ func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
 	return elements[1], elements[3]
 }
 
-func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
+func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
 	data.ID = setStringValue(itemTerraformID(item))
 	data.UUID = setStringValue(item.ID)
-	data.Vault = setStringValue(item.Vault.ID)
+	data.Vault = setStringValue(item.VaultID)
 	data.Title = setStringValue(item.Title)
 
 	for _, u := range item.URLs {
@@ -512,7 +514,7 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 			existingFields = section.Field
 		}
 		for _, f := range item.Fields {
-			if f.Section != nil && f.Section.ID == s.ID {
+			if f.SectionID != "" && f.SectionID == s.ID {
 				dataField := OnePasswordItemResourceFieldModel{}
 				posField := -1
 				newField := true
@@ -534,7 +536,7 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 				dataField.Type = setStringValue(string(f.Type))
 				dataField.Value = setStringValue(f.Value)
 
-				if f.Type == op.FieldTypeDate {
+				if f.Type == model.FieldTypeDate {
 					date, err := util.SecondsToYYYYMMDD(f.Value)
 					if err != nil {
 						return diag.Diagnostics{diag.NewErrorDiagnostic(
@@ -548,14 +550,14 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 				if f.Recipe != nil {
 					charSets := map[string]bool{}
 					for _, s := range f.Recipe.CharacterSets {
-						charSets[strings.ToLower(s)] = true
+						charSets[strings.ToLower(string(s))] = true
 					}
 
 					dataField.Recipe = []PasswordRecipeModel{{
 						Length:  types.Int64Value(int64(f.Recipe.Length)),
 						Letters: types.BoolValue(charSets["letters"]),
-						Digits:  types.BoolValue(charSets["digits"]),
-						Symbols: types.BoolValue(charSets["symbols"]),
+						Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
+						Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
 					}}
 				}
 
@@ -579,14 +581,14 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 
 	for _, f := range item.Fields {
 		switch f.Purpose {
-		case op.FieldPurposeUsername:
+		case model.FieldPurposeUsername:
 			data.Username = setStringValue(f.Value)
-		case op.FieldPurposePassword:
+		case model.FieldPurposePassword:
 			data.Password = setStringValue(f.Value)
-		case op.FieldPurposeNotes:
+		case model.FieldPurposeNotes:
 			data.NoteValue = setStringValue(f.Value)
 		default:
-			if f.Section == nil {
+			if f.SectionID == "" {
 				switch f.Label {
 				case "username":
 					data.Username = setStringValue(f.Value)
@@ -605,21 +607,19 @@ func itemToData(ctx context.Context, item *op.Item, data *OnePasswordItemResourc
 		}
 	}
 
-	if item.Category == op.SecureNote && data.Password.IsUnknown() {
+	if item.Category == model.SecureNote && data.Password.IsUnknown() {
 		data.Password = types.StringNull()
 	}
 
 	return nil
 }
 
-func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Item, diag.Diagnostics) {
-	item := &op.Item{
-		ID: data.UUID.ValueString(),
-		Vault: op.ItemVault{
-			ID: data.Vault.ValueString(),
-		},
-		Title: data.Title.ValueString(),
-		URLs: []op.ItemURL{
+func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.Item, diag.Diagnostics) {
+	item := &model.Item{
+		ID:      data.UUID.ValueString(),
+		VaultID: data.Vault.ValueString(),
+		Title:   data.Title.ValueString(),
+		URLs: []model.ItemURL{
 			{
 				Primary: true,
 				URL:     data.URL.ValueString(),
@@ -645,20 +645,20 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 
 	switch data.Category.ValueString() {
 	case "login":
-		item.Category = op.Login
-		item.Fields = []*op.ItemField{
+		item.Category = model.Login
+		item.Fields = []model.ItemField{
 			{
 				ID:      "username",
 				Label:   "username",
-				Purpose: op.FieldPurposeUsername,
-				Type:    op.FieldTypeString,
+				Purpose: model.FieldPurposeUsername,
+				Type:    model.FieldTypeString,
 				Value:   data.Username.ValueString(),
 			},
 			{
 				ID:       "password",
 				Label:    "password",
-				Purpose:  op.FieldPurposePassword,
-				Type:     op.FieldTypeConcealed,
+				Purpose:  model.FieldPurposePassword,
+				Type:     model.FieldTypeConcealed,
 				Value:    password,
 				Generate: password == "",
 				Recipe:   recipe,
@@ -666,19 +666,19 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:      "notesPlain",
 				Label:   "notesPlain",
-				Type:    op.FieldTypeString,
-				Purpose: op.FieldPurposeNotes,
+				Type:    model.FieldTypeString,
+				Purpose: model.FieldPurposeNotes,
 				Value:   data.NoteValue.ValueString(),
 			},
 		}
 	case "password":
-		item.Category = op.Password
-		item.Fields = []*op.ItemField{
+		item.Category = model.Password
+		item.Fields = []model.ItemField{
 			{
 				ID:       "password",
 				Label:    "password",
-				Purpose:  op.FieldPurposePassword,
-				Type:     op.FieldTypeConcealed,
+				Purpose:  model.FieldPurposePassword,
+				Type:     model.FieldTypeConcealed,
 				Value:    password,
 				Generate: password == "",
 				Recipe:   recipe,
@@ -686,24 +686,24 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:      "notesPlain",
 				Label:   "notesPlain",
-				Type:    op.FieldTypeString,
-				Purpose: op.FieldPurposeNotes,
+				Type:    model.FieldTypeString,
+				Purpose: model.FieldPurposeNotes,
 				Value:   data.NoteValue.ValueString(),
 			},
 		}
 	case "database":
-		item.Category = op.Database
-		item.Fields = []*op.ItemField{
+		item.Category = model.Database
+		item.Fields = []model.ItemField{
 			{
 				ID:    "username",
 				Label: "username",
-				Type:  op.FieldTypeString,
+				Type:  model.FieldTypeString,
 				Value: data.Username.ValueString(),
 			},
 			{
 				ID:       "password",
 				Label:    "password",
-				Type:     op.FieldTypeConcealed,
+				Type:     model.FieldTypeConcealed,
 				Value:    password,
 				Generate: password == "",
 				Recipe:   recipe,
@@ -711,43 +711,43 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			{
 				ID:    "hostname",
 				Label: "hostname",
-				Type:  op.FieldTypeString,
+				Type:  model.FieldTypeString,
 				Value: data.Hostname.ValueString(),
 			},
 			{
 				ID:    "database",
 				Label: "database",
-				Type:  op.FieldTypeString,
+				Type:  model.FieldTypeString,
 				Value: data.Database.ValueString(),
 			},
 			{
 				ID:    "port",
 				Label: "port",
-				Type:  op.FieldTypeString,
+				Type:  model.FieldTypeString,
 				Value: data.Port.ValueString(),
 			},
 			{
 				ID:    "database_type",
 				Label: "type",
-				Type:  op.FieldTypeMenu,
+				Type:  model.FieldTypeString,
 				Value: data.Type.ValueString(),
 			},
 			{
 				ID:      "notesPlain",
 				Label:   "notesPlain",
-				Type:    op.FieldTypeString,
-				Purpose: op.FieldPurposeNotes,
+				Type:    model.FieldTypeString,
+				Purpose: model.FieldPurposeNotes,
 				Value:   data.NoteValue.ValueString(),
 			},
 		}
 	case "secure_note":
-		item.Category = op.SecureNote
-		item.Fields = []*op.ItemField{
+		item.Category = model.SecureNote
+		item.Fields = []model.ItemField{
 			{
 				ID:      "notesPlain",
 				Label:   "notesPlain",
-				Type:    op.FieldTypeString,
-				Purpose: op.FieldPurposeNotes,
+				Type:    model.FieldTypeString,
+				Purpose: model.FieldPurposeNotes,
 				Value:   data.NoteValue.ValueString(),
 			},
 		}
@@ -768,7 +768,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			sectionID = sid
 		}
 
-		s := &op.ItemSection{
+		s := model.ItemSection{
 			ID:    sectionID,
 			Label: section.Label.ValueString(),
 		}
@@ -798,15 +798,15 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 				fieldValue = timestamp
 			}
 
-			f := &op.ItemField{
-				Section: s,
-				ID:      fieldID,
-				Type:    fieldType,
-				Purpose: op.ItemFieldPurpose(field.Purpose.ValueString()),
-				Label:   field.Label.ValueString(),
-				Value:   fieldValue,
+			f := model.ItemField{
+				SectionID:    s.ID,
+				SectionLabel: s.Label,
+				ID:           fieldID,
+				Type:         model.ItemFieldType(fieldType),
+				Purpose:      model.ItemFieldPurpose(field.Purpose.ValueString()),
+				Label:        field.Label.ValueString(),
+				Value:        fieldValue,
 			}
-
 			recipe, err := parseGeneratorRecipe(field.Recipe)
 			if err != nil {
 				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
@@ -816,7 +816,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 			}
 
 			if recipe != nil {
-				addRecipe(f, recipe)
+				addRecipe(&f, recipe)
 			}
 
 			item.Fields = append(item.Fields, f)
@@ -826,16 +826,16 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*op.Ite
 	return item, nil
 }
 
-func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*op.GeneratorRecipe, error) {
+func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {
 	if recipeObject == nil || len(recipeObject) == 0 {
 		return nil, nil
 	}
 
 	recipe := recipeObject[0]
 
-	parsed := &op.GeneratorRecipe{
+	parsed := &model.GeneratorRecipe{
 		Length:        32,
-		CharacterSets: []string{},
+		CharacterSets: []model.CharacterSet{},
 	}
 
 	length := recipe.Length.ValueInt64()
@@ -851,16 +851,16 @@ func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*op.GeneratorReci
 		parsed.CharacterSets = append(parsed.CharacterSets, "LETTERS")
 	}
 	if recipe.Digits.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, "DIGITS")
+		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetDigits)
 	}
 	if recipe.Symbols.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, "SYMBOLS")
+		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetSymbols)
 	}
 
 	return parsed, nil
 }
 
-func addRecipe(f *op.ItemField, r *op.GeneratorRecipe) {
+func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {
 	f.Recipe = r
 
 	// Check to see if the current value adheres to the recipe
@@ -874,9 +874,9 @@ func addRecipe(f *op.ItemField, r *op.GeneratorRecipe) {
 		switch s {
 		case "LETTERS":
 			recipeLetters = true
-		case "DIGITS":
+		case model.CharacterSetDigits:
 			recipeDigits = true
-		case "SYMBOLS":
+		case model.CharacterSetSymbols:
 			recipeSymbols = true
 		}
 	}

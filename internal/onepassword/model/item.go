@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
 )
 
@@ -122,6 +123,45 @@ func (i *Item) FromModelItemToSDKCreateParams() sdk.ItemCreateParams {
 	params.Fields, params.Notes = toSDKFields(i.Fields)
 
 	return params
+}
+
+// FromConnectItemToModel creates a new Item from a Connect SDK item
+func (i *Item) FromConnectItemToModel(item *connect.Item) error {
+	if item == nil {
+		return fmt.Errorf("cannot convert nil Connect item to model")
+	}
+
+	i.ID = item.ID
+	i.Title = item.Title
+	i.VaultID = item.Vault.ID
+	i.Category = ItemCategory(item.Category)
+	i.Version = item.Version
+	i.Tags = item.Tags
+	i.URLs = fromConnectURLs(item.URLs)
+
+	// Convert sections/fields/files
+	sectionMap := make(map[string]ItemSection)
+	i.Sections = fromConnectSections(item.Sections, sectionMap)
+	i.Files = fromConnectFiles(item.Files, sectionMap)
+	i.Fields = fromConnectFields(item.Fields, sectionMap)
+
+	return nil
+}
+
+// FromModelItemToConnect creates a Connect SDK item from a model Item
+func (i *Item) FromModelItemToConnect() *connect.Item {
+	return &connect.Item{
+		ID:       i.ID,
+		Title:    i.Title,
+		Vault:    connect.ItemVault{ID: i.VaultID},
+		Category: connect.ItemCategory(i.Category),
+		Version:  i.Version,
+		Tags:     i.Tags,
+		URLs:     toConnectURLs(i.URLs),
+		Sections: toConnectSections(i.Sections),
+		Fields:   toConnectFields(i.Fields),
+		Files:    toConnectFiles(i.Files),
+	}
 }
 
 func fromSDKURLs(websites []sdk.Website) []ItemURL {
@@ -328,4 +368,171 @@ func buildSectionMap(item *sdk.Item) map[string]ItemSection {
 		}
 	}
 	return sectionMap
+}
+
+func fromConnectURLs(urls []connect.ItemURL) []ItemURL {
+	modelURLs := make([]ItemURL, 0, len(urls))
+	for _, u := range urls {
+		modelURLs = append(modelURLs, ItemURL{
+			URL:     u.URL,
+			Label:   u.Label,
+			Primary: u.Primary,
+		})
+	}
+	return modelURLs
+}
+
+func fromConnectSections(sections []*connect.ItemSection, sectionMap map[string]ItemSection) []ItemSection {
+	modelSections := make([]ItemSection, 0, len(sections))
+	for _, s := range sections {
+		if s != nil {
+			section := ItemSection{
+				ID:    s.ID,
+				Label: s.Label,
+			}
+			modelSections = append(modelSections, section)
+			sectionMap[s.ID] = section
+		}
+	}
+	return modelSections
+}
+
+func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSection) []ItemField {
+	modelFields := make([]ItemField, 0, len(fields))
+	for _, f := range fields {
+		if f == nil {
+			continue
+		}
+
+		field := ItemField{
+			ID:      f.ID,
+			Label:   f.Label,
+			Type:    ItemFieldType(f.Type),
+			Value:   f.Value,
+			Purpose: ItemFieldPurpose(f.Purpose),
+		}
+
+		// Associate field with section if applicable
+		if f.Section != nil && f.Section.ID != "" {
+			if section, exists := sectionMap[f.Section.ID]; exists {
+				field.SectionID = section.ID
+				field.SectionLabel = section.Label
+			}
+		}
+
+		modelFields = append(modelFields, field)
+	}
+	return modelFields
+}
+
+func fromConnectFiles(files []*connect.File, sectionMap map[string]ItemSection) []ItemFile {
+	result := make([]ItemFile, 0, len(files))
+	for _, f := range files {
+		if f == nil {
+			continue
+		}
+
+		itemFile := ItemFile{
+			ID:          f.ID,
+			Name:        f.Name,
+			Size:        f.Size,
+			ContentPath: f.ContentPath,
+		}
+
+		// Only set Section if it exists
+		if f.Section != nil && f.Section.ID != "" {
+			if section, exists := sectionMap[f.Section.ID]; exists {
+				itemFile.SectionID = section.ID
+				itemFile.SectionLabel = section.Label
+			}
+		}
+
+		result = append(result, itemFile)
+	}
+	return result
+}
+
+func toConnectURLs(urls []ItemURL) []connect.ItemURL {
+	connectURLs := make([]connect.ItemURL, 0, len(urls))
+	for _, u := range urls {
+		connectURLs = append(connectURLs, connect.ItemURL{
+			URL:     u.URL,
+			Label:   u.Label,
+			Primary: u.Primary,
+		})
+	}
+	return connectURLs
+}
+
+func toConnectSections(sections []ItemSection) []*connect.ItemSection {
+	connectSections := make([]*connect.ItemSection, 0, len(sections))
+	for _, s := range sections {
+		connectSections = append(connectSections, &connect.ItemSection{
+			ID:    s.ID,
+			Label: s.Label,
+		})
+	}
+	return connectSections
+}
+
+func toConnectFields(fields []ItemField) []*connect.ItemField {
+	connectFields := make([]*connect.ItemField, 0, len(fields))
+	for _, f := range fields {
+		field := &connect.ItemField{
+			ID:       f.ID,
+			Label:    f.Label,
+			Value:    f.Value,
+			Generate: f.Generate,
+			Type:     connect.ItemFieldType(f.Type),
+			Purpose:  connect.ItemFieldPurpose(f.Purpose),
+		}
+
+		// Associate with section
+		if f.SectionID != "" {
+			field.Section = &connect.ItemSection{
+				ID:    f.SectionID,
+				Label: f.SectionLabel,
+			}
+		}
+
+		// Include recipe if present
+		if f.Recipe != nil {
+			characterSets := make([]string, len(f.Recipe.CharacterSets))
+			for i, cs := range f.Recipe.CharacterSets {
+				characterSets[i] = string(cs)
+			}
+
+			field.Recipe = &connect.GeneratorRecipe{
+				Length:        f.Recipe.Length,
+				CharacterSets: characterSets,
+			}
+		}
+
+		connectFields = append(connectFields, field)
+
+	}
+	return connectFields
+}
+
+func toConnectFiles(files []ItemFile) []*connect.File {
+	result := make([]*connect.File, 0, len(files))
+	for _, f := range files {
+		connectFile := &connect.File{
+			ID:          f.ID,
+			Name:        f.Name,
+			Size:        f.Size,
+			ContentPath: f.ContentPath,
+		}
+
+		// Only set Section if it exists
+		if f.SectionID != "" {
+			connectFile.Section = &connect.ItemSection{
+				ID:    f.SectionID,
+				Label: f.SectionLabel,
+			}
+		}
+
+		result = append(result, connectFile)
+	}
+	return result
 }

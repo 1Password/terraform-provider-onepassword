@@ -9,6 +9,7 @@ import (
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
 
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
@@ -24,12 +25,30 @@ type Client struct {
 	config        Config
 }
 
-func (c *Client) GetVault(_ context.Context, uuid string) (*onepassword.Vault, error) {
-	return c.connectClient.GetVault(uuid)
+func (c *Client) GetVault(_ context.Context, uuid string) (*model.Vault, error) {
+	connectVault, err := c.connectClient.GetVault(uuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vault using connect: %w", err)
+	}
+
+	modelVault := &model.Vault{}
+	modelVault.FromConnectVault(connectVault)
+	return modelVault, nil
 }
 
-func (c *Client) GetVaultsByTitle(_ context.Context, title string) ([]onepassword.Vault, error) {
-	return c.connectClient.GetVaultsByTitle(title)
+func (c *Client) GetVaultsByTitle(_ context.Context, title string) ([]model.Vault, error) {
+	connectVaults, err := c.connectClient.GetVaultsByTitle(title)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vault using connect: %w", err)
+	}
+
+	modelVaults := make([]model.Vault, len(connectVaults))
+	for i, connectVault := range connectVaults {
+		modelVault := model.Vault{}
+		modelVault.FromConnectVault(&connectVault)
+		modelVaults[i] = modelVault
+	}
+	return modelVaults, nil
 }
 
 // GetItem looks up an item by UUID (with retries) or by title.
@@ -37,39 +56,75 @@ func (c *Client) GetVaultsByTitle(_ context.Context, title string) ([]onepasswor
 // to handle eventual consistency issues in Connect (there can be a delay between item creation
 // and when it becomes available for reading). If itemUuid is not a valid UUID format, it treats
 // the parameter as a title and looks up the item by title instead.
-func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*onepassword.Item, error) {
+func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
+	var connectItem *onepassword.Item
+	var err error
+
 	if util.IsValidUUID(itemUuid) {
 		// Try GetItemByUUID with retry for eventual consistency
-		var item *onepassword.Item
-		var err error
 		for attempt := 0; attempt < 5; attempt++ {
 			if attempt > 0 {
 				time.Sleep(time.Duration(attempt*100) * time.Millisecond)
 			}
-			item, err = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
-			if item != nil {
-				return item, nil // item is found by UUID, return
+			connectItem, err = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
+
+			if err == nil && connectItem != nil {
+				// Convert to model Item
+				modelItem := &model.Item{}
+				err := modelItem.FromConnectItemToModel(connectItem)
+				if err != nil {
+					return nil, err
+				}
+
+				return modelItem, nil
 			}
 			// If error is not 404, don't retry
 			if err != nil && !strings.Contains(err.Error(), "404") && !strings.Contains(err.Error(), "not found") {
-				return nil, err
+				return nil, fmt.Errorf("failed to get item using connect: %w", err)
 			}
 		}
 		return nil, err
 	}
 
 	// Not a UUID, use GetItemByTitle
-	return c.connectClient.GetItemByTitle(itemUuid, vaultUuid)
-}
+	connectItem, err = c.connectClient.GetItemByTitle(itemUuid, vaultUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get item using connect: %w", err)
+	}
 
-func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid string) (*onepassword.Item, error) {
-	return c.connectClient.GetItemByTitle(title, vaultUuid)
-}
-
-func (c *Client) CreateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
-	createdItem, err := c.connectClient.CreateItem(item, vaultUuid)
+	// Convert to model Item
+	modelItem := &model.Item{}
+	err = modelItem.FromConnectItemToModel(connectItem)
 	if err != nil {
 		return nil, err
+	}
+
+	return modelItem, nil
+}
+
+func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid string) (*model.Item, error) {
+	connectItem, err := c.connectClient.GetItemByTitle(title, vaultUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get item using connect: %w", err)
+	}
+
+	// Convert to model Item
+	modelItem := &model.Item{}
+	err = modelItem.FromConnectItemToModel(connectItem)
+	if err != nil {
+		return nil, err
+	}
+
+	return modelItem, nil
+}
+
+func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
+	// Convert model Item to Connect Item
+	connectItem := item.FromModelItemToConnect()
+
+	createdItem, err := c.connectClient.CreateItem(connectItem, vaultUuid)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create item using connect: %w", err)
 	}
 
 	// Wait for Connect to propagate the create to the local SQLite database.
@@ -93,13 +148,19 @@ func (c *Client) CreateItem(ctx context.Context, item *onepassword.Item, vaultUu
 		return false, nil
 	})
 
-	return createdItem, nil
+	// Convert created Connect Item back to model Item
+	modelItem := &model.Item{}
+	modelItem.FromConnectItemToModel(createdItem)
+	return modelItem, nil
 }
 
-func (c *Client) UpdateItem(ctx context.Context, item *onepassword.Item, vaultUuid string) (*onepassword.Item, error) {
-	updatedItem, err := c.connectClient.UpdateItem(item, vaultUuid)
+func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
+	// Convert model Item to Connect Item
+	connectItem := item.FromModelItemToConnect()
+
+	updatedItem, err := c.connectClient.UpdateItem(connectItem, vaultUuid)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update item using connect: %w", err)
 	}
 
 	expectedVersion := updatedItem.Version + 1 // UpdateItem doesn't return increased item version. Need to increase it manually.
@@ -124,13 +185,19 @@ func (c *Client) UpdateItem(ctx context.Context, item *onepassword.Item, vaultUu
 		return nil, err
 	}
 
-	return updatedItem, nil
+	// Convert updated Connect Item back to model Item
+	modelItem := &model.Item{}
+	modelItem.FromConnectItemToModel(updatedItem)
+	return modelItem, nil
 }
 
-func (c *Client) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUuid string) error {
-	err := c.connectClient.DeleteItem(item, vaultUuid)
+func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
+	// Convert model Item to Connect Item
+	connectItem := item.FromModelItemToConnect()
+
+	err := c.connectClient.DeleteItem(connectItem, vaultUuid)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to delete item using connect: %w", err)
 	}
 
 	// Wait for Connect to propagate the delete to the local SQLite database.
@@ -153,8 +220,25 @@ func (c *Client) DeleteItem(ctx context.Context, item *onepassword.Item, vaultUu
 	return nil
 }
 
-func (w *Client) GetFileContent(_ context.Context, file *onepassword.File, itemUUID, vaultUUID string) ([]byte, error) {
-	return w.connectClient.GetFileContent(file)
+func (w *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUID, vaultUUID string) ([]byte, error) {
+	connectFile := &onepassword.File{
+		ID:          file.ID,
+		Name:        file.Name,
+		Size:        file.Size,
+		ContentPath: file.ContentPath,
+	}
+
+	// Only set Section if it exists
+	// Connect expects nil if Section is not set
+	if file.SectionID != "" {
+		connectFile.Section = &onepassword.ItemSection{
+			ID:    file.SectionID,
+			Label: file.SectionLabel,
+		}
+	}
+
+	content, err := w.connectClient.GetFileContent(connectFile)
+	return content, err
 }
 
 // waitCondition is a function that checks if a condition is met.
