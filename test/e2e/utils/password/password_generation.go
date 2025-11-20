@@ -33,6 +33,9 @@ func BuildPasswordRecipeChecks(resourceName string, recipe PasswordRecipe) []res
 		checks = append(checks, checkPasswordPattern(resourceName, fmt.Sprintf("^.{%d}$", length), "length"))
 	}
 
+	// Letters are always included and not configurable
+	checks = append(checks, checkPasswordPattern(resourceName, `[a-zA-Z]`, "letters"))
+
 	if symbols {
 		checks = append(checks, checkPasswordPattern(resourceName, `[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?~`+"`"+`]`, "symbols"))
 	} else {

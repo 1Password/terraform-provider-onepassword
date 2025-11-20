@@ -253,6 +253,55 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 	}
 }
 
+// Test that letters is not supported and will error if configured as this field is deprecated
+func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
+	lettersTrue := true
+	lettersFalse := false
+
+	testCases := []struct {
+		name    string
+		letters bool
+	}{
+		{name: "LettersTrue", letters: lettersTrue},
+		{name: "LettersFalse", letters: lettersFalse},
+	}
+
+	item := testItemsToCreate[op.Login]
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Generate unique identifier for this test run to avoid conflicts in parallel execution
+			uniqueID := uuid.New().String()
+
+			recipeMap := map[string]any{
+				"length":  20,
+				"symbols": false,
+				"digits":  false,
+				"letters": tc.letters,
+			}
+
+			attrs := map[string]any{
+				"title":           addUniqueIDToTitle(item.Attrs["title"].(string), uniqueID),
+				"category":        item.Attrs["category"],
+				"password_recipe": recipeMap,
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: tfconfig.CreateConfigBuilder()(
+							tfconfig.ProviderConfig(),
+							tfconfig.ItemResourceConfig(testVaultID, attrs),
+						),
+						ExpectError: regexp.MustCompile(`An argument named "letters" is not expected here`),
+					},
+				},
+			})
+		})
+	}
+}
+
 func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	testCases := []struct {
 		name   string
