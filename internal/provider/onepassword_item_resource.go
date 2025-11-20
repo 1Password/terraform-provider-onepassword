@@ -370,6 +370,12 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 	vaultUUID, itemUUID := vaultAndItemUUID(data.ID.ValueString())
 	item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
 	if err != nil {
+		// If the resource no longer exists, remove it from state
+		// The next Terraform plan will recreate the resource
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not get item '%s' from vault '%s', got error: %s", itemUUID, vaultUUID, err))
 		return
 	}
@@ -455,6 +461,20 @@ func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
 	}
 
 	return elements[1], elements[3]
+}
+
+// isNotFoundError checks if an error indicates that a resource was not found.
+// Different client implementations return different error when item is not found:
+//   - Connect: "status 404: item ... not found"
+//   - CLI: "... isn't an item in the ... vault"
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "404") ||
+		strings.Contains(errMsg, "not found") ||
+		strings.Contains(errMsg, "isn't an item")
 }
 
 func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
