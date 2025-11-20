@@ -420,19 +420,6 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 			}
 		}
 
-		// Handle password recipe if present
-		if f.Recipe != nil {
-			characterSets := make([]CharacterSet, len(f.Recipe.CharacterSets))
-			for i, cs := range f.Recipe.CharacterSets {
-				characterSets[i] = CharacterSet(cs)
-			}
-
-			field.Recipe = &GeneratorRecipe{
-				Length:        f.Recipe.Length,
-				CharacterSets: characterSets,
-			}
-		}
-
 		modelFields = append(modelFields, field)
 	}
 	return modelFields
