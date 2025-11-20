@@ -16,8 +16,6 @@ type ItemFieldType string
 const (
 	CharacterSetDigits  CharacterSet = "DIGITS"
 	CharacterSetSymbols CharacterSet = "SYMBOLS"
-	// Letters only for use with connect
-	CharacterSetLetters CharacterSet = "LETTERS"
 
 	Login      ItemCategory = "LOGIN"
 	Password   ItemCategory = "PASSWORD"
