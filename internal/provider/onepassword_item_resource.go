@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
+
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
