@@ -1,8 +1,10 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"maps"
+	"os"
 	"regexp"
 	"testing"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
@@ -460,6 +463,100 @@ func TestAccItemResourceTags(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps:                    testSteps,
+	})
+}
+
+func TestAccRecreateNonExistingItem(t *testing.T) {
+	// Generate unique identifier for this test run to avoid conflicts in parallel execution
+	uniqueID := uuid.New().String()
+
+	item := testItemsToCreate[op.Login]
+	// Create a copy of item attributes and update title with unique ID
+	createAttrs := maps.Clone(item.Attrs)
+	createAttrs["title"] = addUniqueIDToTitle(createAttrs["title"].(string), uniqueID)
+
+	var itemUUID string
+
+	// Build check functions for create step
+	createChecks := []resource.TestCheckFunc{
+		logStep(t, "CREATE"),
+		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+	}
+	bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
+	createChecks = append(createChecks, bcCreate...)
+
+	// Build check function to manually delete the item after creation
+	deleteItemCheck := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Log("MANUALLY_DELETE_ITEM")
+			ctx := context.Background()
+
+			// Get the item to delete - use a generic client for this
+			client, err := onepassword.NewClient(onepassword.ClientConfig{
+				ConnectHost:         os.Getenv("OP_CONNECT_HOST"),
+				ConnectToken:        os.Getenv("OP_CONNECT_TOKEN"),
+				ServiceAccountToken: os.Getenv("OP_SERVICE_ACCOUNT_TOKEN"),
+				OpCLIPath:           "op",
+				ProviderUserAgent:   "terraform-provider-onepassword/test",
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			itemToDelete := &op.Item{
+				ID: itemUUID,
+				Vault: op.ItemVault{
+					ID: testVaultID,
+				},
+			}
+			err = client.DeleteItem(ctx, itemToDelete, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to delete item: %w", err)
+			}
+
+			t.Logf("Successfully deleted item %s from vault %s", itemUUID, testVaultID)
+			return nil
+		}
+	}
+
+	// Build check functions for recreate step - verify the item was recreated
+	recreateChecks := []resource.TestCheckFunc{
+		logStep(t, "RECREATE"),
+	}
+	bcRecreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
+	recreateChecks = append(recreateChecks, bcRecreate...)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create new item
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(createChecks...),
+			},
+			// Manually delete the item outside of Terraform
+			// After this step, Terraform will refresh and detect the item is missing,
+			// so it will plan to recreate it. We expect a non-empty plan.
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check:              deleteItemCheck(),
+				ExpectNonEmptyPlan: true,
+			},
+			// Run Terraform again - it should detect the item is missing and recreate it
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(recreateChecks...),
+			},
+		},
 	})
 }
 
