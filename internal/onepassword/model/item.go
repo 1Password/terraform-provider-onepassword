@@ -16,6 +16,8 @@ type ItemFieldType string
 const (
 	CharacterSetDigits  CharacterSet = "DIGITS"
 	CharacterSetSymbols CharacterSet = "SYMBOLS"
+	// Letters only for use with connect
+	CharacterSetLetters CharacterSet = "LETTERS"
 
 	Login      ItemCategory = "LOGIN"
 	Password   ItemCategory = "PASSWORD"
@@ -510,9 +512,12 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 
 		// Include recipe if present
 		if f.Recipe != nil {
-			characterSets := make([]string, len(f.Recipe.CharacterSets))
-			for i, cs := range f.Recipe.CharacterSets {
-				characterSets[i] = string(cs)
+			// Connect allows confiugration of letters for password recipes
+			// We need to include letters in the character sets in order to ensure they are not excluded
+			characterSets := []string{"LETTERS"}
+
+			for _, cs := range f.Recipe.CharacterSets {
+				characterSets = append(characterSets, string(cs))
 			}
 
 			field.Recipe = &connect.GeneratorRecipe{

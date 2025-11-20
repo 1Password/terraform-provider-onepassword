@@ -255,15 +255,12 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 
 // Test that letters is not supported and will error if configured as this field is deprecated
 func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
-	lettersTrue := true
-	lettersFalse := false
-
 	testCases := []struct {
 		name    string
 		letters bool
 	}{
-		{name: "LettersTrue", letters: lettersTrue},
-		{name: "LettersFalse", letters: lettersFalse},
+		{name: "LettersTrue", letters: true},
+		{name: "LettersFalse", letters: false},
 	}
 
 	item := testItemsToCreate[op.Login]
