@@ -52,7 +52,6 @@ const (
 	passwordRecipeDescription  = "The recipe used to generate a new value for a password."
 	passwordElementDescription = "The kinds of characters to include in the password."
 	passwordLengthDescription  = "The length of the password to be generated."
-	passwordLettersDescription = "Use letters [a-zA-Z] when generating the password."
 	passwordDigitsDescription  = "Use digits [0-9] when generating the password."
 	passwordSymbolsDescription = "Use symbols [!@.-_*] when generating the password."
 

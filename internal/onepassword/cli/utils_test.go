@@ -118,24 +118,24 @@ func TestPasswordRecipeToString(t *testing.T) {
 			},
 			expectedString: "30",
 		},
-		"should contain letters charset": {
+		"should contain digits charset": {
 			recipe: &onepassword.GeneratorRecipe{
-				CharacterSets: []string{"letters"},
+				CharacterSets: []string{"digits"},
 			},
-			expectedString: "letters",
+			expectedString: "digits",
 		},
-		"should contain letters and digits charsets": {
+		"should contain symbols charsets": {
 			recipe: &onepassword.GeneratorRecipe{
-				CharacterSets: []string{"letters", "digits"},
+				CharacterSets: []string{"symbols"},
 			},
-			expectedString: "letters,digits",
+			expectedString: "symbols",
 		},
-		"should contain letters and digits charsets and length": {
+		"should contain symbols and digits charsets and length": {
 			recipe: &onepassword.GeneratorRecipe{
 				Length:        30,
-				CharacterSets: []string{"letters", "digits"},
+				CharacterSets: []string{"symbols", "digits"},
 			},
-			expectedString: "letters,digits,30",
+			expectedString: "symbols,digits,30",
 		},
 	}
 
