@@ -874,9 +874,9 @@ func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {
 		switch s {
 		case "LETTERS":
 			recipeLetters = true
-		case "DIGITS":
+		case model.CharacterSetDigits:
 			recipeDigits = true
-		case "SYMBOLS":
+		case model.CharacterSetSymbols:
 			recipeSymbols = true
 		}
 	}
