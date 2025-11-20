@@ -491,21 +491,13 @@ func toConnectSections(sections []ItemSection) []*connect.ItemSection {
 func toConnectFields(fields []ItemField) []*connect.ItemField {
 	connectFields := make([]*connect.ItemField, 0, len(fields))
 	for _, f := range fields {
-		if f.Generate && f.Recipe != nil {
-			password, err := generatePassword(f.Recipe)
-			if err == nil {
-				f.Value = password
-			} else {
-				fmt.Printf("Error generating password: %v\n", err)
-			}
-		}
-
 		field := &connect.ItemField{
-			ID:      f.ID,
-			Label:   f.Label,
-			Type:    connect.ItemFieldType(f.Type),
-			Value:   f.Value,
-			Purpose: connect.ItemFieldPurpose(f.Purpose),
+			ID:       f.ID,
+			Label:    f.Label,
+			Value:    f.Value,
+			Generate: f.Generate,
+			Type:     connect.ItemFieldType(f.Type),
+			Purpose:  connect.ItemFieldPurpose(f.Purpose),
 		}
 
 		// Associate with section
@@ -518,9 +510,12 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 
 		// Include recipe if present
 		if f.Recipe != nil {
-			characterSets := make([]string, len(f.Recipe.CharacterSets))
-			for i, cs := range f.Recipe.CharacterSets {
-				characterSets[i] = string(cs)
+			// Connect allows confiugration of letters for password recipes
+			// We need to include letters in the character sets in order to ensure they are not excluded
+			characterSets := []string{"LETTERS"}
+
+			for _, cs := range f.Recipe.CharacterSets {
+				characterSets = append(characterSets, string(cs))
 			}
 
 			field.Recipe = &connect.GeneratorRecipe{
@@ -530,6 +525,7 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 		}
 
 		connectFields = append(connectFields, field)
+
 	}
 	return connectFields
 }
