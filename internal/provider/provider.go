@@ -133,7 +133,7 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 
 	// Example client configuration for data sources and resources
 	providerUserAgent := fmt.Sprintf("terraform-provider-onepassword/%s", p.version)
-	client, err := onepassword.NewClient(onepassword.ClientConfig{
+	client, err := onepassword.NewClient(ctx, onepassword.ClientConfig{
 		ConnectHost:         connectHost,
 		ConnectToken:        connectToken,
 		ServiceAccountToken: serviceAccountToken,

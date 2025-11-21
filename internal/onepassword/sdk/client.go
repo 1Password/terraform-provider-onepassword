@@ -33,7 +33,8 @@ func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error
 }
 
 func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]model.Vault, error) {
-	vaultList, err := c.sdkClient.Vaults().List(ctx)
+	decryptDetails := true
+	vaultList, err := c.sdkClient.Vaults().List(ctx, sdk.VaultListParams{DecryptDetails: &decryptDetails})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get vaults using sdk: %w", err)
 	}

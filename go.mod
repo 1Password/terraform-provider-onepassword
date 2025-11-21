@@ -1,12 +1,12 @@
 module github.com/1Password/terraform-provider-onepassword/v2
 
-go 1.24
+go 1.24.0
 
 toolchain go1.24.5
 
 require (
 	github.com/1Password/connect-sdk-go v1.5.3
-	github.com/1password/onepassword-sdk-go v0.4.0-beta.1
+	github.com/1password/onepassword-sdk-go v0.4.0-beta.2
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/hashicorp/terraform-plugin-docs v0.19.2
@@ -89,7 +89,7 @@ require (
 	golang.org/x/mod v0.25.0 // indirect
 	golang.org/x/net v0.41.0 // indirect
 	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
 	golang.org/x/tools v0.33.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
