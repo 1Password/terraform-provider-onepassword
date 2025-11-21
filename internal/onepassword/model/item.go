@@ -87,7 +87,7 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) error {
 	i.ID = item.ID
 	i.Title = item.Title
 	i.VaultID = item.VaultID
-	i.Category = ItemCategory(item.Category)
+	i.Category = fromSDKCategoryToModel(item.Category)
 	i.Tags = item.Tags
 	i.URLs = fromSDKURLs(item.Websites)
 
@@ -114,7 +114,7 @@ func (i *Item) FromModelItemToSDKCreateParams() sdk.ItemCreateParams {
 	params := sdk.ItemCreateParams{
 		VaultID:  i.VaultID,
 		Title:    i.Title,
-		Category: sdk.ItemCategory(i.Category),
+		Category: fromModelCategoryToSDK(i.Category),
 		Tags:     i.Tags,
 		Sections: toSDKSections(i.Sections),
 		Websites: toSDKWebsites(i.URLs),
@@ -191,7 +191,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 		field := ItemField{
 			ID:    f.ID,
 			Label: f.Title,
-			Type:  ItemFieldType(f.FieldType),
+			Type:  toModelFieldType(f.FieldType),
 			Value: f.Value,
 		}
 
@@ -294,7 +294,7 @@ func toSDKField(f ItemField) sdk.ItemField {
 	field := sdk.ItemField{
 		ID:        fieldID,
 		Title:     f.Label,
-		FieldType: sdk.ItemFieldType(f.Type),
+		FieldType: toSDKFieldType(f.Type),
 		Value:     f.Value,
 	}
 
@@ -538,4 +538,60 @@ func toConnectFiles(files []ItemFile) []*connect.File {
 		result = append(result, connectFile)
 	}
 	return result
+}
+
+var modelToSdkFiledTypeMap = map[ItemFieldType]sdk.ItemFieldType{
+	FieldTypeConcealed: sdk.ItemFieldTypeConcealed,
+	FieldTypeDate:      sdk.ItemFieldTypeDate,
+	FieldTypeEmail:     sdk.ItemFieldTypeEmail,
+	FieldTypeMenu:      sdk.ItemFieldTypeMenu,
+	FieldTypeMonthYear: sdk.ItemFieldTypeMonthYear,
+	FieldTypeOTP:       sdk.ItemFieldTypeTOTP,
+	FieldTypeString:    sdk.ItemFieldTypeText,
+	FieldTypeURL:       sdk.ItemFieldTypeURL,
+}
+
+func toSDKFieldType(filedType ItemFieldType) sdk.ItemFieldType {
+	return modelToSdkFiledTypeMap[filedType]
+}
+
+var sdkToModelFieldTypeMap = map[sdk.ItemFieldType]ItemFieldType{
+	sdk.ItemFieldTypeConcealed: FieldTypeConcealed,
+	sdk.ItemFieldTypeDate:      FieldTypeDate,
+	sdk.ItemFieldTypeEmail:     FieldTypeEmail,
+	sdk.ItemFieldTypeMenu:      FieldTypeMenu,
+	sdk.ItemFieldTypeMonthYear: FieldTypeMonthYear,
+	sdk.ItemFieldTypeTOTP:      FieldTypeOTP,
+	sdk.ItemFieldTypeText:      FieldTypeString,
+	sdk.ItemFieldTypeURL:       FieldTypeURL,
+}
+
+func toModelFieldType(filedType sdk.ItemFieldType) ItemFieldType {
+	return sdkToModelFieldTypeMap[filedType]
+}
+
+var modelToSDKCategoryMap = map[ItemCategory]sdk.ItemCategory{
+	Login:      sdk.ItemCategoryLogin,
+	Password:   sdk.ItemCategoryPassword,
+	SecureNote: sdk.ItemCategorySecureNote,
+	Document:   sdk.ItemCategoryDocument,
+	SSHKey:     sdk.ItemCategorySSHKey,
+	Database:   sdk.ItemCategoryDatabase,
+}
+
+func fromModelCategoryToSDK(itemCategory ItemCategory) sdk.ItemCategory {
+	return modelToSDKCategoryMap[itemCategory]
+}
+
+var sdkToModelCategoryMap = map[sdk.ItemCategory]ItemCategory{
+	sdk.ItemCategoryLogin:      Login,
+	sdk.ItemCategoryPassword:   Password,
+	sdk.ItemCategorySecureNote: SecureNote,
+	sdk.ItemCategoryDocument:   Document,
+	sdk.ItemCategorySSHKey:     SSHKey,
+	sdk.ItemCategoryDatabase:   Database,
+}
+
+func fromSDKCategoryToModel(itemCategory sdk.ItemCategory) ItemCategory {
+	return sdkToModelCategoryMap[itemCategory]
 }
