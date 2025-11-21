@@ -458,7 +458,7 @@ func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
 // isNotFoundError checks if an error indicates that a resource was not found.
 // Different client implementations return different error when item is not found:
 //   - Connect: "status 404: item ... not found"
-//   - CLI: "... isn't an item in the ... vault"
+//   - SDK: "item couldn't be found" (when item doesn't exist)
 func isNotFoundError(err error) bool {
 	if err == nil {
 		return false
@@ -466,7 +466,7 @@ func isNotFoundError(err error) bool {
 	errMsg := strings.ToLower(err.Error())
 	return strings.Contains(errMsg, "404") ||
 		strings.Contains(errMsg, "not found") ||
-		strings.Contains(errMsg, "isn't an item")
+		strings.Contains(errMsg, "item couldn't be found")
 }
 
 func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
