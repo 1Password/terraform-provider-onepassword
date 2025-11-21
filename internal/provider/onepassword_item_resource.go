@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -24,8 +25,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-
-	"github.com/hashicorp/go-uuid"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 
@@ -779,6 +778,18 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 		sectionFields := section.Field
 		for _, field := range sectionFields {
 			fieldID := field.ID.ValueString()
+			// Generate field ID if empty
+			if fieldID == "" {
+				sid, err := uuid.GenerateUUID()
+				if err != nil {
+					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+						"Item conversion error",
+						fmt.Sprintf("Unable to generate a field ID, has error: %v", err),
+					)}
+				}
+				fieldID = sid
+			}
+
 			fieldType := op.ItemFieldType(field.Type.ValueString())
 			fieldValue := field.Value.ValueString()
 
