@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
@@ -536,7 +537,7 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 			ctx := context.Background()
 
 			// Get the item to delete - use a generic client for this
-			client, err := onepassword.NewClient(onepassword.ClientConfig{
+			client, err := onepassword.NewClient(ctx, onepassword.ClientConfig{
 				ConnectHost:         os.Getenv("OP_CONNECT_HOST"),
 				ConnectToken:        os.Getenv("OP_CONNECT_TOKEN"),
 				ServiceAccountToken: os.Getenv("OP_SERVICE_ACCOUNT_TOKEN"),
@@ -547,11 +548,9 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 				return fmt.Errorf("failed to create client: %w", err)
 			}
 
-			itemToDelete := &op.Item{
-				ID: itemUUID,
-				Vault: op.ItemVault{
-					ID: testVaultID,
-				},
+			itemToDelete := &model.Item{
+				ID:      itemUUID,
+				VaultID: testVaultID,
 			}
 			err = client.DeleteItem(ctx, itemToDelete, testVaultID)
 			if err != nil {
