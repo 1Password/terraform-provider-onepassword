@@ -220,7 +220,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 	return nil
 }
 
-func (w *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUID, vaultUUID string) ([]byte, error) {
+func (c *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUID, vaultUUID string) ([]byte, error) {
 	connectFile := &onepassword.File{
 		ID:          file.ID,
 		Name:        file.Name,
@@ -237,7 +237,7 @@ func (w *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUI
 		}
 	}
 
-	content, err := w.connectClient.GetFileContent(connectFile)
+	content, err := c.connectClient.GetFileContent(connectFile)
 	return content, err
 }
 
