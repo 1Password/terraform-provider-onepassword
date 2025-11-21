@@ -120,7 +120,10 @@ func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid strin
 
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	// Convert model Item to Connect Item
-	connectItem := item.FromModelItemToConnect()
+	connectItem, err := item.FromModelItemToConnect()
+	if err != nil {
+		return nil, err
+	}
 
 	createdItem, err := c.connectClient.CreateItem(connectItem, vaultUuid)
 	if err != nil {
@@ -150,13 +153,19 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	// Convert created Connect Item back to model Item
 	modelItem := &model.Item{}
-	modelItem.FromConnectItemToModel(createdItem)
+	err = modelItem.FromConnectItemToModel(createdItem)
+	if err != nil {
+		return nil, err
+	}
 	return modelItem, nil
 }
 
 func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	// Convert model Item to Connect Item
-	connectItem := item.FromModelItemToConnect()
+	connectItem, err := item.FromModelItemToConnect()
+	if err != nil {
+		return nil, err
+	}
 
 	updatedItem, err := c.connectClient.UpdateItem(connectItem, vaultUuid)
 	if err != nil {
@@ -187,15 +196,21 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	// Convert updated Connect Item back to model Item
 	modelItem := &model.Item{}
-	modelItem.FromConnectItemToModel(updatedItem)
+	err = modelItem.FromConnectItemToModel(updatedItem)
+	if err != nil {
+		return nil, err
+	}
 	return modelItem, nil
 }
 
 func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
 	// Convert model Item to Connect Item
-	connectItem := item.FromModelItemToConnect()
+	connectItem, err := item.FromModelItemToConnect()
+	if err != nil {
+		return err
+	}
 
-	err := c.connectClient.DeleteItem(connectItem, vaultUuid)
+	err = c.connectClient.DeleteItem(connectItem, vaultUuid)
 	if err != nil {
 		return fmt.Errorf("failed to delete item using connect: %w", err)
 	}

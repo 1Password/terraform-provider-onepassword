@@ -31,7 +31,6 @@ import (
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -551,17 +550,6 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 				dataField.Type = setStringValue(string(f.Type))
 				dataField.Value = setStringValue(f.Value)
 
-				if f.Type == model.FieldTypeDate {
-					date, err := util.SecondsToYYYYMMDD(f.Value)
-					if err != nil {
-						return diag.Diagnostics{diag.NewErrorDiagnostic(
-							"Error parsing data",
-							fmt.Sprintf("Failed to parse date value, got error: %s", err),
-						)}
-					}
-					dataField.Value = setStringValue(date)
-				}
-
 				if f.Recipe != nil {
 					charSets := map[string]bool{}
 					for _, s := range f.Recipe.CharacterSets {
@@ -793,24 +781,6 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 			fieldID := field.ID.ValueString()
 			fieldType := op.ItemFieldType(field.Type.ValueString())
 			fieldValue := field.Value.ValueString()
-			if fieldType == op.FieldTypeDate {
-				if !util.IsValidDateFormat(fieldValue) {
-					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-						"Item conversion error",
-						fmt.Sprintf("Invalid date value provided '%s'. Should be in YYYY-MM-DD format", fieldValue),
-					)}
-				}
-				// Convert date string to timestamp to bypass Connect's timezone-dependent parsing
-				// and ensure consistent storage regardless of where Connect is deployed.
-				timestamp, err := util.YYYYMMDDToSeconds(fieldValue)
-				if err != nil {
-					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-						"Item conversion error",
-						fmt.Sprintf("Failed to convert date value '%s' to timestamp, got error: %s", fieldValue, err),
-					)}
-				}
-				fieldValue = timestamp
-			}
 
 			f := model.ItemField{
 				SectionID:    s.ID,

@@ -6,6 +6,8 @@ import (
 
 	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
+
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 type CharacterSet string
@@ -143,13 +145,23 @@ func (i *Item) FromConnectItemToModel(item *connect.Item) error {
 	sectionMap := make(map[string]ItemSection)
 	i.Sections = fromConnectSections(item.Sections, sectionMap)
 	i.Files = fromConnectFiles(item.Files, sectionMap)
-	i.Fields = fromConnectFields(item.Fields, sectionMap)
+
+	fields, err := fromConnectFields(item.Fields, sectionMap)
+	if err != nil {
+		return err
+	}
+	i.Fields = fields
 
 	return nil
 }
 
 // FromModelItemToConnect creates a Connect SDK item from a model Item
-func (i *Item) FromModelItemToConnect() *connect.Item {
+func (i *Item) FromModelItemToConnect() (*connect.Item, error) {
+	fields, err := toConnectFields(i.Fields)
+	if err != nil {
+		return nil, err
+	}
+
 	return &connect.Item{
 		ID:       i.ID,
 		Title:    i.Title,
@@ -159,9 +171,9 @@ func (i *Item) FromModelItemToConnect() *connect.Item {
 		Tags:     i.Tags,
 		URLs:     toConnectURLs(i.URLs),
 		Sections: toConnectSections(i.Sections),
-		Fields:   toConnectFields(i.Fields),
+		Fields:   fields,
 		Files:    toConnectFiles(i.Files),
-	}
+	}, nil
 }
 
 func fromSDKURLs(websites []sdk.Website) []ItemURL {
@@ -397,7 +409,7 @@ func fromConnectSections(sections []*connect.ItemSection, sectionMap map[string]
 	return modelSections
 }
 
-func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSection) []ItemField {
+func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSection) ([]ItemField, error) {
 	modelFields := make([]ItemField, 0, len(fields))
 	for _, f := range fields {
 		if f == nil {
@@ -412,6 +424,17 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 			Purpose: ItemFieldPurpose(f.Purpose),
 		}
 
+		// Provider handles dates in `YYYY-MM-DD` format.
+		// Connect returns dates as timestamp
+		// Converting timestamp to `YYYY-MM-DD` string.
+		if f.Type == connect.FieldTypeDate {
+			dateStr, err := util.SecondsToYYYYMMDD(field.Value)
+			if err != nil {
+				return modelFields, fmt.Errorf("fromConnectFields: failed to parse timestamp %s to 'YYYY-MM-DD' string format: %w", field.Value, err)
+			}
+			field.Value = dateStr
+		}
+
 		// Associate field with section if applicable
 		if f.Section != nil && f.Section.ID != "" {
 			if section, exists := sectionMap[f.Section.ID]; exists {
@@ -422,7 +445,7 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 
 		modelFields = append(modelFields, field)
 	}
-	return modelFields
+	return modelFields, nil
 }
 
 func fromConnectFiles(files []*connect.File, sectionMap map[string]ItemSection) []ItemFile {
@@ -475,7 +498,7 @@ func toConnectSections(sections []ItemSection) []*connect.ItemSection {
 	return connectSections
 }
 
-func toConnectFields(fields []ItemField) []*connect.ItemField {
+func toConnectFields(fields []ItemField) ([]*connect.ItemField, error) {
 	connectFields := make([]*connect.ItemField, 0, len(fields))
 	for _, f := range fields {
 		field := &connect.ItemField{
@@ -485,6 +508,16 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 			Generate: f.Generate,
 			Type:     connect.ItemFieldType(f.Type),
 			Purpose:  connect.ItemFieldPurpose(f.Purpose),
+		}
+
+		if field.Type == connect.FieldTypeDate {
+			// Convert date string to timestamp to bypass Connect's timezone-dependent parsing
+			// and ensure consistent storage regardless of where Connect is deployed.
+			timestamp, err := util.YYYYMMDDToSeconds(field.Value)
+			if err != nil {
+				return connectFields, fmt.Errorf("toConnectFields: failed to convert '%s' date string to timestamp: %w", field.Value, err)
+			}
+			field.Value = timestamp
 		}
 
 		// Associate with section
@@ -514,7 +547,7 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 		connectFields = append(connectFields, field)
 
 	}
-	return connectFields
+	return connectFields, nil
 }
 
 func toConnectFiles(files []ItemFile) []*connect.File {
