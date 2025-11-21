@@ -65,7 +65,10 @@ func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*mode
 		}
 
 		modelItem := &model.Item{}
-		modelItem.FromSDKItemToModel(&sdkItem)
+		err = modelItem.FromSDKItemToModel(&sdkItem)
+		if err != nil {
+			return nil, fmt.Errorf("sdk.GetItem failed to convert item using sdk: %w", err)
+		}
 		return modelItem, nil
 	}
 
@@ -109,7 +112,10 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	}
 
 	modelItem := &model.Item{}
-	modelItem.FromSDKItemToModel(&sdkItem)
+	err = modelItem.FromSDKItemToModel(&sdkItem)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.CreateItem failed to convert item using sdk: %w", err)
+	}
 	return modelItem, nil
 }
 
@@ -137,7 +143,10 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	// Convert back to provider model
 	modelItem := &model.Item{}
-	modelItem.FromSDKItemToModel(&updatedItem)
+	err = modelItem.FromSDKItemToModel(&updatedItem)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.UpdateItem failed to convert item using sdk: %w", err)
+	}
 	return modelItem, nil
 }
 
