@@ -491,12 +491,14 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 
 	sort.Strings(dataTags)
 	if !reflect.DeepEqual(dataTags, item.Tags) {
-		tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
-		if diagnostics.HasError() {
-			return diagnostics
-		}
-
-		if item.Tags != nil || dataTags == nil {
+		// If item.Tags is empty, preserve null if the original state was null
+		if len(item.Tags) == 0 && data.Tags.IsNull() {
+			data.Tags = types.ListNull(types.StringType)
+		} else {
+			tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
+			if diagnostics.HasError() {
+				return diagnostics
+			}
 			data.Tags = tags
 		}
 	}
@@ -839,7 +841,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 }
 
 func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {
-	if recipeObject == nil || len(recipeObject) == 0 {
+	if len(recipeObject) == 0 {
 		return nil, nil
 	}
 
