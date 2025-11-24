@@ -27,8 +27,8 @@ func BuildUpdatedItemAttrs(currentItem *model.Item, updatedAttrs map[string]any)
 			{ID: "username", Label: "username", Value: updatedAttrs["username"].(string), Type: "STRING", Purpose: "USERNAME"},
 			{ID: "password", Label: "password", Value: updatedAttrs["password"].(string), Type: "CONCEALED", Purpose: "PASSWORD"},
 			{ID: "notesPlain", Label: "notesPlain", Value: updatedAttrs["note_value"].(string), Type: "STRING", Purpose: "NOTES"},
-			{Label: "New Field 3", Value: "new value 3", Type: "URL", SectionID: "updated_section_id"},
-			{Label: "Extra Field", Value: "extra value", Type: "CONCEALED", SectionID: "additional_section_id"},
+			{ID: "new_field", Label: "New Field", Value: "new value", Type: "URL", SectionID: "updated_section_id"},
+			{ID: "extra_field", Label: "Extra Field", Value: "extra value", Type: "CONCEALED", SectionID: "additional_section_id"},
 		},
 	}
 }

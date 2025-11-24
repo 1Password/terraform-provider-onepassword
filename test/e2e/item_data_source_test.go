@@ -238,15 +238,15 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	updatedAttrs["title"] = initialAttrs["title"]
 	updatedAttrs["section"] = sections.MapSections([]sections.TestSection{
 		{
-			Label: "Additional Section",
+			Label: "Updated Section",
 			Fields: []sections.TestField{
-				{Label: "Extra Field", Value: "extra value", Type: "CONCEALED"},
+				{Label: "New Field", Value: "new value", Type: "URL"},
 			},
 		},
 		{
-			Label: "Updated Section",
+			Label: "Additional Section",
 			Fields: []sections.TestField{
-				{Label: "New Field 3", Value: "new value 3", Type: "URL"},
+				{Label: "Extra Field", Value: "extra value", Type: "CONCEALED"},
 			},
 		},
 	})
@@ -414,8 +414,6 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 					}),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(removedFieldsReadChecks...),
-				// PlanOnly:           true,
-				// ExpectNonEmptyPlan: true,
 			},
 		},
 	})
