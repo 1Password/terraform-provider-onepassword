@@ -8,6 +8,7 @@ import (
 	sdk "github.com/1password/onepassword-sdk-go"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 type Client struct {
@@ -51,15 +52,28 @@ func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]model.Va
 	return result, nil
 }
 
+// GetItem looks up an item by UUID or by title.
+// If itemUuid is a valid UUID format, it attempts to fetch the item by UUID.
+// If itemUuid is not a valid UUID format, it treats the parameter as a title
+// and looks up the item by title instead.
 func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
-	sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, itemUuid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get item using sdk: %w", err)
+	if util.IsValidUUID(itemUuid) {
+		// Valid UUID, use GetItem directly
+		sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, itemUuid)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get item using sdk: %w", err)
+		}
+
+		modelItem := &model.Item{}
+		err = modelItem.FromSDKItemToModel(&sdkItem)
+		if err != nil {
+			return nil, fmt.Errorf("sdk.GetItem failed to convert item using sdk: %w", err)
+		}
+		return modelItem, nil
 	}
 
-	modelItem := &model.Item{}
-	modelItem.FromSDKItemToModel(&sdkItem)
-	return modelItem, nil
+	// Not a UUID, use GetItemByTitle
+	return c.GetItemByTitle(ctx, itemUuid, vaultUuid)
 }
 
 func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error) {
@@ -98,7 +112,10 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	}
 
 	modelItem := &model.Item{}
-	modelItem.FromSDKItemToModel(&sdkItem)
+	err = modelItem.FromSDKItemToModel(&sdkItem)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.CreateItem failed to convert item using sdk: %w", err)
+	}
 	return modelItem, nil
 }
 
@@ -126,7 +143,10 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	// Convert back to provider model
 	modelItem := &model.Item{}
-	modelItem.FromSDKItemToModel(&updatedItem)
+	err = modelItem.FromSDKItemToModel(&updatedItem)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.UpdateItem failed to convert item using sdk: %w", err)
+	}
 	return modelItem, nil
 }
 
