@@ -616,15 +616,15 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	updatedAttrs["title"] = initialAttrs["title"]
 	updatedAttrs["section"] = sections.MapSections([]sections.TestSection{
 		{
-			Label: "Updated Section",
-			Fields: []sections.TestField{
-				{Label: "New Field", Value: "new value", Type: "URL"},
-			},
-		},
-		{
 			Label: "Additional Section",
 			Fields: []sections.TestField{
 				{Label: "Extra Field", Value: "extra value", Type: "CONCEALED"},
+			},
+		},
+		{
+			Label: "Updated Section",
+			Fields: []sections.TestField{
+				{Label: "New Field", Value: "new value", Type: "URL"},
 			},
 		},
 	})
@@ -650,7 +650,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	// Build check function to manually update the item after creation
 	updateItemCheck := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
-			logStep(t, "MANUALLY_UPDATE_ITEM")
+			t.Log("MANUALLY_UPDATE_ITEM")
 
 			ctx := context.Background()
 			client, err := client.CreateTestClient(ctx)
@@ -677,7 +677,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	// Build check function to manually remove all fields
 	removeFieldsCheck := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
-			logStep(t, "MANUALLY_REMOVE_ALL_FIELDS")
+			t.Log("MANUALLY_REMOVE_ALL_FIELDS")
 			ctx := context.Background()
 
 			client, err := client.CreateTestClient(ctx)
@@ -734,7 +734,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 				ImportStateId:     fmt.Sprintf("vaults/%s/items/%s", testVaultID, initialAttrs["title"]),
 				ImportStateVerify: false,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					logStep(t, "VERIFY_MANUAL_UPDATES")
+					t.Log("VERIFY_MANUAL_UPDATES")
 					if len(states) != 1 {
 						return fmt.Errorf("expected 1 state, got %d", len(states))
 					}
@@ -766,7 +766,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 				ImportStateId:     fmt.Sprintf("vaults/%s/items/%s", testVaultID, initialAttrs["title"]),
 				ImportStateVerify: false,
 				ImportStateCheck: func(states []*terraform.InstanceState) error {
-					logStep(t, "VERIFY_FIELDS_REMOVED")
+					t.Log("VERIFY_FIELDS_REMOVED")
 					if len(states) != 1 {
 						return fmt.Errorf("expected 1 state, got %d", len(states))
 					}
