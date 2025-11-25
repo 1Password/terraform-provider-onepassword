@@ -6,6 +6,8 @@ import (
 
 	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
+
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 type CharacterSet string
@@ -87,7 +89,7 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) error {
 	i.ID = item.ID
 	i.Title = item.Title
 	i.VaultID = item.VaultID
-	i.Category = ItemCategory(item.Category)
+	i.Category = fromSDKCategoryToModel(item.Category)
 	i.Tags = item.Tags
 	i.URLs = fromSDKURLs(item.Websites)
 
@@ -114,7 +116,7 @@ func (i *Item) FromModelItemToSDKCreateParams() sdk.ItemCreateParams {
 	params := sdk.ItemCreateParams{
 		VaultID:  i.VaultID,
 		Title:    i.Title,
-		Category: sdk.ItemCategory(i.Category),
+		Category: fromModelCategoryToSDK(i.Category),
 		Tags:     i.Tags,
 		Sections: toSDKSections(i.Sections),
 		Websites: toSDKWebsites(i.URLs),
@@ -143,13 +145,23 @@ func (i *Item) FromConnectItemToModel(item *connect.Item) error {
 	sectionMap := make(map[string]ItemSection)
 	i.Sections = fromConnectSections(item.Sections, sectionMap)
 	i.Files = fromConnectFiles(item.Files, sectionMap)
-	i.Fields = fromConnectFields(item.Fields, sectionMap)
+
+	fields, err := fromConnectFields(item.Fields, sectionMap)
+	if err != nil {
+		return err
+	}
+	i.Fields = fields
 
 	return nil
 }
 
 // FromModelItemToConnect creates a Connect SDK item from a model Item
-func (i *Item) FromModelItemToConnect() *connect.Item {
+func (i *Item) FromModelItemToConnect() (*connect.Item, error) {
+	fields, err := toConnectFields(i.Fields)
+	if err != nil {
+		return nil, err
+	}
+
 	return &connect.Item{
 		ID:       i.ID,
 		Title:    i.Title,
@@ -159,9 +171,9 @@ func (i *Item) FromModelItemToConnect() *connect.Item {
 		Tags:     i.Tags,
 		URLs:     toConnectURLs(i.URLs),
 		Sections: toConnectSections(i.Sections),
-		Fields:   toConnectFields(i.Fields),
+		Fields:   fields,
 		Files:    toConnectFiles(i.Files),
-	}
+	}, nil
 }
 
 func fromSDKURLs(websites []sdk.Website) []ItemURL {
@@ -191,7 +203,7 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 		field := ItemField{
 			ID:    f.ID,
 			Label: f.Title,
-			Type:  ItemFieldType(f.FieldType),
+			Type:  toModelFieldType(f.FieldType),
 			Value: f.Value,
 		}
 
@@ -294,7 +306,7 @@ func toSDKField(f ItemField) sdk.ItemField {
 	field := sdk.ItemField{
 		ID:        fieldID,
 		Title:     f.Label,
-		FieldType: sdk.ItemFieldType(f.Type),
+		FieldType: toSDKFieldType(f.Type),
 		Value:     f.Value,
 	}
 
@@ -397,7 +409,7 @@ func fromConnectSections(sections []*connect.ItemSection, sectionMap map[string]
 	return modelSections
 }
 
-func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSection) []ItemField {
+func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSection) ([]ItemField, error) {
 	modelFields := make([]ItemField, 0, len(fields))
 	for _, f := range fields {
 		if f == nil {
@@ -412,6 +424,17 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 			Purpose: ItemFieldPurpose(f.Purpose),
 		}
 
+		// Provider handles dates in `YYYY-MM-DD` format.
+		// Connect returns dates as timestamp
+		// Converting timestamp to `YYYY-MM-DD` string.
+		if f.Type == connect.FieldTypeDate {
+			dateStr, err := util.SecondsToYYYYMMDD(field.Value)
+			if err != nil {
+				return modelFields, fmt.Errorf("fromConnectFields: failed to parse timestamp %s to 'YYYY-MM-DD' string format: %w", field.Value, err)
+			}
+			field.Value = dateStr
+		}
+
 		// Associate field with section if applicable
 		if f.Section != nil && f.Section.ID != "" {
 			if section, exists := sectionMap[f.Section.ID]; exists {
@@ -420,22 +443,9 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 			}
 		}
 
-		// Handle password recipe if present
-		if f.Recipe != nil {
-			characterSets := make([]CharacterSet, len(f.Recipe.CharacterSets))
-			for i, cs := range f.Recipe.CharacterSets {
-				characterSets[i] = CharacterSet(cs)
-			}
-
-			field.Recipe = &GeneratorRecipe{
-				Length:        f.Recipe.Length,
-				CharacterSets: characterSets,
-			}
-		}
-
 		modelFields = append(modelFields, field)
 	}
-	return modelFields
+	return modelFields, nil
 }
 
 func fromConnectFiles(files []*connect.File, sectionMap map[string]ItemSection) []ItemFile {
@@ -488,7 +498,7 @@ func toConnectSections(sections []ItemSection) []*connect.ItemSection {
 	return connectSections
 }
 
-func toConnectFields(fields []ItemField) []*connect.ItemField {
+func toConnectFields(fields []ItemField) ([]*connect.ItemField, error) {
 	connectFields := make([]*connect.ItemField, 0, len(fields))
 	for _, f := range fields {
 		field := &connect.ItemField{
@@ -498,6 +508,16 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 			Generate: f.Generate,
 			Type:     connect.ItemFieldType(f.Type),
 			Purpose:  connect.ItemFieldPurpose(f.Purpose),
+		}
+
+		if field.Type == connect.FieldTypeDate {
+			// Convert date string to timestamp to bypass Connect's timezone-dependent parsing
+			// and ensure consistent storage regardless of where Connect is deployed.
+			timestamp, err := util.YYYYMMDDToSeconds(field.Value)
+			if err != nil {
+				return connectFields, fmt.Errorf("toConnectFields: failed to convert '%s' date string to timestamp: %w", field.Value, err)
+			}
+			field.Value = timestamp
 		}
 
 		// Associate with section
@@ -527,7 +547,7 @@ func toConnectFields(fields []ItemField) []*connect.ItemField {
 		connectFields = append(connectFields, field)
 
 	}
-	return connectFields
+	return connectFields, nil
 }
 
 func toConnectFiles(files []ItemFile) []*connect.File {
@@ -551,4 +571,60 @@ func toConnectFiles(files []ItemFile) []*connect.File {
 		result = append(result, connectFile)
 	}
 	return result
+}
+
+var modelToSdkFiledTypeMap = map[ItemFieldType]sdk.ItemFieldType{
+	FieldTypeConcealed: sdk.ItemFieldTypeConcealed,
+	FieldTypeDate:      sdk.ItemFieldTypeDate,
+	FieldTypeEmail:     sdk.ItemFieldTypeEmail,
+	FieldTypeMenu:      sdk.ItemFieldTypeMenu,
+	FieldTypeMonthYear: sdk.ItemFieldTypeMonthYear,
+	FieldTypeOTP:       sdk.ItemFieldTypeTOTP,
+	FieldTypeString:    sdk.ItemFieldTypeText,
+	FieldTypeURL:       sdk.ItemFieldTypeURL,
+}
+
+func toSDKFieldType(filedType ItemFieldType) sdk.ItemFieldType {
+	return modelToSdkFiledTypeMap[filedType]
+}
+
+var sdkToModelFieldTypeMap = map[sdk.ItemFieldType]ItemFieldType{
+	sdk.ItemFieldTypeConcealed: FieldTypeConcealed,
+	sdk.ItemFieldTypeDate:      FieldTypeDate,
+	sdk.ItemFieldTypeEmail:     FieldTypeEmail,
+	sdk.ItemFieldTypeMenu:      FieldTypeMenu,
+	sdk.ItemFieldTypeMonthYear: FieldTypeMonthYear,
+	sdk.ItemFieldTypeTOTP:      FieldTypeOTP,
+	sdk.ItemFieldTypeText:      FieldTypeString,
+	sdk.ItemFieldTypeURL:       FieldTypeURL,
+}
+
+func toModelFieldType(filedType sdk.ItemFieldType) ItemFieldType {
+	return sdkToModelFieldTypeMap[filedType]
+}
+
+var modelToSDKCategoryMap = map[ItemCategory]sdk.ItemCategory{
+	Login:      sdk.ItemCategoryLogin,
+	Password:   sdk.ItemCategoryPassword,
+	SecureNote: sdk.ItemCategorySecureNote,
+	Document:   sdk.ItemCategoryDocument,
+	SSHKey:     sdk.ItemCategorySSHKey,
+	Database:   sdk.ItemCategoryDatabase,
+}
+
+func fromModelCategoryToSDK(itemCategory ItemCategory) sdk.ItemCategory {
+	return modelToSDKCategoryMap[itemCategory]
+}
+
+var sdkToModelCategoryMap = map[sdk.ItemCategory]ItemCategory{
+	sdk.ItemCategoryLogin:      Login,
+	sdk.ItemCategoryPassword:   Password,
+	sdk.ItemCategorySecureNote: SecureNote,
+	sdk.ItemCategoryDocument:   Document,
+	sdk.ItemCategorySSHKey:     SSHKey,
+	sdk.ItemCategoryDatabase:   Database,
+}
+
+func fromSDKCategoryToModel(itemCategory sdk.ItemCategory) ItemCategory {
+	return sdkToModelCategoryMap[itemCategory]
 }

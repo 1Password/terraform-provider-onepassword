@@ -4,6 +4,8 @@ github.com/1Password/connect-sdk-go v1.5.3 h1:KyjJ+kCKj6BwB2Y8tPM1Ixg5uIS6HsB0uW
 github.com/1Password/connect-sdk-go v1.5.3/go.mod h1:5rSymY4oIYtS4G3t0oMkGAXBeoYiukV3vkqlnEjIDJs=
 github.com/1password/onepassword-sdk-go v0.4.0-beta.1 h1:tpUJsyik9zBD35Sh/1iBXFErWyc3/Neos+ot07c6Ow8=
 github.com/1password/onepassword-sdk-go v0.4.0-beta.1/go.mod h1:kssODrGGqHtniqPR91ZPoCMEo79mKulKat7RaD1bunk=
+github.com/1password/onepassword-sdk-go v0.4.0-beta.2 h1:l3y/hSV90yO3MxRVBInyMCkM1j/PGRkJ+xHH2azhAmY=
+github.com/1password/onepassword-sdk-go v0.4.0-beta.2/go.mod h1:NZBLm3Z5ulcosu1qb+fveYIr1QfpVIMr5FgGhhQDMhs=
 github.com/BurntSushi/toml v1.2.1 h1:9F2/+DoOYIOksmaJFPw1tGFy1eDnIJXg+UHjuD8lTak=
 github.com/BurntSushi/toml v1.2.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2 h1:5IcZpTvzydCQeHzK4Ef/D5rrSqwxob0t8PQPMybUNFM=
@@ -277,6 +279,8 @@ golang.org/x/sys v0.2.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.33.0 h1:q3i8TbbEz+JRD9ywIRlyRAQbM0qF7hu24q3teo2hbuw=
 golang.org/x/sys v0.33.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
+golang.org/x/sys v0.37.0 h1:fdNQudmxPjkdUTPnLn5mdQv7Zwvbvpaxqs831goi9kQ=
+golang.org/x/sys v0.37.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/term v0.0.0-20210927222741-03fcf44c2211/go.mod h1:jbD1KX2456YbFQfuXm/mYQcufACuNUgVhRMnK/tPxf8=
 golang.org/x/term v0.2.0/go.mod h1:TVmDHMZPmdnySmBfhjOoOdhjzdE1h4u1VwSiw2l1Nuc=

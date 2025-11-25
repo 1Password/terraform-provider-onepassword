@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -25,13 +26,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	"github.com/hashicorp/go-uuid"
-
 	op "github.com/1Password/connect-sdk-go/onepassword"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -364,6 +362,12 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 	vaultUUID, itemUUID := vaultAndItemUUID(data.ID.ValueString())
 	item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
 	if err != nil {
+		// If the resource no longer exists, remove it from state
+		// The next Terraform plan will recreate the resource
+		if isNotFoundError(err) {
+			resp.State.RemoveResource(ctx)
+			return
+		}
 		resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not get item '%s' from vault '%s', got error: %s", itemUUID, vaultUUID, err))
 		return
 	}
@@ -451,6 +455,22 @@ func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
 	return elements[1], elements[3]
 }
 
+// isNotFoundError checks if an error indicates that a resource was not found.
+// Different client implementations return different error when item is not found:
+//   - Connect: "status 404: item ... not found"
+//   - SDK: "item couldn't be found" (when item doesn't exist)
+//   - SDK: "item is not in an active state" (when item was removed)
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := strings.ToLower(err.Error())
+	return strings.Contains(errMsg, "404") ||
+		strings.Contains(errMsg, "not found") ||
+		strings.Contains(errMsg, "item couldn't be found") ||
+		strings.Contains(errMsg, "item is not in an active state")
+}
+
 func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
 	data.ID = setStringValue(itemTerraformID(item))
 	data.UUID = setStringValue(item.ID)
@@ -471,12 +491,14 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 
 	sort.Strings(dataTags)
 	if !reflect.DeepEqual(dataTags, item.Tags) {
-		tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
-		if diagnostics.HasError() {
-			return diagnostics
-		}
-
-		if item.Tags != nil || dataTags == nil {
+		// If item.Tags is empty, preserve null if the original state was null
+		if len(item.Tags) == 0 && data.Tags.IsNull() {
+			data.Tags = types.ListNull(types.StringType)
+		} else {
+			tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
+			if diagnostics.HasError() {
+				return diagnostics
+			}
 			data.Tags = tags
 		}
 	}
@@ -528,17 +550,6 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 				dataField.Purpose = setStringValue(string(f.Purpose))
 				dataField.Type = setStringValue(string(f.Type))
 				dataField.Value = setStringValue(f.Value)
-
-				if f.Type == model.FieldTypeDate {
-					date, err := util.SecondsToYYYYMMDD(f.Value)
-					if err != nil {
-						return diag.Diagnostics{diag.NewErrorDiagnostic(
-							"Error parsing data",
-							fmt.Sprintf("Failed to parse date value, got error: %s", err),
-						)}
-					}
-					dataField.Value = setStringValue(date)
-				}
 
 				if f.Recipe != nil {
 					charSets := map[string]bool{}
@@ -769,26 +780,20 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 		sectionFields := section.Field
 		for _, field := range sectionFields {
 			fieldID := field.ID.ValueString()
-			fieldType := op.ItemFieldType(field.Type.ValueString())
-			fieldValue := field.Value.ValueString()
-			if fieldType == op.FieldTypeDate {
-				if !util.IsValidDateFormat(fieldValue) {
-					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-						"Item conversion error",
-						fmt.Sprintf("Invalid date value provided '%s'. Should be in YYYY-MM-DD format", fieldValue),
-					)}
-				}
-				// Convert date string to timestamp to bypass Connect's timezone-dependent parsing
-				// and ensure consistent storage regardless of where Connect is deployed.
-				timestamp, err := util.YYYYMMDDToSeconds(fieldValue)
+			// Generate field ID if empty
+			if fieldID == "" {
+				sid, err := uuid.GenerateUUID()
 				if err != nil {
 					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
 						"Item conversion error",
-						fmt.Sprintf("Failed to convert date value '%s' to timestamp, got error: %s", fieldValue, err),
+						fmt.Sprintf("Unable to generate a field ID, has error: %v", err),
 					)}
 				}
-				fieldValue = timestamp
+				fieldID = sid
 			}
+
+			fieldType := op.ItemFieldType(field.Type.ValueString())
+			fieldValue := field.Value.ValueString()
 
 			f := model.ItemField{
 				SectionID:    s.ID,
@@ -819,7 +824,7 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 }
 
 func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {
-	if recipeObject == nil || len(recipeObject) == 0 {
+	if len(recipeObject) == 0 {
 		return nil, nil
 	}
 
