@@ -6,23 +6,12 @@ import (
 	"strings"
 )
 
-func ItemResourceConfig(vaultID string, params map[string]any) func() string {
-	return func() string {
-		resourceStr := `resource "onepassword_item" "test_item" {`
-
-		resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
-
-		for key, value := range params {
-			attr, err := formatTerraformAttribute(key, value)
-			if err != nil {
-				return fmt.Sprintf("ERROR: %v", err)
-			}
-			resourceStr += attr
-		}
-
-		resourceStr += "\n}"
-		return resourceStr
+func ItemResourceConfig(vaultID string, params map[string]any, resourceName ...string) func() string {
+	name := "test_item"
+	if len(resourceName) > 0 && resourceName[0] != "" {
+		name = resourceName[0]
 	}
+	return ItemResourceConfigWithName(name, vaultID, params)
 }
 
 func ItemResourceConfigWithName(resourceName string, vaultID string, params map[string]any) func() string {

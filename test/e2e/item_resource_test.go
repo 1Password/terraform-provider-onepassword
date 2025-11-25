@@ -845,8 +845,8 @@ func TestAccItemResourceWithAccount(t *testing.T) {
 				Config: tfconfig.CreateConfigBuilder()(
 					tfconfig.ProviderConfig(),
 					tfconfig.VaultDataSourceConfig(map[string]string{"name": "Terraform Test Vault"}),
-					tfconfig.ItemResourceConfigWithName("test_login_item", vaultID, loginAttrs),
-					tfconfig.ItemResourceConfigWithName("test_password_item", vaultID, passwordAttrs),
+					tfconfig.ItemResourceConfig(vaultID, loginAttrs, "test_login_item"),
+					tfconfig.ItemResourceConfig(vaultID, passwordAttrs, "test_password_item"),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(allChecks...),
 			},
