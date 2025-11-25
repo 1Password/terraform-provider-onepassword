@@ -25,6 +25,29 @@ func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 	}
 }
 
+func ItemResourceConfigWithName(resourceName string, vaultID string, params map[string]any) func() string {
+	return func() string {
+		resourceStr := fmt.Sprintf(`resource "onepassword_item" %q {`, resourceName)
+
+		if strings.Contains(vaultID, ".") {
+			resourceStr += fmt.Sprintf("\n  vault = %s", vaultID)
+		} else {
+			resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
+		}
+
+		for key, value := range params {
+			attr, err := formatTerraformAttribute(key, value)
+			if err != nil {
+				return fmt.Sprintf("ERROR: %v", err)
+			}
+			resourceStr += attr
+		}
+
+		resourceStr += "\n}"
+		return resourceStr
+	}
+}
+
 func formatTerraformAttribute(key string, value any) (string, error) {
 	rv := reflect.ValueOf(value)
 
