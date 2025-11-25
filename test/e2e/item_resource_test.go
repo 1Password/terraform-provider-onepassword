@@ -111,10 +111,10 @@ func TestAccItemResource(t *testing.T) {
 		category model.ItemCategory
 		name     string
 	}{
-		// {category: model.Login, name: "Login"},
-		// {category: model.Password, name: "Password"},
-		// {category: model.Database, name: "Database"},
-		// {category: model.SecureNote, name: "SecureNote"},
+		{category: model.Login, name: "Login"},
+		{category: model.Password, name: "Password"},
+		{category: model.Database, name: "Database"},
+		{category: model.SecureNote, name: "SecureNote"},
 	}
 
 	for _, tc := range testCases {
@@ -204,15 +204,15 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 		name   string
 		recipe password.PasswordRecipe
 	}{
-		// {name: "Length32", recipe: password.PasswordRecipe{Length: 32, Digits: false, Symbols: false}},
-		// {name: "Length16", recipe: password.PasswordRecipe{Length: 16, Digits: false, Symbols: false}},
-		// {name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Digits: false, Symbols: true}},
-		// {name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
-		// {name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
-		// {name: "WithoutDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false}},
-		// {name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false}},
-		// {name: "InvalidLength0", recipe: password.PasswordRecipe{Length: 0}},
-		// {name: "InvalidLength65", recipe: password.PasswordRecipe{Length: 65}},
+		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Digits: false, Symbols: false}},
+		{name: "Length16", recipe: password.PasswordRecipe{Length: 16, Digits: false, Symbols: false}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Digits: false, Symbols: true}},
+		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
+		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false}},
+		{name: "InvalidLength0", recipe: password.PasswordRecipe{Length: 0}},
+		{name: "InvalidLength65", recipe: password.PasswordRecipe{Length: 65}},
 	}
 
 	// Test both Login and Password items
@@ -309,102 +309,102 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 		create sections.TestSectionData
 		update sections.TestSectionData
 	}{
-		// {
-		// 	name: "RemoveSection",
-		// 	create: sections.TestSectionData{
-		// 		Sections: []sections.TestSection{
-		// 			{Label: "Test Section 1"},
-		// 			{Label: "Test Section 2"},
-		// 		},
-		// 	},
-		// 	update: sections.TestSectionData{
-		// 		Sections: []sections.TestSection{
-		// 			{Label: "Test Section 1"},
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	name: "RemoveFieldFromSection",
-		// 	create: sections.TestSectionData{
-		// 		Sections: []sections.TestSection{
-		// 			{
-		// 				Label: "Test Section",
-		// 				Fields: []sections.TestField{
-		// 					{Label: "Field 1", Value: "value1", Type: "STRING"},
-		// 					{Label: "Field 2", Value: "value2", Type: "STRING"},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// 	update: sections.TestSectionData{
-		// 		Sections: []sections.TestSection{
-		// 			{
-		// 				Label: "Test Section",
-		// 				Fields: []sections.TestField{
-		// 					{Label: "Field 1", Value: "value1", Type: "STRING"},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	name: "AddFieldToExistingSection",
-		// 	create: sections.TestSectionData{
-		// 		Sections: []sections.TestSection{
-		// 			{Label: "Test Section"},
-		// 		},
-		// 	},
-		// 	update: sections.TestSectionData{
-		// 		Sections: []sections.TestSection{
-		// 			{
-		// 				Label: "Test Section",
-		// 				Fields: []sections.TestField{
-		// 					{Label: "New Field", Value: "new value", Type: "STRING"},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	name: "MultipleSectionsWithMultipleFields",
-		// 	create: sections.TestSectionData{
-		// 		Sections: []sections.TestSection{
-		// 			{
-		// 				Label: "Personal Info",
-		// 				Fields: []sections.TestField{
-		// 					{Label: "Email", Value: "test@example.com", Type: "EMAIL"},
-		// 					{Label: "Date", Value: "1990-01-01", Type: "DATE"},
-		// 				},
-		// 			},
-		// 			{
-		// 				Label: "Additional Info",
-		// 				Fields: []sections.TestField{
-		// 					{Label: "Website", Value: "https://example.com", Type: "URL"},
-		// 					{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// 	update: sections.TestSectionData{
-		// 		Sections: []sections.TestSection{
-		// 			{
-		// 				Label: "Personal Info",
-		// 				Fields: []sections.TestField{
-		// 					{Label: "Updated Email", Value: "updated@example.com", Type: "EMAIL"},
-		// 					{Label: "Date", Value: "1990-01-01", Type: "DATE"},
-		// 				},
-		// 			},
-		// 			{
-		// 				Label: "Additional Info",
-		// 				Fields: []sections.TestField{
-		// 					{Label: "Website", Value: "https://updated.com", Type: "URL"},
-		// 					{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
-		// 					{Label: "Notes", Value: "Some notes", Type: "STRING"},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// },
+		{
+			name: "RemoveSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section 1"},
+					{Label: "Test Section 2"},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section 1"},
+				},
+			},
+		},
+		{
+			name: "RemoveFieldFromSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "Field 1", Value: "value1", Type: "STRING"},
+							{Label: "Field 2", Value: "value2", Type: "STRING"},
+						},
+					},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "Field 1", Value: "value1", Type: "STRING"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "AddFieldToExistingSection",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{Label: "Test Section"},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Test Section",
+						Fields: []sections.TestField{
+							{Label: "New Field", Value: "new value", Type: "STRING"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "MultipleSectionsWithMultipleFields",
+			create: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Personal Info",
+						Fields: []sections.TestField{
+							{Label: "Email", Value: "test@example.com", Type: "EMAIL"},
+							{Label: "Date", Value: "1990-01-01", Type: "DATE"},
+						},
+					},
+					{
+						Label: "Additional Info",
+						Fields: []sections.TestField{
+							{Label: "Website", Value: "https://example.com", Type: "URL"},
+							{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
+						},
+					},
+				},
+			},
+			update: sections.TestSectionData{
+				Sections: []sections.TestSection{
+					{
+						Label: "Personal Info",
+						Fields: []sections.TestField{
+							{Label: "Updated Email", Value: "updated@example.com", Type: "EMAIL"},
+							{Label: "Date", Value: "1990-01-01", Type: "DATE"},
+						},
+					},
+					{
+						Label: "Additional Info",
+						Fields: []sections.TestField{
+							{Label: "Website", Value: "https://updated.com", Type: "URL"},
+							{Label: "Concealed Field", Value: "secret", Type: "CONCEALED"},
+							{Label: "Notes", Value: "Some notes", Type: "STRING"},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	items := []model.ItemCategory{model.Login}
