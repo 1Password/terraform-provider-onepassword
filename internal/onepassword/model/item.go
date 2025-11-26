@@ -193,7 +193,6 @@ func fromSDKSections(sectionMap map[string]ItemSection) []ItemSection {
 	for _, section := range sectionMap {
 		sections = append(sections, section)
 	}
-
 	return sections
 }
 
@@ -407,7 +406,6 @@ func fromConnectSections(sections []*connect.ItemSection, sectionMap map[string]
 			sectionMap[s.ID] = section
 		}
 	}
-
 	return modelSections
 }
 
