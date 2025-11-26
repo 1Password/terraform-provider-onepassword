@@ -315,7 +315,7 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 		{name: "InvalidLength", recipe: password.PasswordRecipe{Length: 0}},
 	}
 
-	item := testItemsToCreate[op.Login]
+	item := testItemsToCreate[model.Login]
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -831,13 +831,12 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 
 					// Check that fields are empty/removed
 					checks := map[string]any{
-						"title":      initialAttrs["title"],
-						"category":   "login",
-						"username":   "",
-						"note_value": "",
-						"url":        "",
-						"tags":       "",
-						"section.#":  "0",
+						"title":     initialAttrs["title"],
+						"category":  "login",
+						"username":  "",
+						"url":       "",
+						"tags":      "",
+						"section.#": "0",
 					}
 					for key, expected := range checks {
 						if actual := state.Attributes[key]; actual != expected {
