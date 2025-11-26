@@ -768,14 +768,15 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 					state := states[0]
 
 					// Check that fields are empty/removed
-					checks := map[string]string{
+					checks := map[string]any{
+						"title":      initialAttrs["title"],
+						"category":   "login",
 						"username":   "",
-						"url":        "",
 						"note_value": "",
+						"url":        "",
 						"tags":       "",
 						"section.#":  "0",
 					}
-
 					for key, expected := range checks {
 						if actual := state.Attributes[key]; actual != expected {
 							return fmt.Errorf("%s: expected %q, got %q", key, expected, actual)
