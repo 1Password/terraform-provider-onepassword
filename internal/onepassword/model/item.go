@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"fmt"
-	"sort"
 
 	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
@@ -194,10 +193,7 @@ func fromSDKSections(sectionMap map[string]ItemSection) []ItemSection {
 	for _, section := range sectionMap {
 		sections = append(sections, section)
 	}
-	// Sort sections by label to ensure deterministic ordering
-	sort.Slice(sections, func(i, j int) bool {
-		return sections[i].Label < sections[j].Label
-	})
+
 	return sections
 }
 
@@ -411,10 +407,7 @@ func fromConnectSections(sections []*connect.ItemSection, sectionMap map[string]
 			sectionMap[s.ID] = section
 		}
 	}
-	// Sort sections by label to ensure deterministic ordering
-	sort.Slice(modelSections, func(i, j int) bool {
-		return modelSections[i].Label < modelSections[j].Label
-	})
+
 	return modelSections
 }
 
