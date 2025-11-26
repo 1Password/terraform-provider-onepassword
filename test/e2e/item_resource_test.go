@@ -303,6 +303,68 @@ func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
 	}
 }
 
+// TestAccItemResourceSectionFieldPasswordGeneration tests the generation of passwords on fields
+func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
+	testCases := []struct {
+		name   string
+		recipe password.PasswordRecipe
+	}{
+		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Digits: false, Symbols: false}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Digits: false, Symbols: true}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false}},
+		{name: "InvalidLength", recipe: password.PasswordRecipe{Length: 0}},
+	}
+
+	item := testItemsToCreate[op.Login]
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Generate unique identifier for this test run to avoid conflicts in parallel execution
+			uniqueID := uuid.New().String()
+
+			recipeMap := password.BuildPasswordRecipeMap(tc.recipe)
+
+			// Create a field with password recipe in a section
+			testSection := sections.TestSection{
+				Label: "Credentials",
+				Fields: []sections.TestField{
+					{
+						Label:          "API Key",
+						Type:           "CONCEALED",
+						PasswordRecipe: &recipeMap,
+					},
+				},
+			}
+
+			attrs := map[string]any{
+				"title":    addUniqueIDToTitle(item.Attrs["title"].(string), uniqueID),
+				"category": item.Attrs["category"],
+				"section":  sections.MapSections([]sections.TestSection{testSection}),
+			}
+
+			testStep := resource.TestStep{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+			}
+
+			if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
+				testStep.ExpectError = regexp.MustCompile(`Invalid Attribute Value`)
+			} else {
+				checks := password.BuildPasswordRecipeChecksForField("onepassword_item.test_item", "section.0.field.0", tc.recipe)
+				testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps:                    []resource.TestStep{testStep},
+			})
+		})
+	}
+}
+
 func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	testCases := []struct {
 		name   string
