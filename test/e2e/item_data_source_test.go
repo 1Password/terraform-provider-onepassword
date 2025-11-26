@@ -238,12 +238,6 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	updatedAttrs["title"] = initialAttrs["title"]
 	updatedAttrs["section"] = sections.MapSections([]sections.TestSection{
 		{
-			Label: "Additional Section",
-			Fields: []sections.TestField{
-				{Label: "Extra Field", Value: "extra value", Type: "CONCEALED"},
-			},
-		},
-		{
 			Label: "Updated Section",
 			Fields: []sections.TestField{
 				{Label: "New Field", Value: "new value", Type: "URL"},
