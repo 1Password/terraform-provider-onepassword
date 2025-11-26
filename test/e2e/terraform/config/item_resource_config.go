@@ -18,7 +18,8 @@ func ItemResourceConfigWithName(resourceName string, vaultID string, params map[
 	return func() string {
 		resourceStr := fmt.Sprintf(`resource "onepassword_item" %q {`, resourceName)
 
-		if strings.Contains(vaultID, ".") {
+		// Terraform references must not be quoated
+		if strings.HasPrefix(vaultID, "data.") {
 			resourceStr += fmt.Sprintf("\n  vault = %s", vaultID)
 		} else {
 			resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
