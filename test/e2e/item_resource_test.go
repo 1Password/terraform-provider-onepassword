@@ -603,7 +603,6 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 				ConnectHost:         os.Getenv("OP_CONNECT_HOST"),
 				ConnectToken:        os.Getenv("OP_CONNECT_TOKEN"),
 				ServiceAccountToken: os.Getenv("OP_SERVICE_ACCOUNT_TOKEN"),
-				OpCLIPath:           "op",
 				ProviderUserAgent:   "terraform-provider-onepassword/test",
 			})
 			if err != nil {
