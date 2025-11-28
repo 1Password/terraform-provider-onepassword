@@ -96,7 +96,18 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 		return nil, fmt.Errorf("found %d item(s) in vault %q with title %q", count, vaultUuid, title)
 	}
 
-	return c.GetItem(ctx, matchedID, vaultUuid)
+	sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, matchedID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get item using sdk: %w", err)
+	}
+
+	modelItem := &model.Item{}
+	err = modelItem.FromSDKItemToModel(&sdkItem)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.GetItemByTitle failed to convert item using sdk: %w", err)
+	}
+
+	return modelItem, nil
 }
 
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
