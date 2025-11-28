@@ -334,8 +334,24 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	}
 	bcRemoved := checks.BuildItemChecks("data.onepassword_item.test_item", removedAttrs)
 	removedFieldsReadChecks = append(removedFieldsReadChecks, bcRemoved...)
-	// Verify that username does not exist when fields are removed
-	removedFieldsReadChecks = append(removedFieldsReadChecks, resource.TestCheckNoResourceAttr("data.onepassword_item.test_item", "username"))
+
+	// Verify that username is either not present (SDK) or empty (Connect)
+	removedFieldsReadChecks = append(removedFieldsReadChecks, resource.TestCheckFunc(func(s *terraform.State) error {
+		item, ok := s.RootModule().Resources["data.onepassword_item.test_item"]
+		if !ok {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		username, exists := item.Primary.Attributes["username"]
+		if exists {
+			// If username exists, it should be empty (Connect behavior)
+			if username != "" {
+				return fmt.Errorf("expected username to be empty or not present, got %q", username)
+			}
+		}
+		// If username doesn't exist, that's also valid (SDK behavior)
+		return nil
+	}))
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
