@@ -246,13 +246,12 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	})
 
 	removedAttrs := map[string]any{
-		"title":      initialAttrs["title"],
-		"category":   "login",
-		"username":   "",
-		"note_value": "",
-		"url":        []string{},
-		"tags":       []string{},
-		"section":    []map[string]any{},
+		"title":    initialAttrs["title"],
+		"category": "login",
+		"username": "",
+		"url":      []string{},
+		"tags":     []string{},
+		"section":  []map[string]any{},
 	}
 
 	// Initial data source read checks
