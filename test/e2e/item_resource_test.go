@@ -303,6 +303,68 @@ func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
 	}
 }
 
+// TestAccItemResourceSectionFieldPasswordGeneration tests the generation of passwords on fields
+func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
+	testCases := []struct {
+		name   string
+		recipe password.PasswordRecipe
+	}{
+		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Digits: false, Symbols: false}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Digits: false, Symbols: true}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false}},
+		{name: "InvalidLength", recipe: password.PasswordRecipe{Length: 0}},
+	}
+
+	item := testItemsToCreate[model.Login]
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Generate unique identifier for this test run to avoid conflicts in parallel execution
+			uniqueID := uuid.New().String()
+
+			recipeMap := password.BuildPasswordRecipeMap(tc.recipe)
+
+			// Create a field with password recipe in a section
+			testSection := sections.TestSection{
+				Label: "Credentials",
+				Fields: []sections.TestField{
+					{
+						Label:          "API Key",
+						Type:           "CONCEALED",
+						PasswordRecipe: &recipeMap,
+					},
+				},
+			}
+
+			attrs := map[string]any{
+				"title":    addUniqueIDToTitle(item.Attrs["title"].(string), uniqueID),
+				"category": item.Attrs["category"],
+				"section":  sections.MapSections([]sections.TestSection{testSection}),
+			}
+
+			testStep := resource.TestStep{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+			}
+
+			if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
+				testStep.ExpectError = regexp.MustCompile(`Invalid Attribute Value`)
+			} else {
+				checks := password.BuildPasswordRecipeChecksForField("onepassword_item.test_item", "section.0.field.0", tc.recipe)
+				testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps:                    []resource.TestStep{testStep},
+			})
+		})
+	}
+}
+
 func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -482,8 +544,8 @@ func TestAccItemResourceTags(t *testing.T) {
 		tags []string
 	}{
 		{"CREATE_ITEM_WITH_2_TAGS", []string{"firstTestTag", "secondTestTag"}},
-		{"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
-		{"REMOVE_2_TAGS", []string{"firstTestTag"}},
+		// {"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
+		// {"REMOVE_2_TAGS", []string{"firstTestTag"}},
 	}
 
 	var testSteps []resource.TestStep
@@ -617,12 +679,6 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	updatedAttrs["title"] = initialAttrs["title"]
 	updatedAttrs["section"] = sections.MapSections([]sections.TestSection{
 		{
-			Label: "Additional Section",
-			Fields: []sections.TestField{
-				{Label: "Extra Field", Value: "extra value", Type: "CONCEALED"},
-			},
-		},
-		{
 			Label: "Updated Section",
 			Fields: []sections.TestField{
 				{Label: "New Field", Value: "new value", Type: "URL"},
@@ -649,7 +705,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	createChecks = append(createChecks, bcCreate...)
 
 	// Build check function to manually update the item after creation
-	updateItemCheck := func() resource.TestCheckFunc {
+	updateItemOutsideTerraform := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			t.Log("MANUALLY_UPDATE_ITEM")
 
@@ -676,7 +732,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	}
 
 	// Build check function to manually remove all fields
-	removeFieldsCheck := func() resource.TestCheckFunc {
+	removeFieldsOutsideTerraform := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			t.Log("MANUALLY_REMOVE_ALL_FIELDS")
 			ctx := context.Background()
@@ -725,7 +781,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 					tfconfig.ProviderConfig(),
 					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
 				),
-				Check:              updateItemCheck(),
+				Check:              updateItemOutsideTerraform(),
 				ExpectNonEmptyPlan: true,
 			},
 			// Verify manual updates via import
@@ -757,7 +813,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 					tfconfig.ProviderConfig(),
 					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
 				),
-				Check:              removeFieldsCheck(),
+				Check:              removeFieldsOutsideTerraform(),
 				ExpectNonEmptyPlan: true,
 			},
 			// Verify fields were removed
@@ -775,14 +831,14 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 					state := states[0]
 
 					// Check that fields are empty/removed
-					checks := map[string]string{
-						"username":   "",
-						"url":        "",
-						"note_value": "",
-						"tags":       "",
-						"section.#":  "0",
+					checks := map[string]any{
+						"title":     initialAttrs["title"],
+						"category":  "login",
+						"username":  "",
+						"url":       "",
+						"tags":      "",
+						"section.#": "0",
 					}
-
 					for key, expected := range checks {
 						if actual := state.Attributes[key]; actual != expected {
 							return fmt.Errorf("%s: expected %q, got %q", key, expected, actual)

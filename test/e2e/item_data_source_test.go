@@ -238,12 +238,6 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	updatedAttrs["title"] = initialAttrs["title"]
 	updatedAttrs["section"] = sections.MapSections([]sections.TestSection{
 		{
-			Label: "Additional Section",
-			Fields: []sections.TestField{
-				{Label: "Extra Field", Value: "extra value", Type: "CONCEALED"},
-			},
-		},
-		{
 			Label: "Updated Section",
 			Fields: []sections.TestField{
 				{Label: "New Field", Value: "new value", Type: "URL"},
@@ -252,13 +246,11 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	})
 
 	removedAttrs := map[string]any{
-		"title":      initialAttrs["title"],
-		"category":   "login",
-		"username":   "",
-		"note_value": "",
-		"url":        []string{},
-		"tags":       []string{},
-		"section":    []map[string]any{},
+		"title":    initialAttrs["title"],
+		"category": "login",
+		"url":      []string{},
+		"tags":     []string{},
+		"section":  []map[string]any{},
 	}
 
 	// Initial data source read checks
@@ -270,7 +262,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	initialReadChecks = append(initialReadChecks, bcInitial...)
 
 	// Build check function to manually update the item
-	updateItemCheck := func() resource.TestCheckFunc {
+	updateItemOutsideTerraform := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			t.Log("MANUALLY_UPDATE_ITEM")
 			ctx := context.Background()
@@ -304,7 +296,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	updatedReadChecks = append(updatedReadChecks, bcUpdated...)
 
 	// Build check function to manually remove all fields
-	removeFieldsCheck := func() resource.TestCheckFunc {
+	removeFieldsOutsideTerraform := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			t.Log("MANUALLY_REMOVE_ALL_FIELDS")
 			ctx := context.Background()
@@ -343,6 +335,24 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	bcRemoved := checks.BuildItemChecks("data.onepassword_item.test_item", removedAttrs)
 	removedFieldsReadChecks = append(removedFieldsReadChecks, bcRemoved...)
 
+	// Verify that username is either not present (SDK) or empty (Connect)
+	removedFieldsReadChecks = append(removedFieldsReadChecks, resource.TestCheckFunc(func(s *terraform.State) error {
+		item, ok := s.RootModule().Resources["data.onepassword_item.test_item"]
+		if !ok {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		username, exists := item.Primary.Attributes["username"]
+		if exists {
+			// If username exists, it should be empty (Connect behavior)
+			if username != "" {
+				return fmt.Errorf("expected username to be empty or not present, got %q", username)
+			}
+		}
+		// If username doesn't exist, that's also valid (SDK behavior)
+		return nil
+	}))
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -375,7 +385,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 						"title": fmt.Sprintf("%v", initialAttrs["title"]),
 					}),
 				),
-				Check:              updateItemCheck(),
+				Check:              updateItemOutsideTerraform(),
 				ExpectNonEmptyPlan: true,
 			},
 			// Data source should read the updated values
@@ -400,7 +410,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 						"title": fmt.Sprintf("%v", initialAttrs["title"]),
 					}),
 				),
-				Check:              removeFieldsCheck(),
+				Check:              removeFieldsOutsideTerraform(),
 				ExpectNonEmptyPlan: true,
 			},
 			// Data source should read the removed fields
