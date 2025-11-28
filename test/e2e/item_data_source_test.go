@@ -248,7 +248,6 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	removedAttrs := map[string]any{
 		"title":    initialAttrs["title"],
 		"category": "login",
-		"username": "",
 		"url":      []string{},
 		"tags":     []string{},
 		"section":  []map[string]any{},
@@ -263,7 +262,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	initialReadChecks = append(initialReadChecks, bcInitial...)
 
 	// Build check function to manually update the item
-	updateItemCheck := func() resource.TestCheckFunc {
+	updateItemOutsideTerraform := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			t.Log("MANUALLY_UPDATE_ITEM")
 			ctx := context.Background()
@@ -297,7 +296,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	updatedReadChecks = append(updatedReadChecks, bcUpdated...)
 
 	// Build check function to manually remove all fields
-	removeFieldsCheck := func() resource.TestCheckFunc {
+	removeFieldsOutsideTerraform := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			t.Log("MANUALLY_REMOVE_ALL_FIELDS")
 			ctx := context.Background()
@@ -335,6 +334,8 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	}
 	bcRemoved := checks.BuildItemChecks("data.onepassword_item.test_item", removedAttrs)
 	removedFieldsReadChecks = append(removedFieldsReadChecks, bcRemoved...)
+	// Verify that username does not exist when fields are removed
+	removedFieldsReadChecks = append(removedFieldsReadChecks, resource.TestCheckNoResourceAttr("data.onepassword_item.test_item", "username"))
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -368,7 +369,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 						"title": fmt.Sprintf("%v", initialAttrs["title"]),
 					}),
 				),
-				Check:              updateItemCheck(),
+				Check:              updateItemOutsideTerraform(),
 				ExpectNonEmptyPlan: true,
 			},
 			// Data source should read the updated values
@@ -393,7 +394,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 						"title": fmt.Sprintf("%v", initialAttrs["title"]),
 					}),
 				),
-				Check:              removeFieldsCheck(),
+				Check:              removeFieldsOutsideTerraform(),
 				ExpectNonEmptyPlan: true,
 			},
 			// Data source should read the removed fields

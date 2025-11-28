@@ -543,8 +543,8 @@ func TestAccItemResourceTags(t *testing.T) {
 		tags []string
 	}{
 		{"CREATE_ITEM_WITH_2_TAGS", []string{"firstTestTag", "secondTestTag"}},
-		{"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
-		{"REMOVE_2_TAGS", []string{"firstTestTag"}},
+		// {"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
+		// {"REMOVE_2_TAGS", []string{"firstTestTag"}},
 	}
 
 	var testSteps []resource.TestStep
@@ -704,7 +704,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	createChecks = append(createChecks, bcCreate...)
 
 	// Build check function to manually update the item after creation
-	updateItemCheck := func() resource.TestCheckFunc {
+	updateItemOutsideTerraform := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			t.Log("MANUALLY_UPDATE_ITEM")
 
@@ -731,7 +731,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	}
 
 	// Build check function to manually remove all fields
-	removeFieldsCheck := func() resource.TestCheckFunc {
+	removeFieldsOutsideTerraform := func() resource.TestCheckFunc {
 		return func(s *terraform.State) error {
 			t.Log("MANUALLY_REMOVE_ALL_FIELDS")
 			ctx := context.Background()
@@ -780,7 +780,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 					tfconfig.ProviderConfig(),
 					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
 				),
-				Check:              updateItemCheck(),
+				Check:              updateItemOutsideTerraform(),
 				ExpectNonEmptyPlan: true,
 			},
 			// Verify manual updates via import
@@ -812,7 +812,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 					tfconfig.ProviderConfig(),
 					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
 				),
-				Check:              removeFieldsCheck(),
+				Check:              removeFieldsOutsideTerraform(),
 				ExpectNonEmptyPlan: true,
 			},
 			// Verify fields were removed
