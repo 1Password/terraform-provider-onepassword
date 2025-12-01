@@ -7,6 +7,33 @@ This example demonstrates creating the currently supported types of 1Password It
 The 1Password Terraform provider supports using both [1Password Connect Server](https://developer.1password.com/docs/secrets-automation/#1password-connect-server)
 and [1Password SDK](https://developer.1password.com/docs/sdks/).
 
+## Use with 1Password SDK
+
+To use the provider with 1Password Connect you need to
+
+### Authenticate SDK with service account
+
+To authenticate SDK with service account:
+
+1. [Create a service account](https://developer.1password.com/docs/service-accounts/get-started#create-a-service-account)
+2. Set `OP_SERVICE_ACCOUNT_TOKEN` environment variable or `service_account_token` in the provider configuration.
+
+### Authenticate the SDK with user account using biometric unlock
+
+To authenticate the SDK with user account using biometric unlock:
+
+1. [Turn on the app integration](https://developer.1password.com/docs/sdks/desktop-app-integrations/)
+2. Get the name of your account as it appears at the top of the left sidebar in the 1Password desktop app. Alternatively, in the terminal run `op account ls` to find the account ID. It will print similar output in the console:
+
+```
+URL                        EMAIL                                         USER ID
+acme.dev.com               test.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
+acme.prod.com              prod.user@acme.com                            HERE_WILL_BE_REAL_USER_ID
+```
+
+3. Set `OP_ACCOUNT` environment variable or `account` in the provider configuration with the `NAME` or `USER ID` value from the previous step.
+4. When the biometric unlock popup appears while running terraform command, [authenticate it using fingerprint or password](https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in).
+
 ## Use with 1Password Connect
 
 To use the provider with 1Password Connect you need to
