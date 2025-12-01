@@ -19,6 +19,7 @@ func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 			}
 			resourceStr += attr
 		}
+
 		resourceStr += "\n}"
 		return resourceStr
 	}
