@@ -6,24 +6,11 @@ import (
 	"strings"
 )
 
-func ItemResourceConfig(vaultID string, params map[string]any, resourceName ...string) func() string {
-	name := "test_item"
-	if len(resourceName) > 0 && resourceName[0] != "" {
-		name = resourceName[0]
-	}
-	return ItemResourceConfigWithName(name, vaultID, params)
-}
-
-func ItemResourceConfigWithName(resourceName string, vaultID string, params map[string]any) func() string {
+func ItemResourceConfig(vaultID string, params map[string]any) func() string {
 	return func() string {
-		resourceStr := fmt.Sprintf(`resource "onepassword_item" %q {`, resourceName)
+		resourceStr := `resource "onepassword_item" "test_item" {`
 
-		// Terraform references must not be quoated
-		if strings.HasPrefix(vaultID, "data.") {
-			resourceStr += fmt.Sprintf("\n  vault = %s", vaultID)
-		} else {
-			resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
-		}
+		resourceStr += fmt.Sprintf("\n  vault = %q", vaultID)
 
 		for key, value := range params {
 			attr, err := formatTerraformAttribute(key, value)
@@ -32,7 +19,6 @@ func ItemResourceConfigWithName(resourceName string, vaultID string, params map[
 			}
 			resourceStr += attr
 		}
-
 		resourceStr += "\n}"
 		return resourceStr
 	}

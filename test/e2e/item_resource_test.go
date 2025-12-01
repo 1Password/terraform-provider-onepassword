@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"os"
 	"regexp"
 	"testing"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
 	uuidutil "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/vault"
 )
 
 type testResourceItem struct {
@@ -116,6 +116,8 @@ func TestAccItemResource(t *testing.T) {
 		{category: model.Database, name: "Database"},
 		{category: model.SecureNote, name: "SecureNote"},
 	}
+
+	testVaultID := vault.GetTestVaultID(t)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -215,6 +217,8 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 		{name: "InvalidLength65", recipe: password.PasswordRecipe{Length: 65}},
 	}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	// Test both Login and Password items
 	items := []model.ItemCategory{model.Login, model.Password}
 
@@ -267,6 +271,8 @@ func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
 		{name: "LettersFalse", letters: false},
 	}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	item := testItemsToCreate[model.Login]
 
 	for _, tc := range testCases {
@@ -315,6 +321,8 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false}},
 		{name: "InvalidLength", recipe: password.PasswordRecipe{Length: 0}},
 	}
+
+	testVaultID := vault.GetTestVaultID(t)
 
 	item := testItemsToCreate[model.Login]
 
@@ -471,6 +479,8 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 
 	items := []model.ItemCategory{model.Login}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	for _, tc := range testCases {
 		for _, item := range items {
 			item := testItemsToCreate[item]
@@ -548,6 +558,8 @@ func TestAccItemResourceTags(t *testing.T) {
 		// {"REMOVE_2_TAGS", []string{"firstTestTag"}},
 	}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	var testSteps []resource.TestStep
 
 	for _, step := range testCases {
@@ -578,6 +590,8 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	uniqueID := uuid.New().String()
 
 	item := testItemsToCreate[model.Login]
+	testVaultID := vault.GetTestVaultID(t)
+
 	// Create a copy of item attributes and update title with unique ID
 	createAttrs := maps.Clone(item.Attrs)
 	createAttrs["title"] = addUniqueIDToTitle(createAttrs["title"].(string), uniqueID)
@@ -662,6 +676,8 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 	var itemUUID string
+	testVaultID := vault.GetTestVaultID(t)
+
 	initialAttrs := maps.Clone(testItemsToCreate[model.Login].Attrs)
 
 	initialAttrs["title"] = addUniqueIDToTitle(initialAttrs["title"].(string), uniqueID)
@@ -847,64 +863,6 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 
 					return nil
 				},
-			},
-		},
-	})
-}
-
-func TestAccItemResourceWithAccount(t *testing.T) {
-	account := os.Getenv("OP_ACCOUNT")
-	if account == "" {
-		t.Skip("Skipping test: OP_ACCOUNT environment variable is not set. This test requires account-based authentication with Touch ID.")
-	}
-
-	// Generate unique identifier for this test run to avoid conflicts
-	uniqueID := uuid.New().String()
-
-	loginItem := testItemsToCreate[model.Login]
-	loginAttrs := maps.Clone(loginItem.Attrs)
-	loginAttrs["title"] = addUniqueIDToTitle(loginAttrs["title"].(string), uniqueID)
-
-	passwordItem := testItemsToCreate[model.Password]
-	passwordAttrs := maps.Clone(passwordItem.Attrs)
-	passwordAttrs["title"] = addUniqueIDToTitle(passwordAttrs["title"].(string), uniqueID)
-
-	var loginItemUUID, passwordItemUUID string
-
-	// Build check functions for both items
-	loginChecks := []resource.TestCheckFunc{
-		logStep(t, "CREATE_LOGIN_WITH_ACCOUNT"),
-		uuidutil.CaptureItemUUID(t, "onepassword_item.test_login_item", &loginItemUUID),
-	}
-	loginChecks = append(loginChecks, checks.BuildItemChecks("onepassword_item.test_login_item", loginAttrs)...)
-
-	passwordChecks := []resource.TestCheckFunc{
-		logStep(t, "CREATE_PASSWORD_WITH_ACCOUNT"),
-		uuidutil.CaptureItemUUID(t, "onepassword_item.test_password_item", &passwordItemUUID),
-	}
-	passwordChecks = append(passwordChecks, checks.BuildItemChecks("onepassword_item.test_password_item", passwordAttrs)...)
-
-	// Combine all checks
-	allChecks := append(loginChecks, passwordChecks...)
-
-	// Use vault data source to resolve vault name to UUID
-	vaultID := "data.onepassword_vault.test_vault.uuid"
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			// Create both items in a single apply operation.
-			// When running manually, observe that biometrics is only prompted once at the start.
-			// Both items should be created successfully, demonstrating that the SDK client
-			// maintains authentication state across: vault lookup, login item create, and password item create.
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.VaultDataSourceConfig(map[string]string{"name": "Terraform Test Vault"}),
-					tfconfig.ItemResourceConfig(vaultID, loginAttrs, "test_login_item"),
-					tfconfig.ItemResourceConfig(vaultID, passwordAttrs, "test_password_item"),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(allChecks...),
 			},
 		},
 	})

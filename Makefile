@@ -37,9 +37,9 @@ test-e2e-account: ## Run e2e test using account methodology with Touch ID (requi
 	@test -n "$(OP_ACCOUNT)" || (echo "[ERROR] OP_ACCOUNT environment variable is not set."; exit 1)
 	@echo "[INFO] Running e2e test with account-based authentication (Touch ID)..."
 	@echo "[WARNING] This test will prompt for Touch ID/biometric authentication."
-	@echo "[WARNING] Please ensure you add a vault titled 'Terraform Test Vault' for this test to pass."
-	@echo "[INFO] The test creates multiple items - observe that biometrics is only prompted once."
-	@sh -c 'unset OP_CONNECT_TOKEN OP_CONNECT_HOST OP_SERVICE_ACCOUNT_TOKEN; OP_ACCOUNT="$(OP_ACCOUNT)" TF_ACC=1 go test -v ./test/e2e/... -run TestAccItemResourceWithAccount -timeout 30m'
+	@echo "[WARNING] Please ensure you add a vault titled 'terraform-provider-acceptance-tests' or set OP_TEST_VAULT_NAME environment variable for this test to pass."
+	@echo "[INFO] Ensure that biometrics are only prompted once."
+	@sh -c 'unset OP_CONNECT_TOKEN OP_CONNECT_HOST OP_SERVICE_ACCOUNT_TOKEN; OP_ACCOUNT="$(OP_ACCOUNT)" TF_ACC=1 go test -v ./test/e2e/... -run TestAccItemResource -timeout 30m'
 
 build: clean	## Build project
 	go build -o ./dist/terraform-provider-onepassword .
