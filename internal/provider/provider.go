@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
@@ -33,6 +36,9 @@ type OnePasswordProviderModel struct {
 	ConnectToken        types.String `tfsdk:"connect_token"`
 	ServiceAccountToken types.String `tfsdk:"service_account_token"`
 	Account             types.String `tfsdk:"account"`
+	// Old field names - these are deprecated and will be removed in a future version.
+	ConnectHostOld  types.String `tfsdk:"url"`
+	ConnectTokenOld types.String `tfsdk:"token"`
 }
 
 func (p *OnePasswordProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -46,11 +52,48 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 			"connect_url": schema.StringAttribute{
 				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{
+							path.MatchRoot("url"),
+						}...,
+					),
+				},
 			},
 			"connect_token": schema.StringAttribute{
 				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 				Sensitive:           true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{
+							path.MatchRoot("token"),
+						}...,
+					),
+				},
+			},
+			"url": schema.StringAttribute{
+				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_url` instead.",
+				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{
+							path.MatchRoot("connect_url"),
+						}...,
+					),
+				},
+			},
+			"token": schema.StringAttribute{
+				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_token` instead.",
+				Optional:            true,
+				Sensitive:           true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{
+							path.MatchRoot("connect_token"),
+						}...,
+					),
+				},
 			},
 			"service_account_token": schema.StringAttribute{
 				MarkdownDescription: "A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable. Provider will use the 1Password SDK if set.",
@@ -88,6 +131,15 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	if !config.ConnectToken.IsNull() {
 		connectToken = config.ConnectToken.ValueString()
 	}
+
+	// Old field names - these are deprecated and will be removed in a future version.
+	if !config.ConnectHostOld.IsNull() {
+		connectHost = config.ConnectHostOld.ValueString()
+	}
+	if !config.ConnectTokenOld.IsNull() {
+		connectToken = config.ConnectTokenOld.ValueString()
+	}
+
 	if !config.ServiceAccountToken.IsNull() {
 		serviceAccountToken = config.ServiceAccountToken.ValueString()
 	}
