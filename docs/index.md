@@ -47,6 +47,8 @@ Environment variables are a more secure way to set configuration options because
 - `connect_token` (String, Sensitive) A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.
 - `connect_url` (String) The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set.
 - `service_account_token` (String, Sensitive) A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable. Provider will use the 1Password SDK if set.
+- `token` (String, Sensitive) A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_token` instead.
+- `url` (String) The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_url` instead.
 
 ## Item fields
 Refer to [1Password Developer documentation](https://developer.1password.com/docs/cli/item-fields/) to find out about available field types.
