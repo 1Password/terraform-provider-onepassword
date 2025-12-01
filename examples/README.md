@@ -12,8 +12,8 @@ and [1Password SDK](https://developer.1password.com/docs/sdks/).
 To use the provider with 1Password Connect you need to
 
 1. [Deploy your Connect server](https://developer.1password.com/docs/connect/get-started#deployment)
-2. Set `OP_CONNECT_HOST` environment variable or `url` in the provider configuration.
-3. Set `OP_CONNECT_TOKEN` environment variable or `token` in the provider configuration.
+2. Set `OP_CONNECT_HOST` environment variable or `connect_url` in the provider configuration.
+3. Set `OP_CONNECT_TOKEN` environment variable or `connect_token` in the provider configuration.
 
 ## Create the Items
 

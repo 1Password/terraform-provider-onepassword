@@ -29,8 +29,8 @@ type OnePasswordProvider struct {
 
 // OnePasswordProviderModel describes the provider data model.
 type OnePasswordProviderModel struct {
-	ConnectHost         types.String `tfsdk:"url"`
-	ConnectToken        types.String `tfsdk:"token"`
+	ConnectHost         types.String `tfsdk:"connect_url"`
+	ConnectToken        types.String `tfsdk:"connect_token"`
 	ServiceAccountToken types.String `tfsdk:"service_account_token"`
 	Account             types.String `tfsdk:"account"`
 }
@@ -43,11 +43,11 @@ func (p *OnePasswordProvider) Metadata(ctx context.Context, req provider.Metadat
 func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"url": schema.StringAttribute{
+			"connect_url": schema.StringAttribute{
 				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 			},
-			"token": schema.StringAttribute{
+			"connect_token": schema.StringAttribute{
 				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 				Sensitive:           true,
@@ -104,7 +104,7 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	// TODO: Investigate if wrapping this as a (framework) validator can be a better fit.
 	if serviceAccountToken != "" || account != "" {
 		if connectToken != "" || connectHost != "" {
-			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"token\" and \"url\") or 1Password SDK (\"service_account_token\" or \"account\") credentials can be set. Both are set. Please unset one of them.")
+			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"connect_token\" and \"connect_url\") or 1Password SDK (\"service_account_token\" or \"account\") credentials can be set. Both are set. Please unset one of them.")
 		}
 		if serviceAccountToken != "" && account != "" {
 			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please unset one of them to use the provider with 1Password SDK.")

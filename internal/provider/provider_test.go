@@ -18,7 +18,7 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 func testAccProviderConfig(url string) string {
 	return fmt.Sprintf(`
 	  provider "onepassword" {
-		url = "%s"
-		token = "<PASSWORD>"
+		connect_url = "%s"
+		connect_token = "<PASSWORD>"
 	  }`, url)
 }
