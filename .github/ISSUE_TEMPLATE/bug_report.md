@@ -27,10 +27,6 @@ https://start.1password.com/integrations/active
 
 Connect Server Version:
 
-<!-- What version of the OP SDK are you running-->
-
-SDK Version:
-
 <!-- What OS are you running Terraform on? -->
 
 OS:
