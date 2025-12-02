@@ -17,6 +17,14 @@ func (v *Vault) FromConnectVault(vault *connect.Vault) {
 	v.Description = vault.Description
 }
 
+func (v *Vault) ToConnectVault() *connect.Vault {
+	return &connect.Vault{
+		ID:          v.ID,
+		Name:        v.Name,
+		Description: v.Description,
+	}
+}
+
 func (v *Vault) FromSDKVault(vault *sdk.VaultOverview) {
 	v.ID = vault.ID
 	v.Name = vault.Title
