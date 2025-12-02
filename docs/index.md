@@ -43,7 +43,7 @@ Environment variables are a more secure way to set configuration options because
 
 ### Optional
 
-- `account` (String) A valid account name or ID to use biometrics unlock. Can also be sourced from `OP_ACCOUNT` environment variable. Provider will use the 1Password SDK if set.
+- `account` (String) A valid account name or ID to use desktop app authentication. Can also be sourced from `OP_ACCOUNT` environment variable.
 - `service_account_token` (String, Sensitive) A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable.
 - `token` (String, Sensitive) A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.
 - `url` (String) The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set.
