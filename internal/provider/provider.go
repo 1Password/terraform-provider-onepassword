@@ -96,12 +96,12 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 				},
 			},
 			"service_account_token": schema.StringAttribute{
-				MarkdownDescription: "A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable. Provider will use the 1Password SDK if set.",
+				MarkdownDescription: "A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 			"account": schema.StringAttribute{
-				Description: "A valid account name or ID to use biometrics unlock. Can also be sourced from `OP_ACCOUNT` environment variable. Provider will use the 1Password SDK if set.",
+				Description: "A valid account name or ID to use desktop app authentication. Can also be sourced from `OP_ACCOUNT` environment variable.",
 				Optional:    true,
 			},
 		},
@@ -154,14 +154,12 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	// the other one is prompted for, but Terraform then forgets the value for the one that
 	// is defined in the code. This confusing user-experience can be avoided by handling the
 	// requirement of one of the attributes manually.
-	//
-	// TODO: Investigate if wrapping this as a (framework) validator can be a better fit.
 	if serviceAccountToken != "" || account != "" {
 		if connectToken != "" || connectHost != "" {
-			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"connect_token\" and \"connect_url\") or 1Password SDK (\"service_account_token\" or \"account\") credentials can be set. Both are set. Please unset one of them.")
+			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"connect_token\" and \"connect_url\") or \"service_account_token\" or \"account\" can be set. Multiple are set. Only one credential must be set.")
 		}
 		if serviceAccountToken != "" && account != "" {
-			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please unset one of them to use the provider with 1Password SDK.")
+			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please use only one of them.")
 		}
 	}
 
