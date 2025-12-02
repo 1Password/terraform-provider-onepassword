@@ -6,14 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestAccItemResourceDatabase(t *testing.T) {
 	expectedItem := generateDatabaseItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "VaultName",
 		Description: "This vault will be retrieved for testing",
 	}
@@ -44,8 +44,8 @@ func TestAccItemResourceDatabase(t *testing.T) {
 
 func TestAccItemResourcePassword(t *testing.T) {
 	expectedItem := generatePasswordItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "VaultName",
 		Description: "This vault will be retrieved for testing",
 	}
@@ -72,8 +72,8 @@ func TestAccItemResourcePassword(t *testing.T) {
 
 func TestAccItemResourceLogin(t *testing.T) {
 	expectedItem := generateLoginItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "VaultName",
 		Description: "This vault will be retrieved for testing",
 	}
@@ -101,8 +101,8 @@ func TestAccItemResourceLogin(t *testing.T) {
 
 func TestAccItemResourceSecureNote(t *testing.T) {
 	expectedItem := generateSecureNoteItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "VaultName",
 		Description: "This vault will be retrieved for testing",
 	}
@@ -129,8 +129,8 @@ func TestAccItemResourceSecureNote(t *testing.T) {
 
 func TestAccItemResourceWithSections(t *testing.T) {
 	expectedItem := generateItemWithSections()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "VaultName",
 		Description: "This vault will be retrieved for testing",
 	}
@@ -159,8 +159,8 @@ func TestAccItemResourceWithSections(t *testing.T) {
 
 func TestAccItemResourceDocument(t *testing.T) {
 	expectedItem := generateDocumentItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "VaultName",
 		Description: "This vault will be retrieved for testing",
 	}
@@ -179,7 +179,7 @@ func TestAccItemResourceDocument(t *testing.T) {
 	})
 }
 
-func testAccDataBaseResourceConfig(expectedItem *op.Item) string {
+func testAccDataBaseResourceConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -195,10 +195,10 @@ resource "onepassword_item" "test-database" {
   database = "%s"
   port = "%s"
   type = "%s"
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[2].Value, expectedItem.Fields[3].Value, expectedItem.Fields[4].Value, expectedItem.Fields[5].Value)
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[2].Value, expectedItem.Fields[3].Value, expectedItem.Fields[4].Value, expectedItem.Fields[5].Value)
 }
 
-func testAccPasswordResourceConfig(expectedItem *op.Item) string {
+func testAccPasswordResourceConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -210,10 +210,10 @@ resource "onepassword_item" "test-database" {
   category = "%s"
   username = "%s"
   password_recipe {}
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value)
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value)
 }
 
-func testAccLoginResourceConfig(expectedItem *op.Item) string {
+func testAccLoginResourceConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -226,10 +226,10 @@ resource "onepassword_item" "test-database" {
   username = "%s"
   password_recipe {}
   url = "%s"
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.URLs[0].URL)
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.URLs[0].URL)
 }
 
-func testAccSecureNoteResourceConfig(expectedItem *op.Item) string {
+func testAccSecureNoteResourceConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -242,10 +242,10 @@ resource "onepassword_item" "test-secure-note" {
   note_value = <<EOT
 %s
 EOT
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), strings.TrimSuffix(expectedItem.Fields[0].Value, "\n"))
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), strings.TrimSuffix(expectedItem.Fields[0].Value, "\n"))
 }
 
-func testAccDocumentResourceConfig(expectedItem *op.Item) string {
+func testAccDocumentResourceConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -255,10 +255,10 @@ resource "onepassword_item" "test-document" {
   vault = data.onepassword_vault.acceptance-tests.uuid
   title = "%s"
   category = "%s"
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)))
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)))
 }
 
-func testAccResourceWithSectionsConfig(expectedItem *op.Item) string {
+func testAccResourceWithSectionsConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -277,7 +277,7 @@ resource "onepassword_item" "test-database" {
 	}
   }
 }`,
-		expectedItem.Vault.ID,
+		expectedItem.VaultID,
 		expectedItem.Title,
 		strings.ToLower(string(expectedItem.Category)),
 		expectedItem.Sections[0].Label,

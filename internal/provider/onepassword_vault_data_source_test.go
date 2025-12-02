@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
 func TestAccVaultDataSource(t *testing.T) {
 	expectedItem := generateDatabaseItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -23,7 +23,7 @@ func TestAccVaultDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccVaultDataSourceConfig(expectedItem.Vault.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccVaultDataSourceConfig(expectedItem.VaultID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_vault.test", "id", fmt.Sprintf("vaults/%s", expectedVault.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_vault.test", "uuid", expectedVault.ID),
