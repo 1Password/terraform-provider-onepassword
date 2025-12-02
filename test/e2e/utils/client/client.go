@@ -13,7 +13,6 @@ func CreateTestClient(ctx context.Context) (onepassword.Client, error) {
 		ConnectToken:        os.Getenv("OP_CONNECT_TOKEN"),
 		ServiceAccountToken: os.Getenv("OP_SERVICE_ACCOUNT_TOKEN"),
 		Account:             os.Getenv("OP_ACCOUNT"),
-		OpCLIPath:           "op",
 		ProviderUserAgent:   "terraform-provider-onepassword/test",
 	})
 }
