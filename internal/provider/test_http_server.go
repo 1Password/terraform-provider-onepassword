@@ -11,12 +11,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 // setupTestServer sets up a http server that can be used mock out 1Password Connect API calls
 func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *testing.T) *httptest.Server {
-	itemBytes, err := json.Marshal(expectedItem)
+	connectItem, err := expectedItem.FromModelItemToConnect()
+	if err != nil {
+		t.Errorf("error converting item to connect item: %s", err)
+	}
+
+	itemBytes, err := json.Marshal(connectItem)
 	if err != nil {
 		t.Errorf("error marshaling item for testing: %s", err)
 	}
@@ -31,13 +37,15 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 		fileBytes = append(fileBytes, c)
 	}
 
-	vaultBytes, err := json.Marshal(expectedVault)
+	connectVault := expectedVault.ToConnectVault()
+
+	vaultBytes, err := json.Marshal(connectVault)
 	if err != nil {
 		t.Errorf("error marshaling vault for testing: %s", err)
 	}
 
-	itemList := []model.Item{*expectedItem}
-	itemListBytes, err := json.Marshal(itemList)
+	connectItemList := []*onepassword.Item{connectItem}
+	itemListBytes, err := json.Marshal(connectItemList)
 	if err != nil {
 		t.Errorf("error marshaling itemlist for testing: %s", err)
 	}
@@ -85,7 +93,24 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 			}
 		} else if r.Method == http.MethodPost {
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items", expectedItem.VaultID) {
-				itemToReturn := convertBodyToItem(r, t)
+				// Unmarshal request body as connect.Item (since that's what Connect sends)
+				rawBody, err := io.ReadAll(r.Body)
+				if err != nil {
+					t.Errorf("error reading item body for testing: %s", err)
+				}
+				var connectItemToReturn *onepassword.Item
+				err = json.Unmarshal(rawBody, &connectItemToReturn)
+				if err != nil {
+					t.Errorf("error unmarshaling item for testing: %s", err)
+				}
+
+				// Convert to model.Item for processing
+				itemToReturn := &model.Item{}
+				err = itemToReturn.FromConnectItemToModel(connectItemToReturn)
+				if err != nil {
+					t.Errorf("error converting Connect item to model: %s", err)
+				}
+
 				if itemToReturn.Category != model.SecureNote {
 					itemField := model.ItemField{
 						Label: "password",
@@ -94,8 +119,16 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 					itemToReturn.Fields = append(itemToReturn.Fields, itemField)
 				}
 
+				// Set the ID and VaultID (important for the response)
 				itemToReturn.ID = expectedItem.ID
-				itemBytes, err := json.Marshal(itemToReturn)
+				itemToReturn.VaultID = expectedItem.VaultID
+
+				// Convert back to Connect format for response
+				connectItemToReturn, err = itemToReturn.FromModelItemToConnect()
+				if err != nil {
+					t.Errorf("error converting model item to Connect format: %s", err)
+				}
+				itemBytes, err := json.Marshal(connectItemToReturn)
 
 				if err != nil {
 					t.Errorf("error marshaling item for testing: %s", err)
@@ -114,19 +147,4 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 			t.Errorf("Method not supported: %s", r.Method)
 		}
 	}))
-}
-
-func convertBodyToItem(r *http.Request, t *testing.T) model.Item {
-	rawBody, err := io.ReadAll(r.Body)
-	if err != nil {
-		t.Errorf("error reading item body for testing: %s", err)
-	}
-	itemToReturn := model.Item{}
-	err = json.Unmarshal(rawBody, &itemToReturn)
-	if err != nil {
-		t.Errorf("error unmarshaling item for testing: %s", err)
-	}
-
-	return itemToReturn
-
 }
