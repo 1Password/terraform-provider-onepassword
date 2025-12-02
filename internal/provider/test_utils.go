@@ -150,26 +150,32 @@ func generateLoginItemWithFiles() *model.Item {
 func generateDatabaseFields() []model.ItemField {
 	fields := []model.ItemField{
 		{
+			ID:    "username",
 			Label: "username",
 			Value: "test_user",
 		},
 		{
+			ID:    "password",
 			Label: "password",
 			Value: "test_password",
 		},
 		{
+			ID:    "hostname",
 			Label: "hostname",
 			Value: "test_host",
 		},
 		{
+			ID:    "database",
 			Label: "database",
 			Value: "test_database",
 		},
 		{
+			ID:    "port",
 			Label: "port",
 			Value: "test_port",
 		},
 		{
+			ID:    "type",
 			Label: "type",
 			Value: "mysql",
 		},
@@ -180,10 +186,12 @@ func generateDatabaseFields() []model.ItemField {
 func generatePasswordFields() []model.ItemField {
 	fields := []model.ItemField{
 		{
+			ID:    "username",
 			Label: "username",
 			Value: "test_user",
 		},
 		{
+			ID:    "password",
 			Label: "password",
 			Value: "test_password",
 		},
@@ -194,10 +202,12 @@ func generatePasswordFields() []model.ItemField {
 func generateLoginFields() []model.ItemField {
 	fields := []model.ItemField{
 		{
+			ID:    "username",
 			Label: "username",
 			Value: "test_user",
 		},
 		{
+			ID:    "password",
 			Label: "password",
 			Value: "test_password",
 		},
@@ -220,10 +230,12 @@ func generateSSHKeyFields() []model.ItemField {
 
 	fields := []model.ItemField{
 		{
+			ID:    "private_key",
 			Label: "private key",
 			Value: string(pem.EncodeToMemory(privateKeyPem)),
 		},
 		{
+			ID:    "public_key",
 			Label: "public key",
 			Value: publicKey,
 		},
