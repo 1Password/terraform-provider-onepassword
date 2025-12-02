@@ -8,8 +8,9 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 func generateBaseItem() model.Item {

@@ -6,8 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 func TestAccItemDataSourceSections(t *testing.T) {
