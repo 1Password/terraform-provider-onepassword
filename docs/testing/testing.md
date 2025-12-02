@@ -16,22 +16,17 @@ These tests verify the internal logic of the provider without requiring a live 1
 **Where**: `test/e2e/...`
 **Add files in**: `*_test.go` files in `test/e2e/`
 **Framework**: [Terraform Plugin Testing](https://github.com/hashicorp/terraform-plugin-testing)
+**Run**: `make test-e2e`
 
-These tests create, read, update, and delete actual resources in a 1Password vault to verify the provider's behavior. The test suite covers.
+## Setup to run e2e tests locally
+1. Set `OP_CONNECT_TOKEN`, `OP_CONNECT_HOST` and `OP_SERVICE_ACCOUNT_TOKEN` env variables.
+   - Optionally can set `TF_LOG` and `TF_LOG_PATH` for debugging. 
+2. `make test-e2e` to run e2e tests.
 
-**Local prep**:
-1. Ensure you have a 1Password account with a service account token
-2. Create or use an existing test vault in your 1Password account
-3. Set required environment variables:
-   ```bash
-   export OP_SERVICE_ACCOUNT_TOKEN=<your-service-account-token>
-   ```
-4. Optional environment variables for debugging:
-   ```bash
-   export TF_LOG=INFO          # Set Terraform logging level
-   export TF_LOG_PATH=./e2e.log # Path to log file
-   ```
-5. Run the tests:
-   ```bash
-   make test-e2e
-   ```
+Other supported commands:
+- `make test-e2e-service-account` - to run e2e tests using a service account only.
+  - set `OP_SERVICE_ACCOUNT_TOKEN` env variable before run.
+- `make test-e2e-connect` - to run e2e tests using Connect only.
+  - set `OP_CONNECT_TOKEN`, `OP_CONNECT_HOST` env variables before run.
+- `make test-e2e-account` - to run e2e test using desktop app authentication only.
+  - set `OP_ACCOUNT` and `OP_TEST_VAULT_NAME` env variables before run.
