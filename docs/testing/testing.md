@@ -1,17 +1,20 @@
 # Testing
 
 ## Unit & Integration tests
+
 **When**: Unit (pure Go) and integration tests for provider logic.
 **Where**: `internal/...`
 **Add files in**: `*_test.go` next to the code.
 **Run**: `make test`
 
 These tests verify the internal logic of the provider without requiring a live 1Password connection. They include:
+
 - Provider configuration and validation
 - Resource and data source logic
-- Utility functions (date parsing, CLI utilities, etc.)
+- Utility functions (date parsing, utilities, etc.)
 
 ## E2E tests (Acceptance Tests)
+
 **When**: End-to-end tests that verify the provider works correctly with a real 1Password account.
 **Where**: `test/e2e/...`
 **Add files in**: `*_test.go` files in `test/e2e/`

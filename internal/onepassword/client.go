@@ -26,7 +26,6 @@ type ClientConfig struct {
 	ConnectToken        string
 	ServiceAccountToken string
 	Account             string
-	OpCLIPath           string
 	ProviderUserAgent   string
 }
 
