@@ -19,6 +19,7 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
 	uuidutil "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/vault"
 )
 
 type testResourceItem struct {
@@ -115,6 +116,8 @@ func TestAccItemResource(t *testing.T) {
 		{category: model.Database, name: "Database"},
 		{category: model.SecureNote, name: "SecureNote"},
 	}
+
+	testVaultID := vault.GetTestVaultID(t)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -214,6 +217,8 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 		{name: "InvalidLength65", recipe: password.PasswordRecipe{Length: 65}},
 	}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	// Test both Login and Password items
 	items := []model.ItemCategory{model.Login, model.Password}
 
@@ -266,6 +271,8 @@ func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
 		{name: "LettersFalse", letters: false},
 	}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	item := testItemsToCreate[model.Login]
 
 	for _, tc := range testCases {
@@ -314,6 +321,8 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false}},
 		{name: "InvalidLength", recipe: password.PasswordRecipe{Length: 0}},
 	}
+
+	testVaultID := vault.GetTestVaultID(t)
 
 	item := testItemsToCreate[model.Login]
 
@@ -470,6 +479,8 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 
 	items := []model.ItemCategory{model.Login}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	for _, tc := range testCases {
 		for _, item := range items {
 			item := testItemsToCreate[item]
@@ -547,6 +558,8 @@ func TestAccItemResourceTags(t *testing.T) {
 		// {"REMOVE_2_TAGS", []string{"firstTestTag"}},
 	}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	var testSteps []resource.TestStep
 
 	for _, step := range testCases {
@@ -577,6 +590,8 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	uniqueID := uuid.New().String()
 
 	item := testItemsToCreate[model.Login]
+	testVaultID := vault.GetTestVaultID(t)
+
 	// Create a copy of item attributes and update title with unique ID
 	createAttrs := maps.Clone(item.Attrs)
 	createAttrs["title"] = addUniqueIDToTitle(createAttrs["title"].(string), uniqueID)
@@ -661,6 +676,8 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 	var itemUUID string
+	testVaultID := vault.GetTestVaultID(t)
+
 	initialAttrs := maps.Clone(testItemsToCreate[model.Login].Attrs)
 
 	initialAttrs["title"] = addUniqueIDToTitle(initialAttrs["title"].(string), uniqueID)
