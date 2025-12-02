@@ -41,5 +41,5 @@ func NewClient(ctx context.Context, config ClientConfig) (Client, error) {
 			ProviderUserAgent: config.ProviderUserAgent,
 		}), nil
 	}
-	return nil, errors.New("Invalid provider configuration. Either Connect credentials (\"token\" and \"url\") or Service Account (\"service_account_token\" or \"account\") credentials should be set.")
+	return nil, errors.New("Invalid provider configuration. Either Connect credentials (\"connect_token\" and \"connect_url\") or Service Account (\"service_account_token\") or \"account\"  should be set.")
 }

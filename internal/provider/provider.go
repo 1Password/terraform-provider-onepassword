@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
@@ -29,10 +32,13 @@ type OnePasswordProvider struct {
 
 // OnePasswordProviderModel describes the provider data model.
 type OnePasswordProviderModel struct {
-	ConnectHost         types.String `tfsdk:"url"`
-	ConnectToken        types.String `tfsdk:"token"`
+	ConnectHost         types.String `tfsdk:"connect_url"`
+	ConnectToken        types.String `tfsdk:"connect_token"`
 	ServiceAccountToken types.String `tfsdk:"service_account_token"`
 	Account             types.String `tfsdk:"account"`
+	// Old field names - these are deprecated and will be removed in a future version.
+	ConnectHostOld  types.String `tfsdk:"url"`
+	ConnectTokenOld types.String `tfsdk:"token"`
 }
 
 func (p *OnePasswordProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -43,14 +49,39 @@ func (p *OnePasswordProvider) Metadata(ctx context.Context, req provider.Metadat
 func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"url": schema.StringAttribute{
+			"connect_url": schema.StringAttribute{
 				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 			},
-			"token": schema.StringAttribute{
+			"connect_token": schema.StringAttribute{
 				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"url": schema.StringAttribute{
+				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_url` instead.",
+				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{
+							path.MatchRoot("connect_url"),
+						}...,
+					),
+				},
+				DeprecationMessage: "The \"url\" field is deprecated and will be removed in a future version. Use \"connect_url\" instead.",
+			},
+			"token": schema.StringAttribute{
+				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_token` instead.",
+				Optional:            true,
+				Sensitive:           true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{
+							path.MatchRoot("connect_token"),
+						}...,
+					),
+				},
+				DeprecationMessage: "The \"token\" field is deprecated and will be removed in a future version. Use \"connect_token\" instead.",
 			},
 			"service_account_token": schema.StringAttribute{
 				MarkdownDescription: "A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable.",
@@ -88,6 +119,15 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	if !config.ConnectToken.IsNull() {
 		connectToken = config.ConnectToken.ValueString()
 	}
+
+	// Old field names - these are deprecated and will be removed in a future version.
+	if !config.ConnectHostOld.IsNull() {
+		connectHost = config.ConnectHostOld.ValueString()
+	}
+	if !config.ConnectTokenOld.IsNull() {
+		connectToken = config.ConnectTokenOld.ValueString()
+	}
+
 	if !config.ServiceAccountToken.IsNull() {
 		serviceAccountToken = config.ServiceAccountToken.ValueString()
 	}
@@ -100,8 +140,6 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	// the other one is prompted for, but Terraform then forgets the value for the one that
 	// is defined in the code. This confusing user-experience can be avoided by handling the
 	// requirement of one of the attributes manually.
-	//
-	// TODO: Investigate if wrapping this as a (framework) validator can be a better fit.
 	if serviceAccountToken != "" || account != "" {
 		if connectToken != "" || connectHost != "" {
 			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"connect_token\" and \"connect_url\") or \"service_account_token\" or \"account\" can be set. Multiple are set. Only one credential must be set.")
