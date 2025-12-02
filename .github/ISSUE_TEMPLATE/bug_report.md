@@ -13,14 +13,14 @@ assignees: ""
 Terraform Provider Version:
 
 <!-- What authentication method are you using?
-- Connect: Using Connect server credentials (url + token)
+- Connect: Using Connect server credentials (connect_url + connect_token)
 - Service Account: Using service account token
-- Biometric/Desktop: Using account name/ID for biometric unlock
+- Desktop app: Using account name/ID for biometric unlock
 -->
 
 Authentication Method:
 
-<!-- What version of the Connect server are you running? (Only relevant if using Connect authentication)
+<!-- What version of the Connect server are you running? (Only relevant if using Connect authentication, otherwise N/A)
 You can get this information from the Integrations section in 1Password
 https://start.1password.com/integrations/active
 -->

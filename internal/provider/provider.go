@@ -58,7 +58,7 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 				Sensitive:           true,
 			},
 			"account": schema.StringAttribute{
-				Description: "A valid account name or ID to use biometrics unlock. Can also be sourced from `OP_ACCOUNT` environment variable. Provider will use the 1Password SDK if set.",
+				Description: "A valid account name or ID to use desktop app authentication. Can also be sourced from `OP_ACCOUNT` environment variable.",
 				Optional:    true,
 			},
 		},
@@ -104,10 +104,10 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	// TODO: Investigate if wrapping this as a (framework) validator can be a better fit.
 	if serviceAccountToken != "" || account != "" {
 		if connectToken != "" || connectHost != "" {
-			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"token\" and \"url\") or \"service_account_token\" or \"account\" can be set. Multiple are set. Only one credential must be set.")
+			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"connect_token\" and \"connect_url\") or \"service_account_token\" or \"account\" can be set. Multiple are set. Only one credential must be set.")
 		}
 		if serviceAccountToken != "" && account != "" {
-			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please unset one of them to use the provider with 1Password SDK.")
+			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please use only one of them.")
 		}
 	}
 
