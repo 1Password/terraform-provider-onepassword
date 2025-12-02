@@ -1,16 +1,24 @@
 package integration
 
 import (
+	"context"
 	"fmt"
+	"maps"
 	"regexp"
 	"testing"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/attributes"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/client"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/ssh"
+	uuidutil "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 )
 
 const testVaultID = "bbucuyq2nn4fozygwttxwizpcy"
@@ -27,8 +35,8 @@ type testItem struct {
 	Attrs map[string]string
 }
 
-var testItems = map[op.ItemCategory]testItem{
-	op.Login: {
+var testItems = map[model.ItemCategory]testItem{
+	model.Login: {
 		Title: "Test Login",
 		UUID:  "5axoqbjhbx3u7wqmersrg6qnqy",
 		Attrs: map[string]string{
@@ -38,7 +46,7 @@ var testItems = map[op.ItemCategory]testItem{
 			"url":      "www.example.com",
 		},
 	},
-	op.Password: {
+	model.Password: {
 		Title: "Test Password",
 		UUID:  "axoqeauq7ilndgdpimb4j4dwhi",
 		Attrs: map[string]string{
@@ -46,7 +54,7 @@ var testItems = map[op.ItemCategory]testItem{
 			"password": "testPassword",
 		},
 	},
-	op.Database: {
+	model.Database: {
 		Title: "Test Database",
 		UUID:  "ck6mbmf3yjps6gk5qldnx4frni",
 		Attrs: map[string]string{
@@ -58,7 +66,7 @@ var testItems = map[op.ItemCategory]testItem{
 			"type":     "mysql",
 		},
 	},
-	op.SecureNote: {
+	model.SecureNote: {
 		Title: "Test Secure Note",
 		UUID:  "5xbca3eblv5kxkszrbuhdame4a",
 		Attrs: map[string]string{
@@ -66,7 +74,7 @@ var testItems = map[op.ItemCategory]testItem{
 			"note_value": "This is a test secure note for terraform-provider-onepassword",
 		},
 	},
-	op.Document: {
+	model.Document: {
 		Title: "Test Document",
 		UUID:  "p6uyugpmxo6zcxo5fdfctet7xa",
 		Attrs: map[string]string{
@@ -76,7 +84,7 @@ var testItems = map[op.ItemCategory]testItem{
 			"file.0.content_base64": "VGhpcyBpcyBhIHRlc3Q=",
 		},
 	},
-	op.SSHKey: {
+	model.SSHKey: {
 		Title: "Test SSH Key",
 		UUID:  "5dbnxvhcknslz4mcaz7lobzt6i",
 		Attrs: map[string]string{
@@ -100,15 +108,15 @@ func TestAccItemDataSource(t *testing.T) {
 	}
 
 	itemTypes := []struct {
-		category op.ItemCategory
+		category model.ItemCategory
 		name     string
 	}{
-		{op.Login, "Login"},
-		{op.Password, "Password"},
-		{op.Database, "Database"},
-		{op.SecureNote, "SecureNote"},
-		{op.Document, "Document"},
-		{op.SSHKey, "SSHKey"},
+		{model.Login, "Login"},
+		{model.Password, "Password"},
+		{model.Database, "Database"},
+		{model.SecureNote, "SecureNote"},
+		{model.Document, "Document"},
+		{model.SSHKey, "SSHKey"},
 	}
 
 	var testCases []itemDataSourceTestCase
@@ -206,4 +214,217 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
+	// Generate unique identifier for this test run to avoid conflicts in parallel execution
+	uniqueID := uuid.New().String()
+	var itemUUID string
+
+	item := testItemsToCreate[model.Login]
+	initialAttrs := maps.Clone(item.Attrs)
+	initialAttrs["title"] = addUniqueIDToTitle(initialAttrs["title"].(string), uniqueID)
+	initialAttrs["section"] = sections.MapSections([]sections.TestSection{
+		{
+			Label: "Original Section",
+			Fields: []sections.TestField{
+				{Label: "Original Field 1", Value: "original value 1", Type: "STRING"},
+				{Label: "Original Field 2", Value: "original value 2", Type: "EMAIL"},
+			},
+		},
+	})
+
+	updatedAttrs := maps.Clone(testItemsUpdatedAttrs[model.Login])
+	updatedAttrs["title"] = initialAttrs["title"]
+	updatedAttrs["section"] = sections.MapSections([]sections.TestSection{
+		{
+			Label: "Updated Section",
+			Fields: []sections.TestField{
+				{Label: "New Field", Value: "new value", Type: "URL"},
+			},
+		},
+	})
+
+	removedAttrs := map[string]any{
+		"title":    initialAttrs["title"],
+		"category": "login",
+		"url":      []string{},
+		"tags":     []string{},
+		"section":  []map[string]any{},
+	}
+
+	// Initial data source read checks
+	initialReadChecks := []resource.TestCheckFunc{
+		logStep(t, "INITIAL_READ"),
+		uuidutil.CaptureItemUUID(t, "data.onepassword_item.test_item", &itemUUID),
+	}
+	bcInitial := checks.BuildItemChecks("data.onepassword_item.test_item", initialAttrs)
+	initialReadChecks = append(initialReadChecks, bcInitial...)
+
+	// Build check function to manually update the item
+	updateItemOutsideTerraform := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Log("MANUALLY_UPDATE_ITEM")
+			ctx := context.Background()
+
+			client, err := client.CreateTestClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			currentItem := &model.Item{
+				ID:       itemUUID,
+				VaultID:  testVaultID,
+				Category: model.Login,
+			}
+			updatedItem := attributes.BuildUpdatedItemAttrs(currentItem, updatedAttrs)
+
+			_, err = client.UpdateItem(ctx, updatedItem, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to update item: %w", err)
+			}
+
+			return nil
+		}
+	}
+
+	// Build checks for updated data source read
+	updatedReadChecks := []resource.TestCheckFunc{
+		logStep(t, "READ_AFTER_UPDATE"),
+	}
+	bcUpdated := checks.BuildItemChecks("data.onepassword_item.test_item", updatedAttrs)
+	updatedReadChecks = append(updatedReadChecks, bcUpdated...)
+
+	// Build check function to manually remove all fields
+	removeFieldsOutsideTerraform := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Log("MANUALLY_REMOVE_ALL_FIELDS")
+			ctx := context.Background()
+
+			client, err := client.CreateTestClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			strippedItem := &model.Item{
+				ID:       itemUUID,
+				Title:    removedAttrs["title"].(string),
+				VaultID:  testVaultID,
+				Category: model.Login,
+				Tags:     []string{},
+				URLs: []model.ItemURL{
+					{URL: "", Primary: true},
+				},
+				Sections: []model.ItemSection{},
+				Fields:   []model.ItemField{},
+			}
+
+			_, err = client.UpdateItem(ctx, strippedItem, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to remove fields: %w", err)
+			}
+
+			return nil
+		}
+	}
+
+	// Build checks for reading after field removal
+	removedFieldsReadChecks := []resource.TestCheckFunc{
+		logStep(t, "READ_AFTER_REMOVAL"),
+	}
+	bcRemoved := checks.BuildItemChecks("data.onepassword_item.test_item", removedAttrs)
+	removedFieldsReadChecks = append(removedFieldsReadChecks, bcRemoved...)
+
+	// Verify that username is either not present (SDK) or empty (Connect)
+	removedFieldsReadChecks = append(removedFieldsReadChecks, resource.TestCheckFunc(func(s *terraform.State) error {
+		item, ok := s.RootModule().Resources["data.onepassword_item.test_item"]
+		if !ok {
+			return fmt.Errorf("resource not found in state")
+		}
+
+		username, exists := item.Primary.Attributes["username"]
+		if exists {
+			// If username exists, it should be empty (Connect behavior)
+			if username != "" {
+				return fmt.Errorf("expected username to be empty or not present, got %q", username)
+			}
+		}
+		// If username doesn't exist, that's also valid (SDK behavior)
+		return nil
+	}))
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create item using resource
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+				),
+			},
+			// Read item with data source
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+					tfconfig.ItemDataSourceConfig(map[string]string{
+						"vault": testVaultID,
+						"title": fmt.Sprintf("%v", initialAttrs["title"]),
+					}),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(initialReadChecks...),
+			},
+			// Manually update item
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+					tfconfig.ItemDataSourceConfig(map[string]string{
+						"vault": testVaultID,
+						"title": fmt.Sprintf("%v", initialAttrs["title"]),
+					}),
+				),
+				Check:              updateItemOutsideTerraform(),
+				ExpectNonEmptyPlan: true,
+			},
+			// Data source should read the updated values
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+					tfconfig.ItemDataSourceConfig(map[string]string{
+						"vault": testVaultID,
+						"title": fmt.Sprintf("%v", initialAttrs["title"]),
+					}),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(updatedReadChecks...),
+			},
+			// Manually remove fields
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+					tfconfig.ItemDataSourceConfig(map[string]string{
+						"vault": testVaultID,
+						"title": fmt.Sprintf("%v", initialAttrs["title"]),
+					}),
+				),
+				Check:              removeFieldsOutsideTerraform(),
+				ExpectNonEmptyPlan: true,
+			},
+			// Data source should read the removed fields
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+					tfconfig.ItemDataSourceConfig(map[string]string{
+						"vault": testVaultID,
+						"title": fmt.Sprintf("%v", initialAttrs["title"]),
+					}),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(removedFieldsReadChecks...),
+			},
+		},
+	})
 }
