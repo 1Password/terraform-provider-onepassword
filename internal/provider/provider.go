@@ -134,9 +134,11 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 
 	// Old field names - these are deprecated and will be removed in a future version.
 	if !config.ConnectHostOld.IsNull() {
+		resp.Diagnostics.AddWarning("Deprecated field", "The \"url\" field is deprecated and will be removed in a future version. Use \"connect_url\" instead.")
 		connectHost = config.ConnectHostOld.ValueString()
 	}
 	if !config.ConnectTokenOld.IsNull() {
+		resp.Diagnostics.AddWarning("Deprecated field", "The \"token\" field is deprecated and will be removed in a future version. Use \"connect_token\" instead.")
 		connectToken = config.ConnectTokenOld.ValueString()
 	}
 
