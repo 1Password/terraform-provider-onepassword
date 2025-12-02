@@ -52,25 +52,11 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 			"connect_url": schema.StringAttribute{
 				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(
-						path.Expressions{
-							path.MatchRoot("url"),
-						}...,
-					),
-				},
 			},
 			"connect_token": schema.StringAttribute{
 				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 				Sensitive:           true,
-				Validators: []validator.String{
-					stringvalidator.ConflictsWith(
-						path.Expressions{
-							path.MatchRoot("token"),
-						}...,
-					),
-				},
 			},
 			"url": schema.StringAttribute{
 				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_url` instead.",
@@ -82,6 +68,7 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 						}...,
 					),
 				},
+				DeprecationMessage: "The \"url\" field is deprecated and will be removed in a future version. Use \"connect_url\" instead.",
 			},
 			"token": schema.StringAttribute{
 				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_token` instead.",
@@ -94,6 +81,7 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 						}...,
 					),
 				},
+				DeprecationMessage: "The \"token\" field is deprecated and will be removed in a future version. Use \"connect_token\" instead.",
 			},
 			"service_account_token": schema.StringAttribute{
 				MarkdownDescription: "A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable.",
@@ -134,11 +122,9 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 
 	// Old field names - these are deprecated and will be removed in a future version.
 	if !config.ConnectHostOld.IsNull() {
-		resp.Diagnostics.AddWarning("Deprecated field", "The \"url\" field is deprecated and will be removed in a future version. Use \"connect_url\" instead.")
 		connectHost = config.ConnectHostOld.ValueString()
 	}
 	if !config.ConnectTokenOld.IsNull() {
-		resp.Diagnostics.AddWarning("Deprecated field", "The \"token\" field is deprecated and will be removed in a future version. Use \"connect_token\" instead.")
 		connectToken = config.ConnectTokenOld.ValueString()
 	}
 

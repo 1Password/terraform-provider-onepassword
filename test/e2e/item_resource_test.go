@@ -554,8 +554,8 @@ func TestAccItemResourceTags(t *testing.T) {
 		tags []string
 	}{
 		{"CREATE_ITEM_WITH_2_TAGS", []string{"firstTestTag", "secondTestTag"}},
-		// {"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
-		// {"REMOVE_2_TAGS", []string{"firstTestTag"}},
+		{"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
+		{"REMOVE_2_TAGS", []string{"firstTestTag"}},
 	}
 
 	testVaultID := vault.GetTestVaultID(t)
