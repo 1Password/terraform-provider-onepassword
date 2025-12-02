@@ -365,7 +365,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			data.NoteValue = types.StringValue(f.Value)
 		default:
 			if f.SectionID == "" {
-				switch f.Label {
+				switch f.ID {
 				case "username":
 					data.Username = types.StringValue(f.Value)
 				case "password":
@@ -376,11 +376,11 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.Database = types.StringValue(f.Value)
 				case "port":
 					data.Port = types.StringValue(f.Value)
-				case "type":
+				case "type", "database_type":
 					data.Type = types.StringValue(f.Value)
-				case "public key":
+				case "public_key":
 					data.PublicKey = types.StringValue(f.Value)
-				case "private key":
+				case "private_key":
 					data.PrivateKey = types.StringValue(f.Value)
 					openSSHPrivateKey, err := opssh.PrivateKeyToOpenSSH([]byte(f.Value), item.ID)
 					if err != nil {
