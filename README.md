@@ -14,7 +14,7 @@
 ## ✨ Get started
 
 - See the [examples](./examples/) directory for detailed examples.
-- Detailed documentation for using this provider can be found on the [Terraform Registry docs](https://registry.terraform.io/providers/1Password/onepassword/latest/docs).
+- For more details check out [1Password Terraform Provider documentation](https://developer.1password.com/docs/terraform/).
 
 ```tf
 terraform {

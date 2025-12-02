@@ -1,19 +1,6 @@
 # Creating Login, Password, and Database 1Password Items
 
-This example demonstrates creating the currently supported types of 1Password Items (Logins, Passwords, and Databases).
-
-## Prerequisites
-
-The 1Password Terraform provider supports using both [1Password Connect Server](https://developer.1password.com/docs/secrets-automation/#1password-connect-server)
-and [1Password SDK](https://developer.1password.com/docs/sdks/).
-
-## Use with 1Password Connect
-
-To use the provider with 1Password Connect you need to
-
-1. [Deploy your Connect server](https://developer.1password.com/docs/connect/get-started#deployment)
-2. Set `OP_CONNECT_HOST` environment variable or `connect_url` in the provider configuration.
-3. Set `OP_CONNECT_TOKEN` environment variable or `connect_token` in the provider configuration.
+For more details check out [1Password Terraform Provider documentation](https://developer.1password.com/docs/terraform/).
 
 ## Create the Items
 
