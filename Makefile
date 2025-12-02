@@ -33,8 +33,9 @@ test-e2e-connect: ## Run e2e tests using Connect (requires OP_CONNECT_TOKEN and 
 	@echo "[INFO] Running e2e tests with Connect authentication..."
 	@sh -c 'unset OP_SERVICE_ACCOUNT_TOKEN; OP_CONNECT_TOKEN="$(OP_CONNECT_TOKEN)" OP_CONNECT_HOST="$(OP_CONNECT_HOST)" TF_ACC=1 go test -v ./test/e2e/... -timeout 30m'
 
-test-e2e-account: ## Run e2e test using account methodology with Touch ID (requires OP_ACCOUNT, manual only). Creates multiple items to verify biometrics is only prompted once.
+test-e2e-account: ## Run e2e test using account methodology with Touch ID (requires OP_ACCOUNT and OP_TEST_VAULT_NAME, manual only). Creates multiple items to verify biometrics is only prompted once.
 	@test -n "$(OP_ACCOUNT)" || (echo "[ERROR] OP_ACCOUNT environment variable is not set."; exit 1)
+	@test -n "$(OP_TEST_VAULT_NAME)" || (echo "[ERROR] OP_TEST_VAULT_NAME environment variable is not set."; exit 1)
 	@echo "[INFO] Running e2e test with account-based authentication (Touch ID)..."
 	@echo "[WARNING] This test will prompt for Touch ID/biometric authentication."
 	@echo "[WARNING] Please ensure you add a vault titled 'terraform-provider-acceptance-tests' or set OP_TEST_VAULT_NAME environment variable for this test to pass."
