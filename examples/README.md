@@ -1,28 +1,6 @@
 # Creating Login, Password, and Database 1Password Items
 
-This example demonstrates creating the currently supported types of 1Password Items (Logins, Passwords, and Databases).
-
-## Authentication
-
-The 1Password Terraform provider supports multiple authentication methods:
-
-### Authenticate with Service Account
-
-1. [Create a service account](https://developer.1password.com/docs/service-accounts/get-started#create-a-service-account)
-2. Set `OP_SERVICE_ACCOUNT_TOKEN` environment variable or `service_account_token` in the provider configuration.
-
-### Authenticate with Biometric Unlock
-
-1. [Turn on the app integration](https://developer.1password.com/docs/sdks/desktop-app-integrations/)
-2. Get the name of your account as it appears at the top of the left sidebar in the 1Password desktop app. Alternatively, in the terminal run `op account get` to find the account ID.
-3. Set `OP_ACCOUNT` environment variable or `account` in the provider configuration with the `NAME` or `ID` value from the previous step.
-4. When the biometric unlock popup appears while running terraform command, [authenticate it using fingerprint or password](https://developer.1password.com/docs/cli/app-integration/#step-2-enter-any-command-to-sign-in).
-
-### Authenticate with Connect Credentials
-
-1. [Deploy your Connect server](https://developer.1password.com/docs/connect/get-started#deployment)
-2. Set `OP_CONNECT_HOST` environment variable or `url` in the provider configuration.
-3. Set `OP_CONNECT_TOKEN` environment variable or `token` in the provider configuration.
+For more details check out [1Password Terraform Provider documentation](https://developer.1password.com/docs/terraform/).
 
 ## Create the Items
 
