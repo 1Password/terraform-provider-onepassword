@@ -93,23 +93,7 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 			}
 		} else if r.Method == http.MethodPost {
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items", expectedItem.VaultID) {
-				// Unmarshal request body as connect.Item (since that's what Connect sends)
-				rawBody, err := io.ReadAll(r.Body)
-				if err != nil {
-					t.Errorf("error reading item body for testing: %s", err)
-				}
-				var connectItemToReturn *onepassword.Item
-				err = json.Unmarshal(rawBody, &connectItemToReturn)
-				if err != nil {
-					t.Errorf("error unmarshaling item for testing: %s", err)
-				}
-
-				// Convert to model.Item for processing
-				itemToReturn := &model.Item{}
-				err = itemToReturn.FromConnectItemToModel(connectItemToReturn)
-				if err != nil {
-					t.Errorf("error converting Connect item to model: %s", err)
-				}
+				itemToReturn := convertBodyToItem(r, t)
 
 				if itemToReturn.Category != model.SecureNote {
 					itemField := model.ItemField{
@@ -119,12 +103,12 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 					itemToReturn.Fields = append(itemToReturn.Fields, itemField)
 				}
 
-				// Set the ID and VaultID (important for the response)
+				// Set the ID and VaultID
 				itemToReturn.ID = expectedItem.ID
 				itemToReturn.VaultID = expectedItem.VaultID
 
 				// Convert back to Connect format for response
-				connectItemToReturn, err = itemToReturn.FromModelItemToConnect()
+				connectItemToReturn, err := itemToReturn.FromModelItemToConnect()
 				if err != nil {
 					t.Errorf("error converting model item to Connect format: %s", err)
 				}
@@ -147,4 +131,24 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 			t.Errorf("Method not supported: %s", r.Method)
 		}
 	}))
+}
+
+func convertBodyToItem(r *http.Request, t *testing.T) model.Item {
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		t.Errorf("error reading item body for testing: %s", err)
+	}
+	connectItemToReturn := onepassword.Item{}
+	err = json.Unmarshal(rawBody, &connectItemToReturn)
+	if err != nil {
+		t.Errorf("error unmarshaling item for testing: %s", err)
+	}
+
+	modelItemToReturn := model.Item{}
+	err = modelItemToReturn.FromConnectItemToModel(&connectItemToReturn)
+	if err != nil {
+		t.Errorf("error converting Connect item to model: %s", err)
+	}
+
+	return modelItemToReturn
 }
