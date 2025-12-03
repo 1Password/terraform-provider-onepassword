@@ -28,7 +28,7 @@
   * Fix provider error when item is manually removed from 1Password. {#97}
   * Update testing documentation with available testing make commands and setup instructions. {#269}
   * Update README and documentation to reference 1Password developer portal. {#266}
-  * Fix field reference from "label" to "id" for item data source. {#213}
+  * Fix field reference from `label` to `id` for item data source. {#213}
 
 ## Changes
   * Remove 1Password CLI support in favor of SDKs. {#264}
