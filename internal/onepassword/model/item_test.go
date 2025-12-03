@@ -262,6 +262,16 @@ func TestFromConnectURLs(t *testing.T) {
 				{URL: "https://example.com", Label: "Example", Primary: true},
 			},
 		},
+		"should convert multiple URLs": {
+			input: []connect.ItemURL{
+				{URL: "https://example.com", Label: "Primary", Primary: true},
+				{URL: "https://example.org", Label: "Secondary", Primary: false},
+			},
+			expected: []ItemURL{
+				{URL: "https://example.com", Label: "Primary", Primary: true},
+				{URL: "https://example.org", Label: "Secondary", Primary: false},
+			},
+		},
 		"should handle empty slice": {
 			input:    []connect.ItemURL{},
 			expected: []ItemURL{},
@@ -337,6 +347,28 @@ func TestFromConnectSections(t *testing.T) {
 				"section2": {ID: "section2", Label: "Section 2"},
 			},
 		},
+		"should handle sections with empty labels": {
+			input: []*connect.ItemSection{
+				{ID: "section1", Label: ""},
+			},
+			expected: []ItemSection{
+				{ID: "section1", Label: ""},
+			},
+			expectedMap: map[string]ItemSection{
+				"section1": {ID: "section1", Label: ""},
+			},
+		},
+		"should handle sections with empty IDs": {
+			input: []*connect.ItemSection{
+				{ID: "", Label: "Section 1"},
+			},
+			expected: []ItemSection{
+				{ID: "", Label: "Section 1"},
+			},
+			expectedMap: map[string]ItemSection{
+				"": {ID: "", Label: "Section 1"},
+			},
+		},
 	}
 
 	for description, test := range tests {
@@ -367,6 +399,15 @@ func TestFromConnectFields(t *testing.T) {
 			sectionMap: map[string]ItemSection{},
 			expected: []ItemField{
 				{ID: "field1", Label: "Field 1", Type: FieldTypeString, Value: "value1"},
+			},
+		},
+		"should convert date field from timestamp to YYYY-MM-DD": {
+			input: []*connect.ItemField{
+				{ID: "date1", Type: connect.FieldTypeDate, Value: "1609459200"}, // 2021-01-01
+			},
+			sectionMap: map[string]ItemSection{},
+			expected: []ItemField{
+				{ID: "date1", Type: FieldTypeDate, Value: "2021-01-01"},
 			},
 		},
 		"should associate field with section": {
@@ -425,6 +466,18 @@ func TestFromConnectFields(t *testing.T) {
 				{ID: "field1", Type: FieldTypeString, Value: "value1"},
 				{ID: "field2", Type: FieldTypeString, Value: "value2"},
 			},
+		},
+		"should handle empty slice": {
+			input:      []*connect.ItemField{},
+			sectionMap: map[string]ItemSection{},
+			expected:   []ItemField{},
+		},
+		"should error on invalid date timestamp": {
+			input: []*connect.ItemField{
+				{ID: "date1", Type: connect.FieldTypeDate, Value: "invalid-timestamp"},
+			},
+			sectionMap:    map[string]ItemSection{},
+			expectedError: true,
 		},
 	}
 
@@ -523,6 +576,16 @@ func TestToConnectURLs(t *testing.T) {
 				{URL: "https://example.com", Label: "Example", Primary: true},
 			},
 		},
+		"should convert multiple URLs": {
+			input: []ItemURL{
+				{URL: "https://example.com", Label: "Primary", Primary: true},
+				{URL: "https://example.org", Label: "Secondary", Primary: false},
+			},
+			expected: []connect.ItemURL{
+				{URL: "https://example.com", Label: "Primary", Primary: true},
+				{URL: "https://example.org", Label: "Secondary", Primary: false},
+			},
+		},
 		"should handle empty slice": {
 			input:    []ItemURL{},
 			expected: []connect.ItemURL{},
@@ -582,6 +645,22 @@ func TestToConnectSections(t *testing.T) {
 				{ID: "section1", Label: ""},
 			},
 		},
+		"should handle sections with empty IDs": {
+			input: []ItemSection{
+				{ID: "", Label: "Section 1"},
+			},
+			expected: []*connect.ItemSection{
+				{ID: "", Label: "Section 1"},
+			},
+		},
+		"should handle sections with both empty ID and label": {
+			input: []ItemSection{
+				{ID: "", Label: ""},
+			},
+			expected: []*connect.ItemSection{
+				{ID: "", Label: ""},
+			},
+		},
 	}
 
 	for description, test := range tests {
@@ -608,6 +687,14 @@ func TestToConnectFields(t *testing.T) {
 				{ID: "field1", Label: "Field 1", Type: connect.FieldTypeString, Value: "value1"},
 			},
 		},
+		"should convert date field from YYYY-MM-DD to timestamp": {
+			input: []ItemField{
+				{ID: "date1", Type: FieldTypeDate, Value: "2021-01-01"},
+			},
+			expected: []*connect.ItemField{
+				{ID: "date1", Type: connect.FieldTypeDate, Value: "1609502460"}, // 2021-01-01 12:01:00 UTC
+			},
+		},
 		"should associate field with section": {
 			input: []ItemField{
 				{
@@ -627,6 +714,26 @@ func TestToConnectFields(t *testing.T) {
 						ID:    "section1",
 						Label: "Section 1",
 					},
+				},
+			},
+		},
+		"should convert field with generate flag": {
+			input: []ItemField{
+				{
+					ID:       "field1",
+					Label:    "Field 1",
+					Type:     FieldTypeString,
+					Value:    "value1",
+					Generate: true,
+				},
+			},
+			expected: []*connect.ItemField{
+				{
+					ID:       "field1",
+					Label:    "Field 1",
+					Type:     connect.FieldTypeString,
+					Value:    "value1",
+					Generate: true,
 				},
 			},
 		},
@@ -665,7 +772,7 @@ func TestToConnectFields(t *testing.T) {
 			},
 			expected: []*connect.ItemField{
 				{ID: "f1", Type: connect.FieldTypeConcealed, Value: "secret"},
-				{ID: "f2", Type: connect.FieldTypeDate, Value: "1609459200"},
+				{ID: "f2", Type: connect.FieldTypeDate, Value: "1609502460"}, // 2021-01-01 12:01:00 UTC
 				{ID: "f3", Type: connect.FieldTypeEmail, Value: "test@example.com"},
 				{ID: "f4", Type: connect.FieldTypeMenu, Value: "option1"},
 				{ID: "f5", Type: connect.FieldTypeMonthYear, Value: "2021-01"},
@@ -673,6 +780,10 @@ func TestToConnectFields(t *testing.T) {
 				{ID: "f7", Type: connect.FieldTypeString, Value: "text"},
 				{ID: "f8", Type: connect.FieldTypeURL, Value: "https://example.com"},
 			},
+		},
+		"should handle empty slice": {
+			input:    []ItemField{},
+			expected: []*connect.ItemField{},
 		},
 		"should error on invalid date string": {
 			input: []ItemField{
