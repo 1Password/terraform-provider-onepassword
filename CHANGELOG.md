@@ -17,7 +17,8 @@
 
 ## 🔴 Breaking Changes
   * Remove `letters` option from password recipes. Letters are now always included in generated passwords and cannot be disabled. Configurations using `letters` in `password_recipe` will result in an error. {#256}
-  * The `account` field should now be set to the account name. Account name appears at the top of the left sidebar in the 1Password desktop app. Users who use account authentication should configure the CLI desktop app. {#270}
+  * The `account` field should now be set to the account name. Account name appears at the top of the left sidebar in the 1Password desktop app.
+  * Users who use biometric authentication should configure 1Password desktop app. {#270}
 
 ## Features
   * Update provider to use 1Password SDKs. {#270}
@@ -25,9 +26,12 @@
 
 ## Fixes
   * Fix provider error when item is manually removed from 1Password. {#97}
-  * Remove 1Password CLI support in favor of SDKs. {#264}
   * Update testing documentation with available testing make commands and setup instructions. {#269}
   * Update README and documentation to reference 1Password developer portal. {#266}
+  * Fix field reference from "label" to "id" for item data source. {#213}
+
+## Changes
+  * Remove 1Password CLI support in favor of SDKs. {#264}
 
 ## Security
   * Update `golang.org/x/crypto` from 0.39.0 to 0.45.0 to address security vulnerabilities. {#276}
