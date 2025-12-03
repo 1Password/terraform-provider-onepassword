@@ -8,6 +8,7 @@ import (
 	sdk "github.com/1password/onepassword-sdk-go"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 type Client struct {
@@ -33,7 +34,8 @@ func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error
 }
 
 func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]model.Vault, error) {
-	vaultList, err := c.sdkClient.Vaults().List(ctx)
+	decryptDetails := true
+	vaultList, err := c.sdkClient.Vaults().List(ctx, sdk.VaultListParams{DecryptDetails: &decryptDetails})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get vaults using sdk: %w", err)
 	}
@@ -50,15 +52,28 @@ func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]model.Va
 	return result, nil
 }
 
+// GetItem looks up an item by UUID or by title.
+// If itemUuid is a valid UUID format, it attempts to fetch the item by UUID.
+// If itemUuid is not a valid UUID format, it treats the parameter as a title
+// and looks up the item by title instead.
 func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
-	sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, itemUuid)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get item using sdk: %w", err)
+	if util.IsValidUUID(itemUuid) {
+		// Valid UUID, use GetItem directly
+		sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, itemUuid)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get item using sdk: %w", err)
+		}
+
+		modelItem := &model.Item{}
+		err = modelItem.FromSDKItemToModel(&sdkItem)
+		if err != nil {
+			return nil, fmt.Errorf("sdk.GetItem failed to convert item using sdk: %w", err)
+		}
+		return modelItem, nil
 	}
 
-	modelItem := &model.Item{}
-	modelItem.FromSDKItemToModel(&sdkItem)
-	return modelItem, nil
+	// Not a UUID, use GetItemByTitle
+	return c.GetItemByTitle(ctx, itemUuid, vaultUuid)
 }
 
 func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error) {
@@ -81,11 +96,26 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 		return nil, fmt.Errorf("found %d item(s) in vault %q with title %q", count, vaultUuid, title)
 	}
 
-	return c.GetItem(ctx, matchedID, vaultUuid)
+	sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, matchedID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get item using sdk: %w", err)
+	}
+
+	modelItem := &model.Item{}
+	err = modelItem.FromSDKItemToModel(&sdkItem)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.GetItemByTitle failed to convert item using sdk: %w", err)
+	}
+
+	return modelItem, nil
 }
 
-func (c *Client) CreateItem(ctx context.Context, item *model.Item) (*model.Item, error) {
+func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	params := item.FromModelItemToSDKCreateParams()
+
+	if params.VaultID != vaultUuid {
+		return nil, fmt.Errorf("vault UUID mismatch: item has %s but %s was provided", params.VaultID, vaultUuid)
+	}
 
 	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
 	if err != nil {
@@ -93,7 +123,10 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item) (*model.Item,
 	}
 
 	modelItem := &model.Item{}
-	modelItem.FromSDKItemToModel(&sdkItem)
+	err = modelItem.FromSDKItemToModel(&sdkItem)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.CreateItem failed to convert item using sdk: %w", err)
+	}
 	return modelItem, nil
 }
 
@@ -121,7 +154,10 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	// Convert back to provider model
 	modelItem := &model.Item{}
-	modelItem.FromSDKItemToModel(&updatedItem)
+	err = modelItem.FromSDKItemToModel(&updatedItem)
+	if err != nil {
+		return nil, fmt.Errorf("sdk.UpdateItem failed to convert item using sdk: %w", err)
+	}
 	return modelItem, nil
 }
 

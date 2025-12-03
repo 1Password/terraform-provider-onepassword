@@ -3,7 +3,7 @@ package provider
 import (
 	"strings"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 const (
@@ -52,7 +52,6 @@ const (
 	passwordRecipeDescription  = "The recipe used to generate a new value for a password."
 	passwordElementDescription = "The kinds of characters to include in the password."
 	passwordLengthDescription  = "The length of the password to be generated."
-	passwordLettersDescription = "Use letters [a-zA-Z] when generating the password."
 	passwordDigitsDescription  = "Use digits [0-9] when generating the password."
 	passwordSymbolsDescription = "Use symbols [!@.-_*] when generating the password."
 
@@ -65,30 +64,30 @@ var (
 	dbTypes = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
 
 	categories = []string{
-		strings.ToLower(string(op.Login)),
-		strings.ToLower(string(op.Password)),
-		strings.ToLower(string(op.Database)),
-		strings.ToLower(string(op.SecureNote)),
+		strings.ToLower(string(model.Login)),
+		strings.ToLower(string(model.Password)),
+		strings.ToLower(string(model.Database)),
+		strings.ToLower(string(model.SecureNote)),
 	}
 	dataSourceCategories = append(categories,
-		strings.ToLower(string(op.Document)),
-		strings.ToLower(string(op.SSHKey)),
+		strings.ToLower(string(model.Document)),
+		strings.ToLower(string(model.SSHKey)),
 	)
 
 	fieldPurposes = []string{
-		string(op.FieldPurposeUsername),
-		string(op.FieldPurposePassword),
-		string(op.FieldPurposeNotes),
+		string(model.FieldPurposeUsername),
+		string(model.FieldPurposePassword),
+		string(model.FieldPurposeNotes),
 	}
 
 	fieldTypes = []string{
-		string(op.FieldTypeString),
-		string(op.FieldTypeConcealed),
-		string(op.FieldTypeEmail),
-		string(op.FieldTypeURL),
-		string(op.FieldTypeOTP),
-		string(op.FieldTypeDate),
-		string(op.FieldTypeMonthYear),
-		string(op.FieldTypeMenu),
+		string(model.FieldTypeString),
+		string(model.FieldTypeConcealed),
+		string(model.FieldTypeEmail),
+		string(model.FieldTypeURL),
+		string(model.FieldTypeOTP),
+		string(model.FieldTypeDate),
+		string(model.FieldTypeMonthYear),
+		string(model.FieldTypeMenu),
 	}
 )

@@ -4,29 +4,30 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"os"
 	"regexp"
 	"testing"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/attributes"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/client"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
 	uuidutil "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/vault"
 )
 
 type testResourceItem struct {
 	Attrs map[string]any
 }
 
-var testItemsToCreate = map[op.ItemCategory]testResourceItem{
-	op.Login: {
+var testItemsToCreate = map[model.ItemCategory]testResourceItem{
+	model.Login: {
 		Attrs: map[string]any{
 			"title":      "Test Login Create",
 			"category":   "login",
@@ -37,7 +38,7 @@ var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
-	op.Password: {
+	model.Password: {
 		Attrs: map[string]any{
 			"title":      "Test Password Create",
 			"category":   "password",
@@ -46,7 +47,7 @@ var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
-	op.Database: {
+	model.Database: {
 		Attrs: map[string]any{
 			"title":      "Test Database Create",
 			"category":   "database",
@@ -59,7 +60,7 @@ var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
-	op.SecureNote: {
+	model.SecureNote: {
 		Attrs: map[string]any{
 			"title":      "Test Secure Note Create",
 			"category":   "secure_note",
@@ -69,8 +70,8 @@ var testItemsToCreate = map[op.ItemCategory]testResourceItem{
 	},
 }
 
-var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
-	op.Login: {
+var testItemsUpdatedAttrs = map[model.ItemCategory]map[string]any{
+	model.Login: {
 		"title":      "Test Login Create",
 		"category":   "login",
 		"username":   "updateduser@example.com",
@@ -79,14 +80,14 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 		"note_value": "Updated login note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
-	op.Password: {
+	model.Password: {
 		"title":      "Test Password Create",
 		"category":   "password",
 		"password":   "updatedPassword",
 		"note_value": "Updated password note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
-	op.Database: {
+	model.Database: {
 		"title":      "Test Database Create",
 		"category":   "database",
 		"username":   "updatedUsername",
@@ -97,7 +98,7 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 		"note_value": "Updated database note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
-	op.SecureNote: {
+	model.SecureNote: {
 		"title":      "Test Secure Note Create",
 		"category":   "secure_note",
 		"note_value": "This is an updated secure note",
@@ -107,14 +108,16 @@ var testItemsUpdatedAttrs = map[op.ItemCategory]map[string]any{
 
 func TestAccItemResource(t *testing.T) {
 	testCases := []struct {
-		category op.ItemCategory
+		category model.ItemCategory
 		name     string
 	}{
-		{category: op.Login, name: "Login"},
-		{category: op.Password, name: "Password"},
-		{category: op.Database, name: "Database"},
-		{category: op.SecureNote, name: "SecureNote"},
+		{category: model.Login, name: "Login"},
+		{category: model.Password, name: "Password"},
+		{category: model.Database, name: "Database"},
+		{category: model.SecureNote, name: "SecureNote"},
 	}
+
+	testVaultID := vault.GetTestVaultID(t)
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -203,21 +206,21 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 		name   string
 		recipe password.PasswordRecipe
 	}{
-		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Letters: true, Digits: false, Symbols: false}},
-		{name: "Length16", recipe: password.PasswordRecipe{Length: 16, Letters: true, Digits: false, Symbols: false}},
-		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: false}},
-		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: true}},
-		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true, Letters: false}},
-		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false, Letters: true}},
-		{name: "WithLetters", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: true}},
-		{name: "WithoutLetters", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: true, Letters: false}},
-		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false, Letters: false}},
+		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Digits: false, Symbols: false}},
+		{name: "Length16", recipe: password.PasswordRecipe{Length: 16, Digits: false, Symbols: false}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Digits: false, Symbols: true}},
+		{name: "WithoutSymbols", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
+		{name: "WithoutDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: true, Digits: false}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false}},
 		{name: "InvalidLength0", recipe: password.PasswordRecipe{Length: 0}},
 		{name: "InvalidLength65", recipe: password.PasswordRecipe{Length: 65}},
 	}
 
+	testVaultID := vault.GetTestVaultID(t)
+
 	// Test both Login and Password items
-	items := []op.ItemCategory{op.Login, op.Password}
+	items := []model.ItemCategory{model.Login, model.Password}
 
 	for _, tc := range testCases {
 		for _, item := range items {
@@ -255,6 +258,118 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 				})
 			})
 		}
+	}
+}
+
+// Test that letters is not supported and will error if configured as this field is deprecated
+func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
+	testCases := []struct {
+		name    string
+		letters bool
+	}{
+		{name: "LettersTrue", letters: true},
+		{name: "LettersFalse", letters: false},
+	}
+
+	testVaultID := vault.GetTestVaultID(t)
+
+	item := testItemsToCreate[model.Login]
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Generate unique identifier for this test run to avoid conflicts in parallel execution
+			uniqueID := uuid.New().String()
+
+			recipeMap := map[string]any{
+				"length":  20,
+				"symbols": false,
+				"digits":  false,
+				"letters": tc.letters,
+			}
+
+			attrs := map[string]any{
+				"title":           addUniqueIDToTitle(item.Attrs["title"].(string), uniqueID),
+				"category":        item.Attrs["category"],
+				"password_recipe": recipeMap,
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: tfconfig.CreateConfigBuilder()(
+							tfconfig.ProviderConfig(),
+							tfconfig.ItemResourceConfig(testVaultID, attrs),
+						),
+						ExpectError: regexp.MustCompile(`An argument named "letters" is not expected here`),
+					},
+				},
+			})
+		})
+	}
+}
+
+// TestAccItemResourceSectionFieldPasswordGeneration tests the generation of passwords on fields
+func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
+	testCases := []struct {
+		name   string
+		recipe password.PasswordRecipe
+	}{
+		{name: "Length32", recipe: password.PasswordRecipe{Length: 32, Digits: false, Symbols: false}},
+		{name: "WithSymbols", recipe: password.PasswordRecipe{Length: 20, Digits: false, Symbols: true}},
+		{name: "WithDigits", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: true}},
+		{name: "AllCharacterTypesDisabled", recipe: password.PasswordRecipe{Length: 20, Symbols: false, Digits: false}},
+		{name: "InvalidLength", recipe: password.PasswordRecipe{Length: 0}},
+	}
+
+	testVaultID := vault.GetTestVaultID(t)
+
+	item := testItemsToCreate[model.Login]
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Generate unique identifier for this test run to avoid conflicts in parallel execution
+			uniqueID := uuid.New().String()
+
+			recipeMap := password.BuildPasswordRecipeMap(tc.recipe)
+
+			// Create a field with password recipe in a section
+			testSection := sections.TestSection{
+				Label: "Credentials",
+				Fields: []sections.TestField{
+					{
+						Label:          "API Key",
+						Type:           "CONCEALED",
+						PasswordRecipe: &recipeMap,
+					},
+				},
+			}
+
+			attrs := map[string]any{
+				"title":    addUniqueIDToTitle(item.Attrs["title"].(string), uniqueID),
+				"category": item.Attrs["category"],
+				"section":  sections.MapSections([]sections.TestSection{testSection}),
+			}
+
+			testStep := resource.TestStep{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+			}
+
+			if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
+				testStep.ExpectError = regexp.MustCompile(`Invalid Attribute Value`)
+			} else {
+				checks := password.BuildPasswordRecipeChecksForField("onepassword_item.test_item", "section.0.field.0", tc.recipe)
+				testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps:                    []resource.TestStep{testStep},
+			})
+		})
 	}
 }
 
@@ -362,7 +477,9 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 		},
 	}
 
-	items := []op.ItemCategory{op.Login}
+	items := []model.ItemCategory{model.Login}
+
+	testVaultID := vault.GetTestVaultID(t)
 
 	for _, tc := range testCases {
 		for _, item := range items {
@@ -430,7 +547,7 @@ func TestAccItemResourceTags(t *testing.T) {
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 
-	item := testItemsToCreate[op.Login]
+	item := testItemsToCreate[model.Login]
 
 	testCases := []struct {
 		name string
@@ -440,6 +557,8 @@ func TestAccItemResourceTags(t *testing.T) {
 		{"ADD_3RD_TAG", []string{"firstTestTag", "secondTestTag", "thirdTestTag"}},
 		{"REMOVE_2_TAGS", []string{"firstTestTag"}},
 	}
+
+	testVaultID := vault.GetTestVaultID(t)
 
 	var testSteps []resource.TestStep
 
@@ -470,7 +589,9 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 
-	item := testItemsToCreate[op.Login]
+	item := testItemsToCreate[model.Login]
+	testVaultID := vault.GetTestVaultID(t)
+
 	// Create a copy of item attributes and update title with unique ID
 	createAttrs := maps.Clone(item.Attrs)
 	createAttrs["title"] = addUniqueIDToTitle(createAttrs["title"].(string), uniqueID)
@@ -491,23 +612,14 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 			t.Log("MANUALLY_DELETE_ITEM")
 			ctx := context.Background()
 
-			// Get the item to delete - use a generic client for this
-			client, err := onepassword.NewClient(onepassword.ClientConfig{
-				ConnectHost:         os.Getenv("OP_CONNECT_HOST"),
-				ConnectToken:        os.Getenv("OP_CONNECT_TOKEN"),
-				ServiceAccountToken: os.Getenv("OP_SERVICE_ACCOUNT_TOKEN"),
-				OpCLIPath:           "op",
-				ProviderUserAgent:   "terraform-provider-onepassword/test",
-			})
+			client, err := client.CreateTestClient(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to create client: %w", err)
 			}
 
-			itemToDelete := &op.Item{
-				ID: itemUUID,
-				Vault: op.ItemVault{
-					ID: testVaultID,
-				},
+			itemToDelete := &model.Item{
+				ID:      itemUUID,
+				VaultID: testVaultID,
 			}
 			err = client.DeleteItem(ctx, itemToDelete, testVaultID)
 			if err != nil {
@@ -555,6 +667,202 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(recreateChecks...),
+			},
+		},
+	})
+}
+
+func TestAccItemResource_DetectManualChanges(t *testing.T) {
+	// Generate unique identifier for this test run to avoid conflicts in parallel execution
+	uniqueID := uuid.New().String()
+	var itemUUID string
+	testVaultID := vault.GetTestVaultID(t)
+
+	initialAttrs := maps.Clone(testItemsToCreate[model.Login].Attrs)
+
+	initialAttrs["title"] = addUniqueIDToTitle(initialAttrs["title"].(string), uniqueID)
+	initialAttrs["section"] = sections.MapSections([]sections.TestSection{
+		{
+			Label: "Original Section",
+			Fields: []sections.TestField{
+				{Label: "Original Field 1", Value: "original value 1", Type: "STRING"},
+				{Label: "Original Field 2", Value: "original value 2", Type: "EMAIL"},
+			},
+		},
+	})
+
+	updatedAttrs := maps.Clone(testItemsUpdatedAttrs[model.Login])
+	updatedAttrs["title"] = initialAttrs["title"]
+	updatedAttrs["section"] = sections.MapSections([]sections.TestSection{
+		{
+			Label: "Updated Section",
+			Fields: []sections.TestField{
+				{Label: "New Field", Value: "new value", Type: "URL"},
+			},
+		},
+	})
+
+	removedAttrs := map[string]any{
+		"title":      initialAttrs["title"],
+		"category":   "login",
+		"username":   "",
+		"note_value": "",
+		"url":        []string{},
+		"tags":       []string{},
+		"section":    []map[string]any{},
+	}
+
+	// Build check functions for create step
+	createChecks := []resource.TestCheckFunc{
+		logStep(t, "CREATE"),
+		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+	}
+	bcCreate := checks.BuildItemChecks("onepassword_item.test_item", initialAttrs)
+	createChecks = append(createChecks, bcCreate...)
+
+	// Build check function to manually update the item after creation
+	updateItemOutsideTerraform := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Log("MANUALLY_UPDATE_ITEM")
+
+			ctx := context.Background()
+			client, err := client.CreateTestClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			currentItem := &model.Item{
+				ID:       itemUUID,
+				VaultID:  testVaultID,
+				Category: model.Login,
+			}
+
+			updatedItem := attributes.BuildUpdatedItemAttrs(currentItem, updatedAttrs)
+			_, err = client.UpdateItem(ctx, updatedItem, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to update item: %w", err)
+			}
+
+			return nil
+		}
+	}
+
+	// Build check function to manually remove all fields
+	removeFieldsOutsideTerraform := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Log("MANUALLY_REMOVE_ALL_FIELDS")
+			ctx := context.Background()
+
+			client, err := client.CreateTestClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			strippedItem := &model.Item{
+				ID:       itemUUID,
+				Title:    removedAttrs["title"].(string),
+				VaultID:  testVaultID,
+				Category: model.Login,
+				Tags:     []string{},
+				URLs: []model.ItemURL{
+					{URL: "", Primary: true},
+				},
+				Sections: []model.ItemSection{},
+				Fields:   []model.ItemField{},
+			}
+
+			_, err = client.UpdateItem(ctx, strippedItem, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to remove fields: %w", err)
+			}
+
+			return nil
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create new item
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(createChecks...),
+			},
+			// Manually update the item outside of Terraform
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+				),
+				Check:              updateItemOutsideTerraform(),
+				ExpectNonEmptyPlan: true,
+			},
+			// Verify manual updates via import
+			{
+				ResourceName:      "onepassword_item.test_item",
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("vaults/%s/items/%s", testVaultID, initialAttrs["title"]),
+				ImportStateVerify: false,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					t.Log("VERIFY_MANUAL_UPDATES")
+					if len(states) != 1 {
+						return fmt.Errorf("expected 1 state, got %d", len(states))
+					}
+
+					state := states[0]
+					expectedAttrs := attributes.BuildImportAttrs(updatedAttrs)
+
+					for key, expected := range expectedAttrs {
+						if actual := state.Attributes[key]; actual != expected {
+							return fmt.Errorf("%s: expected %v, got %v", key, expected, actual)
+						}
+					}
+					return nil
+				},
+			},
+			// Manually remove all fields
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+				),
+				Check:              removeFieldsOutsideTerraform(),
+				ExpectNonEmptyPlan: true,
+			},
+			// Verify fields were removed
+			{
+				ResourceName:      "onepassword_item.test_item",
+				ImportState:       true,
+				ImportStateId:     fmt.Sprintf("vaults/%s/items/%s", testVaultID, initialAttrs["title"]),
+				ImportStateVerify: false,
+				ImportStateCheck: func(states []*terraform.InstanceState) error {
+					t.Log("VERIFY_FIELDS_REMOVED")
+					if len(states) != 1 {
+						return fmt.Errorf("expected 1 state, got %d", len(states))
+					}
+
+					state := states[0]
+
+					// Check that fields are empty/removed
+					checks := map[string]any{
+						"title":     initialAttrs["title"],
+						"category":  "login",
+						"username":  "",
+						"url":       "",
+						"tags":      "",
+						"section.#": "0",
+					}
+					for key, expected := range checks {
+						if actual := state.Attributes[key]; actual != expected {
+							return fmt.Errorf("%s: expected %q, got %q", key, expected, actual)
+						}
+					}
+
+					return nil
+				},
 			},
 		},
 	})

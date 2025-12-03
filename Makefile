@@ -1,7 +1,7 @@
 export MAIN_BRANCH ?= main
 
 .DEFAULT_GOAL := help
-.PHONY: test testacc build clean test/coverage release/prepare release/tag .check_bump_type .check_git_clean help test-e2e test-e2e-service-account test-e2e-connect
+.PHONY: test testacc build clean test/coverage release/prepare release/tag .check_bump_type .check_git_clean help test-e2e test-e2e-service-account test-e2e-connect test-e2e-account
 
 GIT_BRANCH := $(shell git symbolic-ref --short HEAD 2>/dev/null || echo "")
 WORKTREE_CLEAN := $(shell git status --porcelain 1>/dev/null 2>&1; echo $$?)
@@ -20,7 +20,7 @@ test/coverage:	## Runs integration and unit tests with coverage report
 testacc: ## Run acceptance tests
 	TF_ACC=1 go test ./... -v $(TESTARGS) -timeout 120m
 
-test-e2e: test-e2e-service-account test-e2e-connect ## Run all e2e tests (service account and Connect)
+test-e2e: test-e2e-connect test-e2e-service-account  ## Run all e2e tests (service account and Connect)
 
 test-e2e-service-account: ## Run e2e tests using service account (requires OP_SERVICE_ACCOUNT_TOKEN)
 	@test -n "$(OP_SERVICE_ACCOUNT_TOKEN)" || (echo "[ERROR] OP_SERVICE_ACCOUNT_TOKEN environment variable is not set."; exit 1)
@@ -32,6 +32,15 @@ test-e2e-connect: ## Run e2e tests using Connect (requires OP_CONNECT_TOKEN and 
 	@test -n "$(OP_CONNECT_HOST)" || (echo "[ERROR] OP_CONNECT_HOST environment variable is not set."; exit 1)
 	@echo "[INFO] Running e2e tests with Connect authentication..."
 	@sh -c 'unset OP_SERVICE_ACCOUNT_TOKEN; OP_CONNECT_TOKEN="$(OP_CONNECT_TOKEN)" OP_CONNECT_HOST="$(OP_CONNECT_HOST)" TF_ACC=1 go test -v ./test/e2e/... -timeout 30m'
+
+test-e2e-account: ## Run e2e test using account methodology with Touch ID (requires OP_ACCOUNT and OP_TEST_VAULT_NAME, manual only). Creates multiple items to verify biometrics is only prompted once.
+	@test -n "$(OP_ACCOUNT)" || (echo "[ERROR] OP_ACCOUNT environment variable is not set."; exit 1)
+	@test -n "$(OP_TEST_VAULT_NAME)" || (echo "[ERROR] OP_TEST_VAULT_NAME environment variable is not set."; exit 1)
+	@echo "[INFO] Running e2e test with account-based authentication (Touch ID)..."
+	@echo "[WARNING] This test will prompt for Touch ID/biometric authentication."
+	@echo "[WARNING] Please ensure you add a vault titled 'terraform-provider-acceptance-tests' or set OP_TEST_VAULT_NAME environment variable for this test to pass."
+	@echo "[INFO] Ensure that biometrics are only prompted once."
+	@sh -c 'unset OP_CONNECT_TOKEN OP_CONNECT_HOST OP_SERVICE_ACCOUNT_TOKEN; OP_ACCOUNT="$(OP_ACCOUNT)" TF_ACC=1 go test -v ./test/e2e/... -run TestAccItemResource -timeout 30m'
 
 build: clean	## Build project
 	go build -o ./dist/terraform-provider-onepassword .

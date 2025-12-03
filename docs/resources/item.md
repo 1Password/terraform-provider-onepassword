@@ -71,7 +71,6 @@ Optional:
 
 - `digits` (Boolean) Use digits [0-9] when generating the password.
 - `length` (Number) The length of the password to be generated.
-- `letters` (Boolean) Use letters [a-zA-Z] when generating the password.
 - `symbols` (Boolean) Use symbols [!@.-_*] when generating the password.
 
 
@@ -112,7 +111,6 @@ Optional:
 
 - `digits` (Boolean) Use digits [0-9] when generating the password.
 - `length` (Number) The length of the password to be generated.
-- `letters` (Boolean) Use letters [a-zA-Z] when generating the password.
 - `symbols` (Boolean) Use symbols [!@.-_*] when generating the password.
 
 ## Import

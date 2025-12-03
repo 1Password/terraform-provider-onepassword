@@ -4,10 +4,10 @@ on:
   workflow_call:
     secrets:
       OP_CONNECT_CREDENTIALS:
-        description: '1Password Connect credentials'
+        description: "1Password Connect credentials"
         required: true
       OP_CONNECT_TOKEN:
-        description: '1Password Connect token'
+        description: "1Password Connect token"
         required: true
       OP_SERVICE_ACCOUNT_TOKEN:
         description: "1Password service account token"
@@ -32,11 +32,6 @@ jobs:
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v4
-
-      - name: Install 1Password CLI
-        uses: 1password/install-cli-action@v2
-        with:
-          version: 2.32.0
 
       - name: Install dependencies
         run: go mod tidy
@@ -67,10 +62,10 @@ jobs:
           # Expose Connect from cluster
           kubectl port-forward svc/onepassword-connect 8080:8080 &
           PF_PID=$!
-          
+
           # Run tests
           make test-e2e
-          
+
           # Cleanup: kill port-forward when done
           kill $PF_PID || true
         env:
