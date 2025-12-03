@@ -12,6 +12,34 @@
 
 ---
 
+[//]: # (START/v3.0.0)
+# v3.0.0
+
+## 🔴 Breaking Changes
+  * Remove `letters` option from password recipes. Letters are now always included in generated passwords and cannot be disabled. Configurations using `letters` in `password_recipe` will result in an error. {#256}
+  * The `account` field should now be set to the account name. Account name appears at the top of the left sidebar in the 1Password desktop app.
+  * Users who use biometric authentication should configure 1Password desktop app. {#270}
+
+## Features
+  * Update provider to use 1Password SDKs. {#270}
+  * Add `connect_url` and `connect_token` configuration parameters. These are more specific alternatives to `url` and `token` for Connect authentication. The original `url` and `token` parameters continue to be supported but are set for deprecation. {#265}
+
+## Fixes
+  * Fix provider error when item is manually removed from 1Password. {#97}
+  * Update testing documentation with available testing make commands and setup instructions. {#269}
+  * Update README and documentation to reference 1Password developer portal. {#266}
+  * Fix field reference from `label` to `id` for item data source. {#213}
+
+## Changes
+  * Remove 1Password CLI support in favor of SDKs. {#264}
+
+## Security
+  * Update `golang.org/x/crypto` from 0.39.0 to 0.45.0 to address security vulnerabilities. {#276}
+
+
+
+---
+
 [//]: # (START/v2.2.1)
 # v2.2.1
 
