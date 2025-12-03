@@ -33,6 +33,8 @@ builds:
         goarch: "386"
       - goos: freebsd
         goarch: "386"
+      - goos: freebsd
+        goarch: arm
       - goos: windows
         goarch: arm
     binary: "{{ .ProjectName }}_v{{ .Version }}"
