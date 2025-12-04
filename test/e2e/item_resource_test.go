@@ -871,7 +871,6 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 	testVaultID := vault.GetTestVaultID(t)
 
-	// Test all fields that should preserve empty strings
 	attrs := map[string]any{
 		"title":      "",
 		"category":   "database",
@@ -914,19 +913,117 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", ""),
 				),
 			},
+		},
+	})
+}
+
+func TestAccItemResourceNullVsEmptyString(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+
+	attrsWithoutFields := map[string]any{
+		"title":    addUniqueIDToTitle("Test Null vs Empty", uniqueID),
+		"category": "database",
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
 			{
 				Config: tfconfig.CreateConfigBuilder()(
 					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, attrs),
+					tfconfig.ItemResourceConfig(testVaultID, attrsWithoutFields),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", ""),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "username"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "url"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "hostname"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "database"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "port"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Clear Fields", uniqueID)
+
+	attrsWithValues := map[string]any{
+		"title":    title,
+		"category": "database",
+		"username": "testuser",
+		"url":      "https://example.com",
+		"hostname": "db.example.com",
+		"database": "mydb",
+		"port":     "3306",
+		"section": []map[string]any{
+			{
+				"label": "test_section",
+				"field": []map[string]any{
+					{
+						"label": "test_field",
+						"value": "test_value",
+						"type":  "STRING",
+					},
+				},
+			},
+		},
+	}
+
+	attrsCleared := map[string]any{
+		"title":    title,
+		"category": "database",
+		"username": "",
+		"url":      "",
+		"hostname": "",
+		"database": "",
+		"port":     "",
+		"section": []map[string]any{
+			{
+				"label": "",
+				"field": []map[string]any{
+					{
+						"label": "test_field",
+						"value": "",
+						"type":  "STRING",
+					},
+				},
+			},
+		},
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrsWithValues),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "testuser"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", "https://example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", "db.example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", "mydb"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "port", "3306"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", "test_section"),
+				),
+			},
+			// Clear all fields
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrsCleared),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "port", ""),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", ""),
 				),
 			},

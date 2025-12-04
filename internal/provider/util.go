@@ -30,6 +30,6 @@ func setStringValuePreservingEmpty(value string, originalValue basetypes.StringV
 	if !originalValue.IsNull() && originalValue.ValueString() == "" && value == "" {
 		return types.StringValue("")
 	}
-	// Original behavior: convert empty to null (for fields not set)
+	// Original behavior is to convert empty to null
 	return setStringValue(value)
 }

@@ -479,7 +479,7 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 
 	for _, u := range item.URLs {
 		if u.Primary {
-			data.URL = setStringValue(u.URL)
+			data.URL = setStringValuePreservingEmpty(u.URL, data.URL)
 		}
 	}
 
@@ -589,7 +589,7 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 		case model.FieldPurposePassword:
 			data.Password = setStringValue(f.Value)
 		case model.FieldPurposeNotes:
-			data.NoteValue = setStringValue(f.Value)
+			data.NoteValue = setStringValuePreservingEmpty(f.Value, data.NoteValue)
 		default:
 			if f.SectionID == "" {
 				switch f.Label {
