@@ -870,8 +870,6 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 
 func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 	testVaultID := vault.GetTestVaultID(t)
-	//uniqueID := uuid.New().String()
-	//title := addUniqueIDToTitle("Test Empty Strings", uniqueID)
 
 	// Test all fields that should preserve empty strings
 	attrs := map[string]any{
