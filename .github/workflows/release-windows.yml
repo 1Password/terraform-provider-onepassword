@@ -29,10 +29,17 @@ jobs:
           } else {
             Write-Host "Chocolatey not available, using system C compiler if available"
           }
-      - name: Run GoReleaser (dry run)
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          # These secrets will need to be configured for the repository:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          version: latest
-          args: release --clean --config .goreleaser.windows.yml --snapshot --skip=sign
+          args: release --clean
         env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

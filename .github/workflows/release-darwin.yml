@@ -24,11 +24,17 @@ jobs:
           # For cross-compilation, we may need to ensure Xcode command line tools are available
           xcode-select --install || true
           sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer || true
-      - name: Run GoReleaser (dry run)
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          # These secrets will need to be configured for the repository:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          version: latest
-          args: release --clean --config .goreleaser.darwin.yml --snapshot --skip=sign
+          args: release --clean
         env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
