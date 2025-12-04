@@ -1,13 +1,14 @@
-name: goreleaser
+name: Release Darwin
 
-# Manual trigger only - disabled from auto-running on tags
-# release-darwin.yml, release-linux.yml, and release-windows.yml are used instead
 on:
+  push:
+    tags:
+      - "*"
   workflow_dispatch:
 
 jobs:
   goreleaser:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -17,6 +18,12 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Install cross-compilation tools
+        run: |
+          # macOS SDK is already available on macos-latest runners
+          # For cross-compilation, we may need to ensure Xcode command line tools are available
+          xcode-select --install || true
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer || true
       - name: Import GPG key
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v6
@@ -27,7 +34,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          args: release --clean
+          args: release --clean --config .goreleaser.darwin.yml
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

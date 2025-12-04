@@ -1,13 +1,14 @@
-name: goreleaser
+name: Release Windows
 
-# Manual trigger only - disabled from auto-running on tags
-# release-darwin.yml, release-linux.yml, and release-windows.yml are used instead
 on:
+  push:
+    tags:
+      - "*"
   workflow_dispatch:
 
 jobs:
   goreleaser:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -17,6 +18,17 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Install cross-compilation tools
+        run: |
+          # For Windows CGO builds, we need a C compiler
+          # Windows-latest runners typically have Visual Studio Build Tools available
+          # For cross-compilation (e.g., 386 from amd64), we may need MinGW-w64
+          # Try to install via Chocolatey if available, otherwise rely on system tools
+          if (Get-Command choco -ErrorAction SilentlyContinue) {
+            choco install mingw --version=8.1.0 -y
+          } else {
+            Write-Host "Chocolatey not available, using system C compiler if available"
+          }
       - name: Import GPG key
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v6
@@ -27,7 +39,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          args: release --clean
+          args: release --clean --config .goreleaser.windows.yml
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
