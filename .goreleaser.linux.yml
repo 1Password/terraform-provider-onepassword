@@ -1,0 +1,72 @@
+version: 2
+# split build for linux/amd64 and linux/arm64 so goreleaser builds for each architecture successfully
+builds:
+  # Build for linux/amd64
+  - id: linux-amd64
+    env:
+      # CGO is required for onepassword-sdk-go dependency
+      - CGO_ENABLED=1
+      - GOPRIVATE="github.com/1Password"
+      - CC=gcc
+      - AS=as
+      - AR=ar
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - "-s -w -X main.commit={{.Commit}} -X version.ProviderVersion={{.Version}}"
+    goos:
+      - linux
+    goarch:
+      - amd64
+    binary: "{{ .ProjectName }}_v{{ .Version }}"
+  # Build for linux/arm64
+  - id: linux-arm64
+    env:
+      # CGO is required for onepassword-sdk-go dependency
+      - CGO_ENABLED=1
+      - GOPRIVATE="github.com/1Password"
+      - CC=aarch64-linux-gnu-gcc
+      - AS=aarch64-linux-gnu-as
+      - AR=aarch64-linux-gnu-ar
+      - CXX=aarch64-linux-gnu-g++
+      - PKG_CONFIG=aarch64-linux-gnu-pkg-config
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - "-s -w -X main.commit={{.Commit}} -X version.ProviderVersion={{.Version}}"
+    goos:
+      - linux
+    goarch:
+      - arm64
+    binary: "{{ .ProjectName }}_v{{ .Version }}"
+archives:
+  - formats: ["zip"]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+checksum:
+  extra_files:
+    - glob: "terraform-registry-manifest.json"
+      name_template: "{{ .ProjectName }}_{{ .Version }}_manifest.json"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
+  algorithm: sha256
+signs:
+  - artifacts: checksum
+    args:
+      # if you are using this is a GitHub action or some other automated pipeline, you
+      # need to pass the batch flag to indicate its not interactive.
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}" # set this environment variable for your signing key
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+release:
+  extra_files:
+    - glob: "terraform-registry-manifest.json"
+      name_template: "{{ .ProjectName }}_{{ .Version }}_manifest.json"
+  # If you want to manually examine the release before its live, uncomment this line:
+  draft: true
+changelog:
+  disable: true
