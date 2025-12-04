@@ -1,9 +1,9 @@
 name: goreleaser
 
+# Manual trigger only - disabled from auto-running on tags
+# release-darwin.yml, release-linux.yml, and release-windows.yml are used instead
 on:
-  push:
-    tags:
-      - "*"
+  workflow_dispatch: 
 
 jobs:
   goreleaser:
