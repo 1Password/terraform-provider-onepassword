@@ -23,3 +23,13 @@ func setStringValue(value string) basetypes.StringValue {
 	}
 	return types.StringValue(value)
 }
+
+// setStringValuePreservingEmpty preserves empty strings when they were explicitly set in Terraform
+func setStringValuePreservingEmpty(value string, originalValue basetypes.StringValue) basetypes.StringValue {
+	// If original was explicitly set to empty string (not null), preserve it
+	if !originalValue.IsNull() && originalValue.ValueString() == "" && value == "" {
+		return types.StringValue("")
+	}
+	// Original behavior: convert empty to null (for fields not set)
+	return setStringValue(value)
+}

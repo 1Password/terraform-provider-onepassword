@@ -868,6 +868,74 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	})
 }
 
+func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	//uniqueID := uuid.New().String()
+	//title := addUniqueIDToTitle("Test Empty Strings", uniqueID)
+
+	// Test all fields that should preserve empty strings
+	attrs := map[string]any{
+		"title":      "",
+		"category":   "database",
+		"username":   "",
+		"url":        "",
+		"hostname":   "",
+		"database":   "",
+		"port":       "",
+		"note_value": "",
+		"section": []map[string]any{
+			{
+				"label": "",
+				"field": []map[string]any{
+					{
+						"label": "test_field",
+						"value": "",
+						"type":  "STRING",
+					},
+				},
+			},
+		},
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "port", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", ""),
+				),
+			},
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "port", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", ""),
+				),
+			},
+		},
+	})
+}
+
 // addUniqueIDToTitle appends a UUID to the title to avoid conflicts in parallel test execution
 func addUniqueIDToTitle(title string, uniqueID string) string {
 	return fmt.Sprintf("%s-%s", title, uniqueID)
