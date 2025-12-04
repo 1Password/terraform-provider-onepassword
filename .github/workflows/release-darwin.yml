@@ -1,0 +1,34 @@
+name: Release Darwin
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  goreleaser:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25.5'
+      - name: Install cross-compilation tools
+        run: |
+          # macOS SDK is already available on macos-latest runners
+          # For cross-compilation, we may need to ensure Xcode command line tools are available
+          xcode-select --install || true
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer || true
+      - name: Run GoReleaser (dry run)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: release --clean --config .goreleaser.darwin.yml --snapshot --skip=sign
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
