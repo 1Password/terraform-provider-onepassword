@@ -1,13 +1,16 @@
-name: goreleaser
+name: Release
 
-# Manual trigger only - disabled from auto-running on tags
-# release-darwin.yml, release-linux.yml, and release-windows.yml are used instead
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - "*"
 
 jobs:
-  goreleaser:
+  # Build and release for Linux (runs first, creates the release)
+  release-linux:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create and update releases
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -17,17 +20,192 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Install cross-compilation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository universe -y
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+          sudo apt-get install -y gcc gcc-multilib
+          sudo apt-get install -y gcc-13 gcc-13-base || echo "GCC-13 not available, trying alternative"
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            binutils-aarch64-linux-gnu
       - name: Import GPG key
         id: import_gpg
         uses: crazy-max/ghaction-import-gpg@v6
         with:
-          # These secrets will need to be configured for the repository:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          args: release --clean
+          args: release --clean --config .goreleaser.linux.yml
         env:
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CC_amd64_linux: gcc
+          AS_amd64_linux: as
+          AR_amd64_linux: ar
+          CC_arm64_linux: aarch64-linux-gnu-gcc
+          AS_arm64_linux: aarch64-linux-gnu-as
+          AR_arm64_linux: aarch64-linux-gnu-ar
+          CXX_arm64_linux: aarch64-linux-gnu-g++
+          PKG_CONFIG_arm64_linux: aarch64-linux-gnu-pkg-config
+
+  # Build and release for Darwin (runs after Linux, appends to same release)
+  release-darwin:
+    needs: release-linux
+    runs-on: macos-latest
+    permissions:
+      contents: write # Required to append artifacts to existing release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Install cross-compilation tools
+        run: |
+          xcode-select --install || true
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer || true
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          args: release --clean --config .goreleaser.darwin.yml
+        env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build and release for Windows (runs after Darwin, appends to same release)
+  release-windows:
+    needs: release-darwin
+    runs-on: windows-latest
+    permissions:
+      contents: write # Required to append artifacts to existing release
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Install cross-compilation tools
+        run: |
+          if (Get-Command choco -ErrorAction SilentlyContinue) {
+            choco install mingw --version=8.1.0 -y
+          } else {
+            Write-Host "Chocolatey not available, using system C compiler if available"
+          }
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          args: release --clean --config .goreleaser.windows.yml
+        env:
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Generate complete checksums file with all platform artifacts
+  generate-checksums:
+    needs: release-windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to update release artifacts
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+      - name: Get release tag
+        id: get_tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Release tag: $TAG"
+      - name: Upload manifest.json
+        run: |
+          PROJECT_NAME="terraform-provider-onepassword"
+          TAG="${{ steps.get_tag.outputs.tag }}"
+          VERSION=${TAG#v}
+          # Copy manifest.json with the correct name and upload to the release
+          cp terraform-registry-manifest.json "${PROJECT_NAME}_${VERSION}_manifest.json"
+          gh release upload "$TAG" \
+            --repo "${{ github.repository }}" \
+            "${PROJECT_NAME}_${VERSION}_manifest.json" \
+            --clobber || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download all release artifacts
+        run: |
+          mkdir -p artifacts
+          # Download all zip files and manifest.json, but exclude checksums files
+          gh release download "${{ steps.get_tag.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --dir artifacts \
+            --pattern "*.zip" \
+            --pattern "*manifest.json" \
+            --skip-existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Generate SHA256 checksums
+        run: |
+          PROJECT_NAME="terraform-provider-onepassword"
+          TAG="${{ steps.get_tag.outputs.tag }}"
+          VERSION=${TAG#v}
+          # Generate checksums for all files except existing checksums files and signatures
+          # Format: hash  filename (filename only, no path)
+          cd artifacts
+          > "../${PROJECT_NAME}_${VERSION}_SHA256SUMS"  # Create empty file
+          for file in *.zip *.json; do
+            if [[ -f "$file" && "$file" != *"SHA256SUMS"* && "$file" != *.sig ]]; then
+              hash=$(sha256sum "$file" | awk '{print $1}')
+              echo "$hash  $file" >> "../${PROJECT_NAME}_${VERSION}_SHA256SUMS"
+            fi
+          done
+          cd ..
+          sort -k2 "${PROJECT_NAME}_${VERSION}_SHA256SUMS" -o "${PROJECT_NAME}_${VERSION}_SHA256SUMS"
+          echo "Generated checksums file: ${PROJECT_NAME}_${VERSION}_SHA256SUMS"
+      - name: Sign checksums file
+        run: |
+          PROJECT_NAME="terraform-provider-onepassword"
+          TAG="${{ steps.get_tag.outputs.tag }}"
+          VERSION=${TAG#v}
+          gpg --batch --local-user "${{ steps.import_gpg.outputs.fingerprint }}" \
+            --output "${PROJECT_NAME}_${VERSION}_SHA256SUMS.sig" \
+            --detach-sign "${PROJECT_NAME}_${VERSION}_SHA256SUMS"
+      - name: Upload checksums and signature to release
+        run: |
+          PROJECT_NAME="terraform-provider-onepassword"
+          TAG="${{ steps.get_tag.outputs.tag }}"
+          VERSION=${TAG#v}
+
+          gh release upload "$TAG" \
+            --repo "${{ github.repository }}" \
+            "${PROJECT_NAME}_${VERSION}_SHA256SUMS" \
+            "${PROJECT_NAME}_${VERSION}_SHA256SUMS.sig"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
