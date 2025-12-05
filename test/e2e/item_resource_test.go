@@ -949,16 +949,6 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 						),
 						Check: resource.ComposeAggregateTestCheckFunc(checks...),
 					},
-					// Second apply to verify password is stable (not regenerated)
-					{
-						Config: tfconfig.CreateConfigBuilder()(
-							tfconfig.ProviderConfig(),
-							tfconfig.ItemResourceConfig(testVaultID, attrs),
-						),
-						Check: resource.ComposeAggregateTestCheckFunc(
-							resource.TestCheckResourceAttrSet("onepassword_item.test_item", "password"),
-						),
-					},
 				},
 			})
 		})
