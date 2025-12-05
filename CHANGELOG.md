@@ -17,8 +17,8 @@
 
 ## 🔴 Breaking Changes
   * Remove `letters` option from password recipes. Letters are now always included in generated passwords and cannot be disabled. Configurations using `letters` in `password_recipe` will result in an error. {#256}
-* The `account` field should now be set to the account name. Account name appears at the top of the left sidebar in the 1Password desktop app.
-* Users who use biometric authentication should configure 1Password desktop app. {#270}
+  * The `account` field should now be set to the account name. Account name appears at the top of the left sidebar in the 1Password desktop app.
+  * Users who use biometric authentication should configure 1Password desktop app. {#270}
 
 ## Features
   * Provider uses 1Password SDKs instead of 1Password CLI now. {#270}
