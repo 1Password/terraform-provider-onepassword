@@ -21,7 +21,6 @@
   * Users who use biometric authentication should configure 1Password desktop app. {#270}
 
 ## Features
-  * Provider uses 1Password SDKs instead of 1Password CLI now. {#270}
   * Enable provider to run using Terraform Stacks on HCP Terraform with a self-hosted agent. {#227}
   * Enable provider to run on Terraform Cloud. {#141}
   * `connect_url` and `connect_token` configuration parameters are available now. These are more specific alternatives to `url` and `token` for Connect authentication. The original `url` and `token` parameters continue to be supported but are set for deprecation. {#265}
