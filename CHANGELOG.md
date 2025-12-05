@@ -17,21 +17,24 @@
 
 ## 🔴 Breaking Changes
   * Remove `letters` option from password recipes. Letters are now always included in generated passwords and cannot be disabled. Configurations using `letters` in `password_recipe` will result in an error. {#256}
-  * The `account` field should now be set to the account name. Account name appears at the top of the left sidebar in the 1Password desktop app.
-  * Users who use biometric authentication should configure 1Password desktop app. {#270}
+* The `account` field should now be set to the account name. Account name appears at the top of the left sidebar in the 1Password desktop app.
+* Users who use biometric authentication should configure 1Password desktop app. {#270}
 
 ## Features
-  * Update provider to use 1Password SDKs. {#270}
-  * Add `connect_url` and `connect_token` configuration parameters. These are more specific alternatives to `url` and `token` for Connect authentication. The original `url` and `token` parameters continue to be supported but are set for deprecation. {#265}
+  * Provider uses 1Password SDKs instead of 1Password CLI now. {#270}
+  * Enable provider to run using Terraform Stacks on HCP Terraform with a self-hosted agent. {#227}
+  * Enable provider to run on Terraform Cloud. {#141}
+  * `connect_url` and `connect_token` configuration parameters are available now. These are more specific alternatives to `url` and `token` for Connect authentication. The original `url` and `token` parameters continue to be supported but are set for deprecation. {#265}
 
 ## Fixes
-  * Fix provider error when item is manually removed from 1Password. {#97}
-  * Update testing documentation with available testing make commands and setup instructions. {#269}
-  * Update README and documentation to reference 1Password developer portal. {#266}
+  * `1password cli` is not required anymore to use the provider. {#148, #206}
+  * Biometric unlock doesn't pop up multiple times anymore. {#140, #130}
+  * Provider re-creates item when it's missing in 1Password vault. {#97}
+  * No 504 Gateway Timeout errors anymore for newly created items. {#5}
   * Fix field reference from `label` to `id` for item data source. {#213}
-
-## Changes
-  * Remove 1Password CLI support in favor of SDKs. {#264}
+  * `password_recipe` properly generates passwords now. {#129} 
+  * Testing documentation now includes make commands and setup instructions about how to run e2e tests. {#269}
+  * README and documentation now to references to 1Password developer portal for more info. {#266}
 
 ## Security
   * Update `golang.org/x/crypto` from 0.39.0 to 0.45.0 to address security vulnerabilities. {#276}
