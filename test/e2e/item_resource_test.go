@@ -880,7 +880,6 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 		"database":   "",
 		"port":       "",
 		"note_value": "",
-		"password":   "",
 		"section": []map[string]any{
 			{
 				"label": "",
@@ -912,7 +911,6 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "port", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", ""),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "password", ""),
 				),
 			},
 		},
@@ -943,7 +941,6 @@ func TestAccItemResourceNullVsEmptyString(t *testing.T) {
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "database"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "port"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "note_value"),
-					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "password"),
 				),
 			},
 		},
@@ -963,7 +960,6 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 		"database":   "mydb",
 		"port":       "3306",
 		"note_value": "test_note",
-		"password":   "test_password",
 		"section": []map[string]any{
 			{
 				"label": "test_section",
@@ -986,7 +982,6 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 		"database":   "",
 		"port":       "",
 		"note_value": "",
-		"password":   "",
 		"section": []map[string]any{
 			{
 				"label": "",
@@ -1017,7 +1012,6 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", "test_section"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.label", "test_field"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", "test_note"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "password", "test_password"),
 				),
 			},
 			// Clear all fields
@@ -1034,7 +1028,6 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.label", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", ""),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "password", ""),
 				),
 			},
 		},
