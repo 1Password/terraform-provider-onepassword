@@ -868,6 +868,93 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	})
 }
 
+func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+
+	// Test all three categories that support password generation
+	categories := []struct {
+		name     string
+		category model.ItemCategory
+		attrs    map[string]any
+	}{
+		{
+			name:     "Login",
+			category: model.Login,
+			attrs: map[string]any{
+				"title":    "Test Login Password Generation",
+				"category": "login",
+				"username": "testuser@example.com",
+				"url":      "https://example.com",
+				"password_recipe": password.BuildPasswordRecipeMap(password.PasswordRecipe{
+					Length:  20,
+					Symbols: true,
+					Digits:  true,
+				}),
+			},
+		},
+		{
+			name:     "Password",
+			category: model.Password,
+			attrs: map[string]any{
+				"title":    "Test Password Category Generation",
+				"category": "password",
+				"password_recipe": password.BuildPasswordRecipeMap(password.PasswordRecipe{
+					Length:  20,
+					Symbols: true,
+					Digits:  true,
+				}),
+			},
+		},
+		{
+			name:     "Database",
+			category: model.Database,
+			attrs: map[string]any{
+				"title":    "Test Database Password Generation",
+				"category": "database",
+				"database": "testdatabase",
+				"username": "testusername",
+				"password_recipe": password.BuildPasswordRecipeMap(password.PasswordRecipe{
+					Length:  20,
+					Symbols: true,
+					Digits:  true,
+				}),
+			},
+		},
+	}
+
+	recipe := password.PasswordRecipe{
+		Length:  20,
+		Symbols: true,
+		Digits:  true,
+	}
+
+	for _, tc := range categories {
+		t.Run(tc.name, func(t *testing.T) {
+			uniqueID := uuid.New().String()
+
+			attrs := maps.Clone(tc.attrs)
+			attrs["title"] = addUniqueIDToTitle(attrs["title"].(string), uniqueID)
+
+			// Build checks to verify password was generated
+			checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipe)
+			checks = append(checks, resource.TestCheckResourceAttrSet("onepassword_item.test_item", "password"))
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: tfconfig.CreateConfigBuilder()(
+							tfconfig.ProviderConfig(),
+							tfconfig.ItemResourceConfig(testVaultID, attrs),
+						),
+						Check: resource.ComposeAggregateTestCheckFunc(checks...),
+					},
+				},
+			})
+		})
+	}
+}
+
 // addUniqueIDToTitle appends a UUID to the title to avoid conflicts in parallel test execution
 func addUniqueIDToTitle(title string, uniqueID string) string {
 	return fmt.Sprintf("%s-%s", title, uniqueID)
