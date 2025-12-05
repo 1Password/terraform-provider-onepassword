@@ -27,7 +27,7 @@ func setStringValue(value string) basetypes.StringValue {
 // setStringValuePreservingEmpty preserves empty strings when they were explicitly set in Terraform
 func setStringValuePreservingEmpty(value string, originalValue basetypes.StringValue) basetypes.StringValue {
 	// If original was explicitly set to empty string (not null), preserve it
-	if !originalValue.IsNull() && originalValue.ValueString() == "" && value == "" {
+	if !originalValue.IsNull() && !originalValue.IsUnknown() && originalValue.ValueString() == "" && value == "" {
 		return types.StringValue("")
 	}
 	// Original behavior is to convert empty to null

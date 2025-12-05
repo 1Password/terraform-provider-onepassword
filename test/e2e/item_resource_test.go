@@ -880,6 +880,7 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 		"database":   "",
 		"port":       "",
 		"note_value": "",
+		"password":   "",
 		"section": []map[string]any{
 			{
 				"label": "",
@@ -911,6 +912,7 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "port", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password", ""),
 				),
 			},
 		},
@@ -940,6 +942,8 @@ func TestAccItemResourceNullVsEmptyString(t *testing.T) {
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "hostname"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "database"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "port"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "note_value"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "password"),
 				),
 			},
 		},
@@ -952,13 +956,14 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 	title := addUniqueIDToTitle("Test Clear Fields", uniqueID)
 
 	attrsWithValues := map[string]any{
-		"title":    title,
-		"category": "database",
-		"username": "testuser",
-		"url":      "https://example.com",
-		"hostname": "db.example.com",
-		"database": "mydb",
-		"port":     "3306",
+		"title":      title,
+		"category":   "database",
+		"username":   "testuser",
+		"hostname":   "db.example.com",
+		"database":   "mydb",
+		"port":       "3306",
+		"note_value": "test_note",
+		"password":   "test_password",
 		"section": []map[string]any{
 			{
 				"label": "test_section",
@@ -974,19 +979,20 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 	}
 
 	attrsCleared := map[string]any{
-		"title":    title,
-		"category": "database",
-		"username": "",
-		"url":      "",
-		"hostname": "",
-		"database": "",
-		"port":     "",
+		"title":      title,
+		"category":   "database",
+		"username":   "",
+		"hostname":   "",
+		"database":   "",
+		"port":       "",
+		"note_value": "",
+		"password":   "",
 		"section": []map[string]any{
 			{
 				"label": "",
 				"field": []map[string]any{
 					{
-						"label": "test_field",
+						"label": "",
 						"value": "",
 						"type":  "STRING",
 					},
@@ -1005,11 +1011,13 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "testuser"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", "https://example.com"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", "db.example.com"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", "mydb"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "port", "3306"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", "test_section"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.label", "test_field"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", "test_note"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password", "test_password"),
 				),
 			},
 			// Clear all fields
@@ -1020,11 +1028,13 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", ""),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "port", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.label", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value", ""),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password", ""),
 				),
 			},
 		},
