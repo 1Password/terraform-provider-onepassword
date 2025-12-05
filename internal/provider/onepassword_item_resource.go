@@ -587,7 +587,7 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 		case model.FieldPurposeUsername:
 			data.Username = setStringValuePreservingEmpty(f.Value, data.Username)
 		case model.FieldPurposePassword:
-			data.Password = setStringValue(f.Value)
+			data.Password = setStringValuePreservingEmpty(f.Value, data.Password)
 		case model.FieldPurposeNotes:
 			data.NoteValue = setStringValuePreservingEmpty(f.Value, data.NoteValue)
 		default:
@@ -596,7 +596,7 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 				case "username":
 					data.Username = setStringValuePreservingEmpty(f.Value, data.Username)
 				case "password":
-					data.Password = setStringValue(f.Value)
+					data.Password = setStringValuePreservingEmpty(f.Value, data.Password)
 				case "hostname", "server":
 					data.Hostname = setStringValuePreservingEmpty(f.Value, data.Hostname)
 				case "database":
