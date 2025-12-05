@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/function"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
@@ -30,11 +32,13 @@ type OnePasswordProvider struct {
 
 // OnePasswordProviderModel describes the provider data model.
 type OnePasswordProviderModel struct {
-	ConnectHost         types.String `tfsdk:"url"`
-	ConnectToken        types.String `tfsdk:"token"`
+	ConnectHost         types.String `tfsdk:"connect_url"`
+	ConnectToken        types.String `tfsdk:"connect_token"`
 	ServiceAccountToken types.String `tfsdk:"service_account_token"`
 	Account             types.String `tfsdk:"account"`
-	OpCLIPath           types.String `tfsdk:"op_cli_path"`
+	// Old field names - these are deprecated and will be removed in a future version.
+	ConnectHostOld  types.String `tfsdk:"url"`
+	ConnectTokenOld types.String `tfsdk:"token"`
 }
 
 func (p *OnePasswordProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -45,26 +49,47 @@ func (p *OnePasswordProvider) Metadata(ctx context.Context, req provider.Metadat
 func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"url": schema.StringAttribute{
+			"connect_url": schema.StringAttribute{
 				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 			},
-			"token": schema.StringAttribute{
+			"connect_token": schema.StringAttribute{
 				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set.",
 				Optional:            true,
 				Sensitive:           true,
 			},
+			"url": schema.StringAttribute{
+				MarkdownDescription: "The HTTP(S) URL where your 1Password Connect server can be found. Can also be sourced `OP_CONNECT_HOST` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_url` instead.",
+				Optional:            true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{
+							path.MatchRoot("connect_url"),
+						}...,
+					),
+				},
+				DeprecationMessage: "The \"url\" field is deprecated and will be removed in a future version. Use \"connect_url\" instead.",
+			},
+			"token": schema.StringAttribute{
+				MarkdownDescription: "A valid token for your 1Password Connect server. Can also be sourced from `OP_CONNECT_TOKEN` environment variable. Provider will use 1Password Connect server if set. Deprecated: Use `connect_token` instead.",
+				Optional:            true,
+				Sensitive:           true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{
+							path.MatchRoot("connect_token"),
+						}...,
+					),
+				},
+				DeprecationMessage: "The \"token\" field is deprecated and will be removed in a future version. Use \"connect_token\" instead.",
+			},
 			"service_account_token": schema.StringAttribute{
-				MarkdownDescription: "A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable. Provider will use the 1Password CLI if set.",
+				MarkdownDescription: "A valid 1Password service account token. Can also be sourced from `OP_SERVICE_ACCOUNT_TOKEN` environment variable.",
 				Optional:            true,
 				Sensitive:           true,
 			},
 			"account": schema.StringAttribute{
-				Description: "A valid account's sign-in address or ID to use biometrics unlock. Can also be sourced from `OP_ACCOUNT` environment variable. Provider will use the 1Password CLI if set.",
-				Optional:    true,
-			},
-			"op_cli_path": schema.StringAttribute{
-				Description: "The path to the 1Password CLI binary. Can also be sourced from `OP_CLI_PATH` environment variable. Defaults to `op`.",
+				Description: "A valid account name or ID to use desktop app authentication. Can also be sourced from `OP_ACCOUNT` environment variable.",
 				Optional:    true,
 			},
 		},
@@ -86,10 +111,6 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	connectToken := os.Getenv("OP_CONNECT_TOKEN")
 	serviceAccountToken := os.Getenv("OP_SERVICE_ACCOUNT_TOKEN")
 	account := os.Getenv("OP_ACCOUNT")
-	opCLIPath := os.Getenv("OP_CLI_PATH")
-	if opCLIPath == "" {
-		opCLIPath = "op"
-	}
 
 	// Configuration values are now available.
 	if !config.ConnectHost.IsNull() {
@@ -98,14 +119,20 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	if !config.ConnectToken.IsNull() {
 		connectToken = config.ConnectToken.ValueString()
 	}
+
+	// Old field names - these are deprecated and will be removed in a future version.
+	if !config.ConnectHostOld.IsNull() {
+		connectHost = config.ConnectHostOld.ValueString()
+	}
+	if !config.ConnectTokenOld.IsNull() {
+		connectToken = config.ConnectTokenOld.ValueString()
+	}
+
 	if !config.ServiceAccountToken.IsNull() {
 		serviceAccountToken = config.ServiceAccountToken.ValueString()
 	}
 	if !config.Account.IsNull() {
 		account = config.Account.ValueString()
-	}
-	if !config.OpCLIPath.IsNull() {
-		opCLIPath = config.OpCLIPath.ValueString()
 	}
 
 	// This is not handled by setting Required to true because Terraform does not handle
@@ -113,17 +140,12 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	// the other one is prompted for, but Terraform then forgets the value for the one that
 	// is defined in the code. This confusing user-experience can be avoided by handling the
 	// requirement of one of the attributes manually.
-	//
-	// TODO: Investigate if wrapping this as a (framework) validator can be a better fit.
 	if serviceAccountToken != "" || account != "" {
 		if connectToken != "" || connectHost != "" {
-			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"token\" and \"url\") or 1Password CLI (\"service_account_token\" or \"account\") credentials can be set. Both are set. Please unset one of them.")
-		}
-		if opCLIPath == "" {
-			resp.Diagnostics.AddAttributeError(path.Root("op_cli_path"), "CLI path missing", "Path to op CLI binary is not set. Either leave empty, provide the \"op_cli_path\" field in the provider configuration, or set the OP_CLI_PATH environment variable.")
+			resp.Diagnostics.AddError("Config conflict", "Either Connect credentials (\"connect_token\" and \"connect_url\") or \"service_account_token\" or \"account\" can be set. Multiple are set. Only one credential must be set.")
 		}
 		if serviceAccountToken != "" && account != "" {
-			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please unset one of them to use the provider with 1Password CLI.")
+			resp.Diagnostics.AddError("Config conflict", "\"service_account_token\" and \"account\" are set. Please use only one of them.")
 		}
 	}
 
@@ -132,12 +154,13 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 	}
 
 	// Example client configuration for data sources and resources
-	client, err := onepassword.NewClient(onepassword.ClientConfig{
+	providerUserAgent := fmt.Sprintf("terraform-provider-onepassword/%s", p.version)
+	client, err := onepassword.NewClient(ctx, onepassword.ClientConfig{
 		ConnectHost:         connectHost,
 		ConnectToken:        connectToken,
 		ServiceAccountToken: serviceAccountToken,
 		Account:             account,
-		OpCLIPath:           opCLIPath,
+		ProviderUserAgent:   providerUserAgent,
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Client init failure", fmt.Sprintf("Client failed to initialize, got error: %s", err))

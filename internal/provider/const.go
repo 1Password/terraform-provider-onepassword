@@ -3,26 +3,27 @@ package provider
 import (
 	"strings"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 const (
 	terraformItemIDDescription = "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`."
 
-	itemUUIDDescription                 = "The UUID of the item. Item identifiers are unique within a specific vault."
-	vaultUUIDDescription                = "The UUID of the vault the item is in."
-	categoryDescription                 = "The category of the item."
-	itemTitleDescription                = "The title of the item."
-	urlDescription                      = "The primary URL for the item."
-	tagsDescription                     = "An array of strings of the tags assigned to the item."
-	usernameDescription                 = "Username for this item."
-	passwordDescription                 = "Password for this item."
+	itemUUIDDescription          = "The UUID of the item. Item identifiers are unique within a specific vault."
+	vaultUUIDDescription         = "The UUID of the vault the item is in."
+	categoryDescription          = "The category of the item."
+	itemTitleDescription         = "The title of the item."
+	urlDescription               = "The primary URL for the item."
+	tagsDescription              = "An array of strings of the tags assigned to the item."
+	usernameDescription          = "Username for this item."
+	passwordDescription          = "Password for this item."
 	passwordWriteOnceDescription        = "A write-only password for this item. This value is not stored in the state and is intended for use with ephemeral values."
 	passwordWriteOnceVersionDescription = "An integer that must be incremented to trigger an update to the 'password_wo' field."
-	credentialDescription               = "API credential for this item."
-	noteValueDescription                = "Secure Note value."
-	publicKeyDescription                = "SSH Public Key for this item."
-	privateKeyDescription               = "SSH Private Key for this item."
+	credentialDescription        = "API credential for this item."
+	noteValueDescription         = "Secure Note value."
+	publicKeyDescription         = "SSH Public Key for this item."
+	privateKeyDescription        = "SSH Private Key in PKCS#8 for this item."
+	privateKeyOpenSSHDescription = "SSH Private key in OpenSSH format."
 
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
@@ -53,7 +54,6 @@ const (
 	passwordRecipeDescription  = "The recipe used to generate a new value for a password."
 	passwordElementDescription = "The kinds of characters to include in the password."
 	passwordLengthDescription  = "The length of the password to be generated."
-	passwordLettersDescription = "Use letters [a-zA-Z] when generating the password."
 	passwordDigitsDescription  = "Use digits [0-9] when generating the password."
 	passwordSymbolsDescription = "Use symbols [!@.-_*] when generating the password."
 
@@ -66,30 +66,30 @@ var (
 	dbTypes = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
 
 	categories = []string{
-		strings.ToLower(string(op.Login)),
-		strings.ToLower(string(op.Password)),
-		strings.ToLower(string(op.Database)),
-		strings.ToLower(string(op.SecureNote)),
+		strings.ToLower(string(model.Login)),
+		strings.ToLower(string(model.Password)),
+		strings.ToLower(string(model.Database)),
+		strings.ToLower(string(model.SecureNote)),
 	}
 	dataSourceCategories = append(categories,
-		strings.ToLower(string(op.Document)),
-		strings.ToLower(string(op.SSHKey)),
+		strings.ToLower(string(model.Document)),
+		strings.ToLower(string(model.SSHKey)),
 	)
 
 	fieldPurposes = []string{
-		string(op.FieldPurposeUsername),
-		string(op.FieldPurposePassword),
-		string(op.FieldPurposeNotes),
+		string(model.FieldPurposeUsername),
+		string(model.FieldPurposePassword),
+		string(model.FieldPurposeNotes),
 	}
 
 	fieldTypes = []string{
-		string(op.FieldTypeString),
-		string(op.FieldTypeConcealed),
-		string(op.FieldTypeEmail),
-		string(op.FieldTypeURL),
-		string(op.FieldTypeOTP),
-		string(op.FieldTypeDate),
-		string(op.FieldTypeMonthYear),
-		string(op.FieldTypeMenu),
+		string(model.FieldTypeString),
+		string(model.FieldTypeConcealed),
+		string(model.FieldTypeEmail),
+		string(model.FieldTypeURL),
+		string(model.FieldTypeOTP),
+		string(model.FieldTypeDate),
+		string(model.FieldTypeMonthYear),
+		string(model.FieldTypeMenu),
 	}
 )

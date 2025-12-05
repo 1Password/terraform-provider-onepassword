@@ -12,6 +12,59 @@
 
 ---
 
+[//]: # (START/v3.0.0)
+# v3.0.0
+
+## 🔴 Breaking Changes
+  * Remove `letters` option from password recipes. Letters are now always included in generated passwords and cannot be disabled. Configurations using `letters` in `password_recipe` will result in an error. {#256}
+  * The `account` field should now be set to the account name. Account name appears at the top of the left sidebar in the 1Password desktop app.
+  * Users who use biometric authentication should configure 1Password desktop app. {#270}
+
+## Features
+  * Enable provider to run using Terraform Stacks on HCP Terraform with a self-hosted agent. {#227}
+  * Enable provider to run on Terraform Cloud. {#141}
+  * `connect_url` and `connect_token` configuration parameters are available now. These are more specific alternatives to `url` and `token` for Connect authentication. The original `url` and `token` parameters continue to be supported but are set for deprecation. {#265}
+
+## Fixes
+  * `1password cli` is not required anymore to use the provider. {#148, #206}
+  * Biometric unlock doesn't pop up multiple times anymore. {#140, #130}
+  * Provider re-creates item when it's missing in 1Password vault. {#97}
+  * No 504 Gateway Timeout errors anymore for newly created items. {#5}
+  * Fix field reference from `label` to `id` for item data source. {#213}
+  * `password_recipe` properly generates passwords now. {#129} 
+  * Testing documentation now includes make commands and setup instructions about how to run e2e tests. {#269}
+  * README and documentation now to references to 1Password developer portal for more info. {#266}
+
+## Security
+  * Update `golang.org/x/crypto` from 0.39.0 to 0.45.0 to address security vulnerabilities. {#276}
+
+
+
+---
+
+[//]: # (START/v2.2.1)
+# v2.2.1
+
+## Fixes
+ * Add testing documentation. {#242}
+ * Eventual consistency for Connect client. {#246}
+ * Fix eventual consultancy issue in Connect's item get implementation. {#244}
+ * Fix item creation with incorrect date when using Connect. {#247}
+ * Trimming trailing newline from `op read` command output. {#245}
+
+---
+
+[//]: # (START/v2.2.0)
+# v2.2.0
+
+## Features
+  * Add `private_key_openssh` property to Item Data Source that returns SSH private key in OpenSSH format. {#189}
+
+## Security
+ * Address dependabot alerts and update Go version. {#226}
+
+---
+
 [//]: # (START/v2.1.2)
 # v2.1.2
 

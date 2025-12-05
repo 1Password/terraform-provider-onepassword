@@ -1,0 +1,74 @@
+name: E2E Tests
+
+on:
+  workflow_call:
+    secrets:
+      OP_CONNECT_CREDENTIALS:
+        description: "1Password Connect credentials"
+        required: true
+      OP_CONNECT_TOKEN:
+        description: "1Password Connect token"
+        required: true
+      OP_SERVICE_ACCOUNT_TOKEN:
+        description: "1Password service account token"
+        required: true
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Create '1password-credentials.json' file
+        env:
+          OP_CONNECT_CREDENTIALS: ${{ secrets.OP_CONNECT_CREDENTIALS }}
+        run: |
+          echo "$OP_CONNECT_CREDENTIALS" > 1password-credentials.json
+
+      - name: Deploy Connect using Helm
+        run: |
+          helm repo add 1password https://1password.github.io/connect-helm-charts || true
+          helm repo update
+          helm install connect 1password/connect \
+            --set connect.create=true \
+            --set-file connect.credentials=1password-credentials.json \
+            --set operator.create=false \
+            --set operator.authMethod=connect
+
+      - name: Wait for Connect service to be ready
+        run: |
+          kubectl wait --for=condition=ready pod -l app=onepassword-connect --timeout=300s || true
+          kubectl get svc onepassword-connect
+
+      - name: Run E2E tests
+        run: |
+          # Expose Connect from cluster
+          kubectl port-forward svc/onepassword-connect 8080:8080 &
+          PF_PID=$!
+
+          # Run tests
+          make test-e2e
+
+          # Cleanup: kill port-forward when done
+          kill $PF_PID || true
+        env:
+          OP_CONNECT_TOKEN: ${{ secrets.OP_CONNECT_TOKEN }}
+          OP_CONNECT_HOST: http://localhost:8080
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}

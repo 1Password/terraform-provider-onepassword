@@ -1,0 +1,38 @@
+version: 2
+builds:
+  - env:
+      # CGO is required for onepassword-sdk-go dependency
+      - CGO_ENABLED=1
+      - GOPRIVATE="github.com/1Password"
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    ldflags:
+      - "-s -w -X main.commit={{.Commit}} -X version.ProviderVersion={{.Version}}"
+    goos:
+      - windows
+    goarch:
+      - amd64
+      - "386"
+      - arm64
+    ignore:
+      # Ignore windows/arm (32-bit ARM): Windows on ARM is 64-bit only.
+      # Windows RT (32-bit ARM) was discontinued in 2015. Modern Windows ARM devices
+      # (Surface Pro X, etc.) run Windows ARM64, not 32-bit ARM.
+      - goos: windows
+        goarch: arm
+    binary: "{{ .ProjectName }}_v{{ .Version }}"
+archives:
+  - formats: ["zip"]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+# Checksums are generated in the final generate-checksums job to include all platforms
+checksum:
+  disable: true
+signs: []
+release:
+  # Use existing draft release created by the Linux job instead of creating a new one
+  use_existing_draft: true
+  # If you want to manually examine the release before its live, uncomment this line:
+  draft: true
+changelog:
+  disable: true

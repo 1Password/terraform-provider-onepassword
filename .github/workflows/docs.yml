@@ -6,18 +6,18 @@ jobs:
     name: Verify docs
     runs-on: ubuntu-latest
     steps:
-      - name: Set up Go 1.x
-        uses: actions/setup-go@v5
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
         with:
-          go-version: ^1.24
+          go-version-file: go.mod
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
-
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v4
 
       - name: Generate docs
         run: go generate
