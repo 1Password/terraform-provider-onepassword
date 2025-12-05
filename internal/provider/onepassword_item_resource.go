@@ -475,11 +475,11 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 	data.ID = setStringValue(itemTerraformID(item))
 	data.UUID = setStringValue(item.ID)
 	data.Vault = setStringValue(item.VaultID)
-	data.Title = setStringValue(item.Title)
+	data.Title = setStringValuePreservingEmpty(item.Title, data.Title)
 
 	for _, u := range item.URLs {
 		if u.Primary {
-			data.URL = setStringValue(u.URL)
+			data.URL = setStringValuePreservingEmpty(u.URL, data.URL)
 		}
 	}
 
@@ -522,7 +522,7 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 		}
 
 		section.ID = setStringValue(s.ID)
-		section.Label = setStringValue(s.Label)
+		section.Label = setStringValuePreservingEmpty(s.Label, section.Label)
 
 		var existingFields []OnePasswordItemResourceFieldModel
 		if section.Field != nil {
@@ -546,10 +546,10 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 				}
 
 				dataField.ID = setStringValue(f.ID)
-				dataField.Label = setStringValue(f.Label)
+				dataField.Label = setStringValuePreservingEmpty(f.Label, dataField.Label)
 				dataField.Purpose = setStringValue(string(f.Purpose))
 				dataField.Type = setStringValue(string(f.Type))
-				dataField.Value = setStringValue(f.Value)
+				dataField.Value = setStringValuePreservingEmpty(f.Value, dataField.Value)
 
 				if f.Recipe != nil {
 					charSets := map[string]bool{}
@@ -585,24 +585,24 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 	for _, f := range item.Fields {
 		switch f.Purpose {
 		case model.FieldPurposeUsername:
-			data.Username = setStringValue(f.Value)
+			data.Username = setStringValuePreservingEmpty(f.Value, data.Username)
 		case model.FieldPurposePassword:
 			data.Password = setStringValue(f.Value)
 		case model.FieldPurposeNotes:
-			data.NoteValue = setStringValue(f.Value)
+			data.NoteValue = setStringValuePreservingEmpty(f.Value, data.NoteValue)
 		default:
 			if f.SectionID == "" {
 				switch f.Label {
 				case "username":
-					data.Username = setStringValue(f.Value)
+					data.Username = setStringValuePreservingEmpty(f.Value, data.Username)
 				case "password":
 					data.Password = setStringValue(f.Value)
 				case "hostname", "server":
-					data.Hostname = setStringValue(f.Value)
+					data.Hostname = setStringValuePreservingEmpty(f.Value, data.Hostname)
 				case "database":
-					data.Database = setStringValue(f.Value)
+					data.Database = setStringValuePreservingEmpty(f.Value, data.Database)
 				case "port":
-					data.Port = setStringValue(f.Value)
+					data.Port = setStringValuePreservingEmpty(f.Value, data.Port)
 				case "type":
 					data.Type = setStringValue(f.Value)
 				}
