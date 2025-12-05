@@ -39,7 +39,10 @@ jobs:
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             # For pull_request events, check if PR is from external fork
             echo "PR head repo: ${{ github.event.pull_request.head.repo.full_name }}"
-            if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            if [ "${{ github.actor }}" == "dependabot[bot]" ]; then
+              echo "condition=skip" >> $GITHUB_OUTPUT
+              echo "Setting condition=skip (Dependabot PR)"
+            elif [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
               echo "condition=skip" >> $GITHUB_OUTPUT
               echo "Setting condition=skip (external fork PR creation)"
             else
