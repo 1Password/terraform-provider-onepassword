@@ -429,7 +429,6 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 		// Connect returns dates as timestamp
 		// Converting timestamp to `YYYY-MM-DD` string.
 		if f.Type == connect.FieldTypeDate && field.Value != "" {
-			fmt.Printf("DEBUG: Processing date field - ID: %q, Label: %q, Value: %q\n", field.ID, field.Label, field.Value)
 			dateStr, err := util.SecondsToYYYYMMDD(field.Value)
 			if err != nil {
 				return modelFields, fmt.Errorf("fromConnectFields: failed to parse timestamp %s to 'YYYY-MM-DD' string format: %w", field.Value, err)
