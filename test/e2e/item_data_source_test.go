@@ -91,6 +91,17 @@ var testItems = map[model.ItemCategory]testItem{
 			"category": "ssh_key",
 		},
 	},
+	model.APICredential: {
+		Title: "Test API Credential",
+		UUID:  "pkqk4ehxuqp4fy3wpjep5qozru",
+		Attrs: map[string]string{
+			"category":   "api_credential",
+			"credential": "testCredential",
+			"username":   "testAPICredential",
+			"hostname":   "testHostname",
+			"type":       "bearer",
+		},
+	},
 }
 
 func TestAccItemDataSource(t *testing.T) {
@@ -117,6 +128,7 @@ func TestAccItemDataSource(t *testing.T) {
 		{model.SecureNote, "SecureNote"},
 		{model.Document, "Document"},
 		{model.SSHKey, "SSHKey"},
+		{model.APICredential, "APICredential"},
 	}
 
 	var testCases []itemDataSourceTestCase
