@@ -264,7 +264,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Computed:            true,
 										Default:             stringdefault.StaticString("STRING"),
 										Validators: []validator.String{
-											stringvalidator.OneOfCaseInsensitive(fieldTypes...),
+											stringvalidator.OneOf(fieldTypes...),
 										},
 									},
 									"value": schema.StringAttribute{
