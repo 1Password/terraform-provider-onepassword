@@ -117,7 +117,12 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		return nil, fmt.Errorf("vault UUID mismatch: item has %s but %s was provided", params.VaultID, vaultUuid)
 	}
 
-	sdkItem, err := c.sdkClient.Items().Create(ctx, params)
+	var sdkItem sdk.Item
+	err := util.RetryOnConflict(ctx, func() error {
+		var createErr error
+		sdkItem, createErr = c.sdkClient.Items().Create(ctx, params)
+		return createErr
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item using sdk: %w", err)
 	}
@@ -147,7 +152,12 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		currentItem.Notes = *params.Notes
 	}
 
-	updatedItem, err := c.sdkClient.Items().Put(ctx, currentItem)
+	var updatedItem sdk.Item
+	err = util.RetryOnConflict(ctx, func() error {
+		var updateErr error
+		updatedItem, updateErr = c.sdkClient.Items().Put(ctx, currentItem)
+		return updateErr
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update item using sdk: %w", err)
 	}
@@ -162,7 +172,9 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 }
 
 func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
-	err := c.sdkClient.Items().Delete(ctx, vaultUuid, item.ID)
+	err := util.RetryOnConflict(ctx, func() error {
+		return c.sdkClient.Items().Delete(ctx, vaultUuid, item.ID)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to delete item using sdk: %w", err)
 	}

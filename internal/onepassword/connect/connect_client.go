@@ -125,7 +125,12 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		return nil, err
 	}
 
-	createdItem, err := c.connectClient.CreateItem(connectItem, vaultUuid)
+	var createdItem *onepassword.Item
+	err = util.RetryOnConflict(ctx, func() error {
+		var createErr error
+		createdItem, createErr = c.connectClient.CreateItem(connectItem, vaultUuid)
+		return createErr
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item using connect: %w", err)
 	}
@@ -167,7 +172,12 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		return nil, err
 	}
 
-	updatedItem, err := c.connectClient.UpdateItem(connectItem, vaultUuid)
+	var updatedItem *onepassword.Item
+	err = util.RetryOnConflict(ctx, func() error {
+		var updateErr error
+		updatedItem, updateErr = c.connectClient.UpdateItem(connectItem, vaultUuid)
+		return updateErr
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update item using connect: %w", err)
 	}
@@ -210,7 +220,9 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 		return err
 	}
 
-	err = c.connectClient.DeleteItem(connectItem, vaultUuid)
+	err = util.RetryOnConflict(ctx, func() error {
+		return c.connectClient.DeleteItem(connectItem, vaultUuid)
+	})
 	if err != nil {
 		return fmt.Errorf("failed to delete item using connect: %w", err)
 	}
