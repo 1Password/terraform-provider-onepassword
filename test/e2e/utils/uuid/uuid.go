@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/cleanup"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
@@ -46,6 +47,20 @@ func VerifyItemUUIDUnchanged(t *testing.T, resourceName string, expectedUUID *st
 			return fmt.Errorf("UUID changed from %s to %s - resource was replaced instead of updated", *expectedUUID, currentUUID)
 		}
 
+		return nil
+	}
+}
+
+// CaptureItemUUIDAndRegisterCleanup captures the UUID and registers cleanup
+func CaptureItemUUIDAndRegisterCleanup(t *testing.T, resourceName string, uuidPtr *string, vaultID string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+
+		err := CaptureItemUUID(t, resourceName, uuidPtr)(s)
+		if err != nil {
+			return err
+		}
+
+		cleanup.RegisterItemCleanup(t, *uuidPtr, vaultID)
 		return nil
 	}
 }

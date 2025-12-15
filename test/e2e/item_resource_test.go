@@ -138,7 +138,7 @@ func TestAccItemResource(t *testing.T) {
 			// Build check functions for create step
 			createChecks := []resource.TestCheckFunc{
 				logStep(t, "CREATE"),
-				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 			}
 			bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 			createChecks = append(createChecks, bcCreate...)
@@ -248,7 +248,11 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 				if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
 					testStep.ExpectError = regexp.MustCompile(`length value must be between 1 and 64`)
 				} else {
+					var itemUUID string
 					checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)
+					checks = append(checks,
+						uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+					)
 					testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
 				}
 
@@ -361,7 +365,11 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 			if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
 				testStep.ExpectError = regexp.MustCompile(`Invalid Attribute Value`)
 			} else {
+				var itemUUID string
 				checks := password.BuildPasswordRecipeChecksForField("onepassword_item.test_item", "section.0.field.0", tc.recipe)
+				checks = append(checks,
+					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+				)
 				testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
 			}
 
@@ -506,7 +514,7 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 				// Build check functions for create step
 				createChecks := []resource.TestCheckFunc{
 					logStep(t, "CREATE"),
-					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 				}
 				createChecks = append(createChecks, checks.BuildItemChecks("onepassword_item.test_item", createAttrs)...)
 
@@ -562,12 +570,21 @@ func TestAccItemResourceTags(t *testing.T) {
 
 	var testSteps []resource.TestStep
 
-	for _, step := range testCases {
+	for i, step := range testCases {
 		attrs := maps.Clone(item.Attrs)
 		attrs["title"] = addUniqueIDToTitle(attrs["title"].(string), uniqueID)
 		attrs["tags"] = step.tags
 
 		testChecks := []resource.TestCheckFunc{logStep(t, step.name)}
+
+		// Capture UUID and register cleanup only on the first step
+		if i == 0 {
+			var itemUUID string
+			testChecks = append(testChecks,
+				uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+			)
+		}
+
 		testChecks = append(testChecks, checks.BuildItemChecks("onepassword_item.test_item", attrs)...)
 
 		testSteps = append(testSteps, resource.TestStep{
@@ -601,7 +618,7 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	// Build check functions for create step
 	createChecks := []resource.TestCheckFunc{
 		logStep(t, "CREATE"),
-		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+		uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 	}
 	bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 	createChecks = append(createChecks, bcCreate...)
@@ -715,7 +732,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	// Build check functions for create step
 	createChecks := []resource.TestCheckFunc{
 		logStep(t, "CREATE"),
-		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+		uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 	}
 	bcCreate := checks.BuildItemChecks("onepassword_item.test_item", initialAttrs)
 	createChecks = append(createChecks, bcCreate...)
@@ -931,6 +948,7 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 	for _, tc := range categories {
 		t.Run(tc.name, func(t *testing.T) {
 			uniqueID := uuid.New().String()
+			var itemUUID string
 
 			attrs := maps.Clone(tc.attrs)
 			attrs["title"] = addUniqueIDToTitle(attrs["title"].(string), uniqueID)
@@ -938,6 +956,9 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 			// Build checks to verify password was generated
 			checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipe)
 			checks = append(checks, resource.TestCheckResourceAttrSet("onepassword_item.test_item", "password"))
+			checks = append(checks,
+				uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+			)
 
 			resource.Test(t, resource.TestCase{
 				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
