@@ -978,6 +978,7 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 
 func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 	testVaultID := vault.GetTestVaultID(t)
+	var itemUUID string
 
 	attrs := map[string]any{
 		"title":      "",
@@ -1011,6 +1012,7 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrs),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", ""),
@@ -1026,6 +1028,7 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 }
 
 func TestAccItemResourceNullVsEmptyString(t *testing.T) {
+	var itemUUID string
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 
@@ -1043,6 +1046,7 @@ func TestAccItemResourceNullVsEmptyString(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrsWithoutFields),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "username"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "url"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "hostname"),
@@ -1059,6 +1063,7 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test Clear Fields", uniqueID)
+	var itemUUID string
 
 	attrsWithValues := map[string]any{
 		"title":      title,
@@ -1113,6 +1118,7 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrsWithValues),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "testuser"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", "db.example.com"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", "mydb"),
