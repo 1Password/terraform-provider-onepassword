@@ -17,7 +17,7 @@
 
 ## Fixes
 
-  * Provider produces consistent results after apply. {#223}
+  * Provider produces consistent results after apply. {#223, #170}
   * Database item doesn't throw an error anymore. {#215}
   * Provider doesn't throw an error for sensitive attibutes. {#185}
   * SSH private keys in OpenSSH format are properly handled. {#286}
