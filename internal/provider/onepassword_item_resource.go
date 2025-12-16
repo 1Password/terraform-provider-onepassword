@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -25,8 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-
-	op "github.com/1Password/connect-sdk-go/onepassword"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
@@ -630,13 +627,6 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 		},
 	}
 
-	var tags []string
-	diagnostics := data.Tags.ElementsAs(ctx, &tags, false)
-	if diagnostics.HasError() {
-		return nil, diagnostics
-	}
-	item.Tags = tags
-
 	password := data.Password.ValueString()
 	recipe, err := parseGeneratorRecipe(data.Recipe)
 	if err != nil {
@@ -649,175 +639,27 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 	switch data.Category.ValueString() {
 	case "login":
 		item.Category = model.Login
-		item.Fields = []model.ItemField{
-			{
-				ID:      "username",
-				Label:   "username",
-				Purpose: model.FieldPurposeUsername,
-				Type:    model.FieldTypeString,
-				Value:   data.Username.ValueString(),
-			},
-			{
-				ID:       "password",
-				Label:    "password",
-				Purpose:  model.FieldPurposePassword,
-				Type:     model.FieldTypeConcealed,
-				Value:    password,
-				Generate: password == "",
-				Recipe:   recipe,
-			},
-			{
-				ID:      "notesPlain",
-				Label:   "notesPlain",
-				Type:    model.FieldTypeString,
-				Purpose: model.FieldPurposeNotes,
-				Value:   data.NoteValue.ValueString(),
-			},
-		}
+		item.Fields = buildLoginFields(data, password, recipe)
 	case "password":
 		item.Category = model.Password
-		item.Fields = []model.ItemField{
-			{
-				ID:       "password",
-				Label:    "password",
-				Purpose:  model.FieldPurposePassword,
-				Type:     model.FieldTypeConcealed,
-				Value:    password,
-				Generate: password == "",
-				Recipe:   recipe,
-			},
-			{
-				ID:      "notesPlain",
-				Label:   "notesPlain",
-				Type:    model.FieldTypeString,
-				Purpose: model.FieldPurposeNotes,
-				Value:   data.NoteValue.ValueString(),
-			},
-		}
+		item.Fields = buildPasswordFields(data, password, recipe)
 	case "database":
 		item.Category = model.Database
-		item.Fields = []model.ItemField{
-			{
-				ID:    "username",
-				Label: "username",
-				Type:  model.FieldTypeString,
-				Value: data.Username.ValueString(),
-			},
-			{
-				ID:       "password",
-				Label:    "password",
-				Type:     model.FieldTypeConcealed,
-				Value:    password,
-				Generate: password == "",
-				Recipe:   recipe,
-			},
-			{
-				ID:    "hostname",
-				Label: "hostname",
-				Type:  model.FieldTypeString,
-				Value: data.Hostname.ValueString(),
-			},
-			{
-				ID:    "database",
-				Label: "database",
-				Type:  model.FieldTypeString,
-				Value: data.Database.ValueString(),
-			},
-			{
-				ID:    "port",
-				Label: "port",
-				Type:  model.FieldTypeString,
-				Value: data.Port.ValueString(),
-			},
-			{
-				ID:    "database_type",
-				Label: "type",
-				Type:  model.FieldTypeString,
-				Value: data.Type.ValueString(),
-			},
-			{
-				ID:      "notesPlain",
-				Label:   "notesPlain",
-				Type:    model.FieldTypeString,
-				Purpose: model.FieldPurposeNotes,
-				Value:   data.NoteValue.ValueString(),
-			},
-		}
+		item.Fields = buildDatabaseFields(data, password, recipe)
 	case "secure_note":
 		item.Category = model.SecureNote
-		item.Fields = []model.ItemField{
-			{
-				ID:      "notesPlain",
-				Label:   "notesPlain",
-				Type:    model.FieldTypeString,
-				Purpose: model.FieldPurposeNotes,
-				Value:   data.NoteValue.ValueString(),
-			},
-		}
+		item.Fields = buildSecureNoteFields(data)
 	}
 
-	sections := data.Section
+	tags, diagnostics := buildTags(ctx, data)
+	if diagnostics.HasError() {
+		return nil, diagnostics
+	}
+	item.Tags = tags
 
-	for _, section := range sections {
-		sectionID := section.ID.ValueString()
-		if sectionID == "" {
-			sid, err := uuid.GenerateUUID()
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-					"Item conversion error",
-					fmt.Sprintf("Unable to generate a section ID, has error: %v", err),
-				)}
-			}
-			sectionID = sid
-		}
-
-		s := model.ItemSection{
-			ID:    sectionID,
-			Label: section.Label.ValueString(),
-		}
-		item.Sections = append(item.Sections, s)
-
-		sectionFields := section.Field
-		for _, field := range sectionFields {
-			fieldID := field.ID.ValueString()
-			// Generate field ID if empty
-			if fieldID == "" {
-				sid, err := uuid.GenerateUUID()
-				if err != nil {
-					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-						"Item conversion error",
-						fmt.Sprintf("Unable to generate a field ID, has error: %v", err),
-					)}
-				}
-				fieldID = sid
-			}
-
-			fieldType := op.ItemFieldType(field.Type.ValueString())
-			fieldValue := field.Value.ValueString()
-
-			f := model.ItemField{
-				SectionID:    s.ID,
-				SectionLabel: s.Label,
-				ID:           fieldID,
-				Type:         model.ItemFieldType(fieldType),
-				Purpose:      model.ItemFieldPurpose(field.Purpose.ValueString()),
-				Label:        field.Label.ValueString(),
-				Value:        fieldValue,
-			}
-			recipe, err := parseGeneratorRecipe(field.Recipe)
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-					"Item conversion error",
-					fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
-				)}
-			}
-
-			if recipe != nil {
-				addRecipe(&f, recipe)
-			}
-
-			item.Fields = append(item.Fields, f)
-		}
+	diagnostics = buildSections(data, item)
+	if diagnostics.HasError() {
+		return nil, diagnostics
 	}
 
 	return item, nil
