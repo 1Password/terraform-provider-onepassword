@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-uuid"
@@ -476,6 +474,9 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 	data.UUID = setStringValue(item.ID)
 	data.Vault = setStringValue(item.VaultID)
 	data.Title = setStringValuePreservingEmpty(item.Title, data.Title)
+	data.Category = setStringValue(strings.ToLower(string(item.Category)))
+	data.Section = processSectionsAndFields(item.Sections, item.Fields, data.Section)
+	processTopLevelFields(item.Fields, data)
 
 	for _, u := range item.URLs {
 		if u.Primary {
@@ -483,133 +484,13 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 		}
 	}
 
-	var dataTags []string
-	diagnostics := data.Tags.ElementsAs(ctx, &dataTags, false)
+	tags, diagnostics := processTags(ctx, item.Tags, data.Tags)
 	if diagnostics.HasError() {
 		return diagnostics
 	}
+	data.Tags = tags
 
-	sort.Strings(dataTags)
-	if !reflect.DeepEqual(dataTags, item.Tags) {
-		// If item.Tags is empty, preserve null if the original state was null
-		if len(item.Tags) == 0 && data.Tags.IsNull() {
-			data.Tags = types.ListNull(types.StringType)
-		} else {
-			tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
-			if diagnostics.HasError() {
-				return diagnostics
-			}
-			data.Tags = tags
-		}
-	}
-
-	data.Category = setStringValue(strings.ToLower(string(item.Category)))
-
-	dataSections := data.Section
-	for _, s := range item.Sections {
-		section := OnePasswordItemResourceSectionModel{}
-		posSection := -1
-		newSection := true
-
-		for i := range dataSections {
-			existingID := dataSections[i].ID.ValueString()
-			existingLabel := dataSections[i].Label.ValueString()
-			if (s.ID != "" && s.ID == existingID) || s.Label == existingLabel {
-				section = dataSections[i]
-				posSection = i
-				newSection = false
-			}
-		}
-
-		section.ID = setStringValue(s.ID)
-		section.Label = setStringValuePreservingEmpty(s.Label, section.Label)
-
-		var existingFields []OnePasswordItemResourceFieldModel
-		if section.Field != nil {
-			existingFields = section.Field
-		}
-		for _, f := range item.Fields {
-			if f.SectionID != "" && f.SectionID == s.ID {
-				dataField := OnePasswordItemResourceFieldModel{}
-				posField := -1
-				newField := true
-
-				for i := range existingFields {
-					existingID := existingFields[i].ID.ValueString()
-					existingLabel := existingFields[i].Label.ValueString()
-
-					if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
-						dataField = existingFields[i]
-						posField = i
-						newField = false
-					}
-				}
-
-				dataField.ID = setStringValue(f.ID)
-				dataField.Label = setStringValuePreservingEmpty(f.Label, dataField.Label)
-				dataField.Purpose = setStringValue(string(f.Purpose))
-				dataField.Type = setStringValue(string(f.Type))
-				dataField.Value = setStringValuePreservingEmpty(f.Value, dataField.Value)
-
-				if f.Recipe != nil {
-					charSets := map[string]bool{}
-					for _, s := range f.Recipe.CharacterSets {
-						charSets[strings.ToLower(string(s))] = true
-					}
-
-					dataField.Recipe = []PasswordRecipeModel{{
-						Length:  types.Int64Value(int64(f.Recipe.Length)),
-						Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
-						Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
-					}}
-				}
-
-				if newField {
-					existingFields = append(existingFields, dataField)
-				} else {
-					existingFields[posField] = dataField
-				}
-			}
-		}
-		section.Field = existingFields
-
-		if newSection {
-			dataSections = append(dataSections, section)
-		} else {
-			dataSections[posSection] = section
-		}
-	}
-
-	data.Section = dataSections
-
-	for _, f := range item.Fields {
-		switch f.Purpose {
-		case model.FieldPurposeUsername:
-			data.Username = setStringValuePreservingEmpty(f.Value, data.Username)
-		case model.FieldPurposePassword:
-			data.Password = setStringValue(f.Value)
-		case model.FieldPurposeNotes:
-			data.NoteValue = setStringValuePreservingEmpty(f.Value, data.NoteValue)
-		default:
-			if f.SectionID == "" {
-				switch f.Label {
-				case "username":
-					data.Username = setStringValuePreservingEmpty(f.Value, data.Username)
-				case "password":
-					data.Password = setStringValue(f.Value)
-				case "hostname", "server":
-					data.Hostname = setStringValuePreservingEmpty(f.Value, data.Hostname)
-				case "database":
-					data.Database = setStringValuePreservingEmpty(f.Value, data.Database)
-				case "port":
-					data.Port = setStringValuePreservingEmpty(f.Value, data.Port)
-				case "type":
-					data.Type = setStringValue(f.Value)
-				}
-			}
-		}
-	}
-
+	// Password is not set for secure notes
 	if item.Category == model.SecureNote && data.Password.IsUnknown() {
 		data.Password = types.StringNull()
 	}
