@@ -18,12 +18,12 @@
 
 ## Fixes
 
-* Provider produces consysten results after apply. {#223}
-* Database item doesn't trow an error anymore. {#215}
-* Provider doesn't throw an error for sensitive attibutes. {#185}
-* SSH private keys in OpenSSH format are properly handled. {#286}
-* Provider reads API credential items correctly. {#287}
-* Provider properly handles string values in sections. {#214}
+  * Provider produces consysten results after apply. {#223}
+  * Database item doesn't trow an error anymore. {#215}
+  * Provider doesn't throw an error for sensitive attibutes. {#185}
+  * SSH private keys in OpenSSH format are properly handled. {#286}
+  * Provider reads API credential items correctly. {#287}
+  * Provider properly handles string values in sections. {#214}
 
 ---
 
