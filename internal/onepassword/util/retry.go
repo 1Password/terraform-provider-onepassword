@@ -18,7 +18,7 @@ func RetryOnConflict(ctx context.Context, operation func() error) error {
 		}
 
 		errStr := err.Error()
-		if strings.Contains(errStr, "409") || strings.Contains(errStr, "Conflict") {
+		if strings.Contains(errStr, "409") || strings.Contains(errStr, "Conflict") || strings.Contains(errStr, "conflict") {
 			// 409 error - retry
 			continue
 		}
