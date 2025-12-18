@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func TestProcessTags(t *testing.T) {
+func TestToStateTags(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
@@ -101,7 +101,7 @@ func TestProcessTags(t *testing.T) {
 				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2"})
 			}
 
-			got, diags := processTags(ctx, tt.modelTags, stateTags)
+			got, diags := toStateTags(ctx, tt.modelTags, stateTags)
 			if (diags.HasError()) != tt.wantErr {
 				t.Errorf("processTags() error = %v, wantErr %v", diags.HasError(), tt.wantErr)
 				return
@@ -124,7 +124,7 @@ func TestProcessTags(t *testing.T) {
 	}
 }
 
-func TestProcessSectionsAndFields(t *testing.T) {
+func TestToStateSectionsAndFields(t *testing.T) {
 	tests := []struct {
 		name          string
 		modelSections []model.ItemSection
@@ -482,7 +482,7 @@ func TestProcessSectionsAndFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := processSectionsAndFields(tt.modelSections, tt.modelFields, tt.stateSections)
+			got := toStateSectionsAndFields(tt.modelSections, tt.modelFields, tt.stateSections)
 			if len(got) != len(tt.want) {
 				t.Errorf("processSectionsAndFields() len = %d, want %d", len(got), len(tt.want))
 				return
@@ -502,7 +502,7 @@ func TestProcessSectionsAndFields(t *testing.T) {
 	}
 }
 
-func TestProcessTopLevelFields(t *testing.T) {
+func TestToStateTopLevelFields(t *testing.T) {
 	tests := []struct {
 		name        string
 		modelFields []model.ItemField
@@ -714,7 +714,7 @@ func TestProcessTopLevelFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			processTopLevelFields(tt.modelFields, tt.state)
+			toStateTopLevelFields(tt.modelFields, tt.state)
 			if tt.state.Username.ValueString() != tt.want.Username.ValueString() {
 				t.Errorf("Username = %v, want %v", tt.state.Username.ValueString(), tt.want.Username.ValueString())
 			}

@@ -475,8 +475,8 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 	state.Vault = setStringValue(modelItem.VaultID)
 	state.Title = setStringValuePreservingEmpty(modelItem.Title, state.Title)
 	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
-	state.Section = processSectionsAndFields(modelItem.Sections, modelItem.Fields, state.Section)
-	processTopLevelFields(modelItem.Fields, state)
+	state.Section = toStateSectionsAndFields(modelItem.Sections, modelItem.Fields, state.Section)
+	toStateTopLevelFields(modelItem.Fields, state)
 
 	for _, u := range modelItem.URLs {
 		if u.Primary {
@@ -484,7 +484,7 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 		}
 	}
 
-	tags, diagnostics := processTags(ctx, modelItem.Tags, state.Tags)
+	tags, diagnostics := toStateTags(ctx, modelItem.Tags, state.Tags)
 	if diagnostics.HasError() {
 		return diagnostics
 	}

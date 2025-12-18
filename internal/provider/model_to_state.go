@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func processTags(ctx context.Context, modelTags []string, stateTags types.List) (types.List, diag.Diagnostics) {
+func toStateTags(ctx context.Context, modelTags []string, stateTags types.List) (types.List, diag.Diagnostics) {
 	var dataTagsSlice []string
 	diagnostics := stateTags.ElementsAs(ctx, &dataTagsSlice, false)
 	if diagnostics.HasError() {
@@ -40,7 +40,7 @@ func processTags(ctx context.Context, modelTags []string, stateTags types.List) 
 	return stateTags, nil
 }
 
-func processSectionsAndFields(modelSections []model.ItemSection, modelFields []model.ItemField, stateSections []OnePasswordItemResourceSectionModel) []OnePasswordItemResourceSectionModel {
+func toStateSectionsAndFields(modelSections []model.ItemSection, modelFields []model.ItemField, stateSections []OnePasswordItemResourceSectionModel) []OnePasswordItemResourceSectionModel {
 	for _, s := range modelSections {
 		section := OnePasswordItemResourceSectionModel{}
 		posSection := -1
@@ -118,7 +118,7 @@ func processSectionsAndFields(modelSections []model.ItemSection, modelFields []m
 	return stateSections
 }
 
-func processTopLevelFields(modelFields []model.ItemField, state *OnePasswordItemResourceModel) {
+func toStateTopLevelFields(modelFields []model.ItemField, state *OnePasswordItemResourceModel) {
 	for _, f := range modelFields {
 		switch f.Purpose {
 		case model.FieldPurposeUsername:
