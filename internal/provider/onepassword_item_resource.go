@@ -319,7 +319,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, diagnostics := dataToItem(ctx, data)
+	item, diagnostics := stateToModel(ctx, data)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -389,7 +389,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, diagnostics := dataToItem(ctx, data)
+	item, diagnostics := stateToModel(ctx, data)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -425,7 +425,7 @@ func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.Delet
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, diagnostics := dataToItem(ctx, data)
+	item, diagnostics := stateToModel(ctx, data)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -614,21 +614,21 @@ func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemReso
 	return nil
 }
 
-func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.Item, diag.Diagnostics) {
-	item := &model.Item{
-		ID:      data.UUID.ValueString(),
-		VaultID: data.Vault.ValueString(),
-		Title:   data.Title.ValueString(),
+func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*model.Item, diag.Diagnostics) {
+	modelItem := &model.Item{
+		ID:      state.UUID.ValueString(),
+		VaultID: state.Vault.ValueString(),
+		Title:   state.Title.ValueString(),
 		URLs: []model.ItemURL{
 			{
 				Primary: true,
-				URL:     data.URL.ValueString(),
+				URL:     state.URL.ValueString(),
 			},
 		},
 	}
 
-	password := data.Password.ValueString()
-	recipe, err := parseGeneratorRecipe(data.Recipe)
+	password := state.Password.ValueString()
+	recipe, err := parseGeneratorRecipe(state.Recipe)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
 			"Error parsing generator recipe",
@@ -636,33 +636,33 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 		)}
 	}
 
-	switch data.Category.ValueString() {
+	switch state.Category.ValueString() {
 	case "login":
-		item.Category = model.Login
-		item.Fields = buildLoginFields(data, password, recipe)
+		modelItem.Category = model.Login
+		modelItem.Fields = toModelLoginFields(state, password, recipe)
 	case "password":
-		item.Category = model.Password
-		item.Fields = buildPasswordFields(data, password, recipe)
+		modelItem.Category = model.Password
+		modelItem.Fields = toModelPasswordFields(state, password, recipe)
 	case "database":
-		item.Category = model.Database
-		item.Fields = buildDatabaseFields(data, password, recipe)
+		modelItem.Category = model.Database
+		modelItem.Fields = toModelDatabaseFields(state, password, recipe)
 	case "secure_note":
-		item.Category = model.SecureNote
-		item.Fields = buildSecureNoteFields(data)
+		modelItem.Category = model.SecureNote
+		modelItem.Fields = toModelSecureNoteFields(state)
 	}
 
-	tags, diagnostics := buildTags(ctx, data)
+	tags, diagnostics := toModelTags(ctx, state)
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}
-	item.Tags = tags
+	modelItem.Tags = tags
 
-	diagnostics = buildSections(data, item)
+	diagnostics = toModelSections(state, modelItem)
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}
 
-	return item, nil
+	return modelItem, nil
 }
 
 func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {

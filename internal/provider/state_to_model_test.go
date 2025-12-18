@@ -10,15 +10,15 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
-func TestBuildLoginFields(t *testing.T) {
+func TestToModelLoginFields(t *testing.T) {
 	tests := map[string]struct {
-		data     OnePasswordItemResourceModel
+		state    OnePasswordItemResourceModel
 		password string
 		recipe   *model.GeneratorRecipe
 		want     []model.ItemField
 	}{
 		"with all fields": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				Username:  types.StringValue("testuser"),
 				NoteValue: types.StringValue("test notes"),
 			},
@@ -51,7 +51,7 @@ func TestBuildLoginFields(t *testing.T) {
 			},
 		},
 		"with empty password should generate": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				Username:  types.StringValue("testuser"),
 				NoteValue: types.StringValue("test notes"),
 			},
@@ -90,7 +90,7 @@ func TestBuildLoginFields(t *testing.T) {
 			},
 		},
 		"with null values": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				Username:  types.StringNull(),
 				NoteValue: types.StringNull(),
 			},
@@ -126,7 +126,7 @@ func TestBuildLoginFields(t *testing.T) {
 
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
-			got := buildLoginFields(test.data, test.password, test.recipe)
+			got := toModelLoginFields(test.state, test.password, test.recipe)
 			if len(got) != len(test.want) {
 				t.Errorf("Field count mismatch: got %d, want %d", len(got), len(test.want))
 				return
@@ -165,16 +165,16 @@ func TestBuildLoginFields(t *testing.T) {
 	}
 }
 
-func TestBuildPasswordFields(t *testing.T) {
+func TestToModelPasswordFields(t *testing.T) {
 	tests := map[string]struct {
-		data     OnePasswordItemResourceModel
+		state    OnePasswordItemResourceModel
 		password string
 		recipe   *model.GeneratorRecipe
 		wantLen  int
 		wantIDs  []string
 	}{
 		"with password and notes": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				NoteValue: types.StringValue("test notes"),
 			},
 			password: "testpass",
@@ -183,7 +183,7 @@ func TestBuildPasswordFields(t *testing.T) {
 			wantIDs:  []string{"password", "notesPlain"},
 		},
 		"with empty password": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				NoteValue: types.StringValue("test notes"),
 			},
 			password: "",
@@ -197,7 +197,7 @@ func TestBuildPasswordFields(t *testing.T) {
 
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
-			got := buildPasswordFields(test.data, test.password, test.recipe)
+			got := toModelPasswordFields(test.state, test.password, test.recipe)
 			if len(got) != test.wantLen {
 				t.Errorf("Field count: got %d, want %d", len(got), test.wantLen)
 				return
@@ -217,8 +217,8 @@ func TestBuildPasswordFields(t *testing.T) {
 	}
 }
 
-func TestBuildDatabaseFields(t *testing.T) {
-	data := OnePasswordItemResourceModel{
+func TestToModelDatabaseFields(t *testing.T) {
+	state := OnePasswordItemResourceModel{
 		Username:  types.StringValue("dbuser"),
 		Hostname:  types.StringValue("dbhost"),
 		Database:  types.StringValue("mydb"),
@@ -229,7 +229,7 @@ func TestBuildDatabaseFields(t *testing.T) {
 	password := "dbpass"
 	recipe := &model.GeneratorRecipe{Length: 32}
 
-	got := buildDatabaseFields(data, password, recipe)
+	got := toModelDatabaseFields(state, password, recipe)
 
 	if len(got) != 7 {
 		t.Fatalf("Field count: got %d, want 7", len(got))
@@ -271,25 +271,25 @@ func TestBuildDatabaseFields(t *testing.T) {
 	}
 }
 
-func TestBuildSecureNoteFields(t *testing.T) {
+func TestToModelSecureNoteFields(t *testing.T) {
 	tests := map[string]struct {
-		data     OnePasswordItemResourceModel
+		state    OnePasswordItemResourceModel
 		wantNote string
 	}{
 		"with notes": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				NoteValue: types.StringValue("secure note content"),
 			},
 			wantNote: "secure note content",
 		},
 		"with empty notes": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				NoteValue: types.StringValue(""),
 			},
 			wantNote: "",
 		},
 		"with null notes": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				NoteValue: types.StringNull(),
 			},
 			wantNote: "",
@@ -298,7 +298,7 @@ func TestBuildSecureNoteFields(t *testing.T) {
 
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
-			got := buildSecureNoteFields(test.data)
+			got := toModelSecureNoteFields(test.state)
 			if len(got) != 1 {
 				t.Fatalf("Field count: got %d, want 1", len(got))
 			}
@@ -318,16 +318,16 @@ func TestBuildSecureNoteFields(t *testing.T) {
 	}
 }
 
-func TestBuildSectionField(t *testing.T) {
+func TestToModelSectionField(t *testing.T) {
 	tests := map[string]struct {
-		field        OnePasswordItemResourceFieldModel
+		state        OnePasswordItemResourceFieldModel
 		sectionID    string
 		sectionLabel string
 		wantErr      bool
 		validate     func(t *testing.T, field *model.ItemField)
 	}{
 		"with existing field ID": {
-			field: OnePasswordItemResourceFieldModel{
+			state: OnePasswordItemResourceFieldModel{
 				ID:      types.StringValue("existing-field-id"),
 				Label:   types.StringValue("Test Field"),
 				Type:    types.StringValue("STRING"),
@@ -363,7 +363,7 @@ func TestBuildSectionField(t *testing.T) {
 			},
 		},
 		"without field ID generates UUID": {
-			field: OnePasswordItemResourceFieldModel{
+			state: OnePasswordItemResourceFieldModel{
 				ID:      types.StringValue(""),
 				Label:   types.StringValue("Test Field"),
 				Type:    types.StringValue("CONCEALED"),
@@ -387,7 +387,7 @@ func TestBuildSectionField(t *testing.T) {
 			},
 		},
 		"with recipe": {
-			field: OnePasswordItemResourceFieldModel{
+			state: OnePasswordItemResourceFieldModel{
 				ID:      types.StringValue("field-id"),
 				Label:   types.StringValue("Password Field"),
 				Type:    types.StringValue("CONCEALED"),
@@ -416,7 +416,7 @@ func TestBuildSectionField(t *testing.T) {
 
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
-			got, err := buildSectionField(test.field, test.sectionID, test.sectionLabel)
+			got, err := toModelSectionField(test.state, test.sectionID, test.sectionLabel)
 			if (err != nil) != test.wantErr {
 				t.Errorf("Error: got err=%v, wantErr=%v", err != nil, test.wantErr)
 				return
@@ -437,14 +437,14 @@ func TestBuildSectionField(t *testing.T) {
 	}
 }
 
-func TestBuildSections(t *testing.T) {
+func TestToModelSections(t *testing.T) {
 	tests := map[string]struct {
-		data     OnePasswordItemResourceModel
+		state    OnePasswordItemResourceModel
 		wantErr  bool
 		validate func(t *testing.T, item *model.Item)
 	}{
 		"with sections and fields": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				Section: []OnePasswordItemResourceSectionModel{
 					{
 						ID:    types.StringValue("section-1"),
@@ -499,7 +499,7 @@ func TestBuildSections(t *testing.T) {
 			},
 		},
 		"with section without ID generates UUID": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				Section: []OnePasswordItemResourceSectionModel{
 					{
 						ID:    types.StringValue(""),
@@ -536,7 +536,7 @@ func TestBuildSections(t *testing.T) {
 			},
 		},
 		"with multiple sections": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				Section: []OnePasswordItemResourceSectionModel{
 					{
 						ID:    types.StringValue("section-1"),
@@ -583,7 +583,7 @@ func TestBuildSections(t *testing.T) {
 			},
 		},
 		"with empty sections": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				Section: []OnePasswordItemResourceSectionModel{},
 			},
 			wantErr: false,
@@ -601,7 +601,7 @@ func TestBuildSections(t *testing.T) {
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
 			item := &model.Item{}
-			err := buildSections(test.data, item)
+			err := toModelSections(test.state, item)
 			if (err != nil) != test.wantErr {
 				t.Errorf("Error: got err=%v, wantErr=%v", err != nil, test.wantErr)
 				return
@@ -616,16 +616,16 @@ func TestBuildSections(t *testing.T) {
 	}
 }
 
-func TestBuildTags(t *testing.T) {
+func TestToModelTags(t *testing.T) {
 	ctx := context.Background()
 
 	tests := map[string]struct {
-		data     OnePasswordItemResourceModel
+		state    OnePasswordItemResourceModel
 		wantTags []string
 		wantErr  bool
 	}{
 		"with tags": {
-			data: func() OnePasswordItemResourceModel {
+			state: func() OnePasswordItemResourceModel {
 				tags, _ := types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2", "tag3"})
 				return OnePasswordItemResourceModel{Tags: tags}
 			}(),
@@ -633,7 +633,7 @@ func TestBuildTags(t *testing.T) {
 			wantErr:  false,
 		},
 		"with empty tags": {
-			data: func() OnePasswordItemResourceModel {
+			state: func() OnePasswordItemResourceModel {
 				tags, _ := types.ListValueFrom(ctx, types.StringType, []string{})
 				return OnePasswordItemResourceModel{Tags: tags}
 			}(),
@@ -641,14 +641,14 @@ func TestBuildTags(t *testing.T) {
 			wantErr:  false,
 		},
 		"with null tags": {
-			data: OnePasswordItemResourceModel{
+			state: OnePasswordItemResourceModel{
 				Tags: types.ListNull(types.StringType),
 			},
 			wantTags: []string{},
 			wantErr:  false,
 		},
 		"with single tag": {
-			data: func() OnePasswordItemResourceModel {
+			state: func() OnePasswordItemResourceModel {
 				tags, _ := types.ListValueFrom(ctx, types.StringType, []string{"single"})
 				return OnePasswordItemResourceModel{Tags: tags}
 			}(),
@@ -659,7 +659,7 @@ func TestBuildTags(t *testing.T) {
 
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
-			got, err := buildTags(ctx, test.data)
+			got, err := toModelTags(ctx, test.state)
 			if (err != nil && err.HasError()) != test.wantErr {
 				t.Errorf("Error: got err=%v, wantErr=%v", err != nil && err.HasError(), test.wantErr)
 				return

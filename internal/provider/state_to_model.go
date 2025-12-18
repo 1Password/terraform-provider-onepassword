@@ -11,14 +11,14 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
-func buildLoginFields(data OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
+func toModelLoginFields(state OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
 	return []model.ItemField{
 		{
 			ID:      "username",
 			Label:   "username",
 			Purpose: model.FieldPurposeUsername,
 			Type:    model.FieldTypeString,
-			Value:   data.Username.ValueString(),
+			Value:   state.Username.ValueString(),
 		},
 		{
 			ID:       "password",
@@ -34,12 +34,12 @@ func buildLoginFields(data OnePasswordItemResourceModel, password string, recipe
 			Label:   "notesPlain",
 			Type:    model.FieldTypeString,
 			Purpose: model.FieldPurposeNotes,
-			Value:   data.NoteValue.ValueString(),
+			Value:   state.NoteValue.ValueString(),
 		},
 	}
 }
 
-func buildPasswordFields(data OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
+func toModelPasswordFields(state OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
 	return []model.ItemField{
 		{
 			ID:       "password",
@@ -55,18 +55,18 @@ func buildPasswordFields(data OnePasswordItemResourceModel, password string, rec
 			Label:   "notesPlain",
 			Type:    model.FieldTypeString,
 			Purpose: model.FieldPurposeNotes,
-			Value:   data.NoteValue.ValueString(),
+			Value:   state.NoteValue.ValueString(),
 		},
 	}
 }
 
-func buildDatabaseFields(data OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
+func toModelDatabaseFields(state OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
 	return []model.ItemField{
 		{
 			ID:    "username",
 			Label: "username",
 			Type:  model.FieldTypeString,
-			Value: data.Username.ValueString(),
+			Value: state.Username.ValueString(),
 		},
 		{
 			ID:       "password",
@@ -80,49 +80,49 @@ func buildDatabaseFields(data OnePasswordItemResourceModel, password string, rec
 			ID:    "hostname",
 			Label: "hostname",
 			Type:  model.FieldTypeString,
-			Value: data.Hostname.ValueString(),
+			Value: state.Hostname.ValueString(),
 		},
 		{
 			ID:    "database",
 			Label: "database",
 			Type:  model.FieldTypeString,
-			Value: data.Database.ValueString(),
+			Value: state.Database.ValueString(),
 		},
 		{
 			ID:    "port",
 			Label: "port",
 			Type:  model.FieldTypeString,
-			Value: data.Port.ValueString(),
+			Value: state.Port.ValueString(),
 		},
 		{
 			ID:    "database_type",
 			Label: "type",
 			Type:  model.FieldTypeString,
-			Value: data.Type.ValueString(),
+			Value: state.Type.ValueString(),
 		},
 		{
 			ID:      "notesPlain",
 			Label:   "notesPlain",
 			Type:    model.FieldTypeString,
 			Purpose: model.FieldPurposeNotes,
-			Value:   data.NoteValue.ValueString(),
+			Value:   state.NoteValue.ValueString(),
 		},
 	}
 }
 
-func buildSecureNoteFields(data OnePasswordItemResourceModel) []model.ItemField {
+func toModelSecureNoteFields(state OnePasswordItemResourceModel) []model.ItemField {
 	return []model.ItemField{
 		{
 			ID:      "notesPlain",
 			Label:   "notesPlain",
 			Type:    model.FieldTypeString,
 			Purpose: model.FieldPurposeNotes,
-			Value:   data.NoteValue.ValueString(),
+			Value:   state.NoteValue.ValueString(),
 		},
 	}
 }
 
-func buildSectionField(field OnePasswordItemResourceFieldModel, sectionID, sectionLabel string) (*model.ItemField, diag.Diagnostics) {
+func toModelSectionField(field OnePasswordItemResourceFieldModel, sectionID, sectionLabel string) (*model.ItemField, diag.Diagnostics) {
 	fieldID := field.ID.ValueString()
 	// Generate field ID if empty
 	if fieldID == "" {
@@ -136,7 +136,7 @@ func buildSectionField(field OnePasswordItemResourceFieldModel, sectionID, secti
 		fieldID = sid
 	}
 
-	itemField := &model.ItemField{
+	modelItemField := &model.ItemField{
 		SectionID:    sectionID,
 		SectionLabel: sectionLabel,
 		ID:           fieldID,
@@ -155,14 +155,14 @@ func buildSectionField(field OnePasswordItemResourceFieldModel, sectionID, secti
 	}
 
 	if recipe != nil {
-		addRecipe(itemField, recipe)
+		addRecipe(modelItemField, recipe)
 	}
 
-	return itemField, nil
+	return modelItemField, nil
 }
 
-func buildSections(data OnePasswordItemResourceModel, item *model.Item) diag.Diagnostics {
-	for _, section := range data.Section {
+func toModelSections(state OnePasswordItemResourceModel, modelItem *model.Item) diag.Diagnostics {
+	for _, section := range state.Section {
 		sectionID := section.ID.ValueString()
 		if sectionID == "" {
 			sid, err := uuid.GenerateUUID()
@@ -179,22 +179,22 @@ func buildSections(data OnePasswordItemResourceModel, item *model.Item) diag.Dia
 			ID:    sectionID,
 			Label: section.Label.ValueString(),
 		}
-		item.Sections = append(item.Sections, s)
+		modelItem.Sections = append(modelItem.Sections, s)
 
 		for _, field := range section.Field {
-			itemField, diagnostics := buildSectionField(field, s.ID, s.Label)
+			modelItemField, diagnostics := toModelSectionField(field, s.ID, s.Label)
 			if diagnostics.HasError() {
 				return diagnostics
 			}
-			item.Fields = append(item.Fields, *itemField)
+			modelItem.Fields = append(modelItem.Fields, *modelItemField)
 		}
 	}
 	return nil
 }
 
-func buildTags(ctx context.Context, data OnePasswordItemResourceModel) ([]string, diag.Diagnostics) {
+func toModelTags(ctx context.Context, state OnePasswordItemResourceModel) ([]string, diag.Diagnostics) {
 	var tags []string
-	diagnostics := data.Tags.ElementsAs(ctx, &tags, false)
+	diagnostics := state.Tags.ElementsAs(ctx, &tags, false)
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}
