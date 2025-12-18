@@ -332,7 +332,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, createdItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, createdItem, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -370,7 +370,7 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, item, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, item, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -405,7 +405,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, updatedItem, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -469,30 +469,30 @@ func isNotFoundError(err error) bool {
 		strings.Contains(errMsg, "item is not in an active state")
 }
 
-func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
-	data.ID = setStringValue(itemTerraformID(item))
-	data.UUID = setStringValue(item.ID)
-	data.Vault = setStringValue(item.VaultID)
-	data.Title = setStringValuePreservingEmpty(item.Title, data.Title)
-	data.Category = setStringValue(strings.ToLower(string(item.Category)))
-	data.Section = processSectionsAndFields(item.Sections, item.Fields, data.Section)
-	processTopLevelFields(item.Fields, data)
+func modelToState(ctx context.Context, modelItem *model.Item, state *OnePasswordItemResourceModel) diag.Diagnostics {
+	state.ID = setStringValue(itemTerraformID(modelItem))
+	state.UUID = setStringValue(modelItem.ID)
+	state.Vault = setStringValue(modelItem.VaultID)
+	state.Title = setStringValuePreservingEmpty(modelItem.Title, state.Title)
+	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
+	state.Section = processSectionsAndFields(modelItem.Sections, modelItem.Fields, state.Section)
+	processTopLevelFields(modelItem.Fields, state)
 
-	for _, u := range item.URLs {
+	for _, u := range modelItem.URLs {
 		if u.Primary {
-			data.URL = setStringValuePreservingEmpty(u.URL, data.URL)
+			state.URL = setStringValuePreservingEmpty(u.URL, state.URL)
 		}
 	}
 
-	tags, diagnostics := processTags(ctx, item.Tags, data.Tags)
+	tags, diagnostics := processTags(ctx, modelItem.Tags, state.Tags)
 	if diagnostics.HasError() {
 		return diagnostics
 	}
-	data.Tags = tags
+	state.Tags = tags
 
 	// Password is not set for secure notes
-	if item.Category == model.SecureNote && data.Password.IsUnknown() {
-		data.Password = types.StringNull()
+	if modelItem.Category == model.SecureNote && state.Password.IsUnknown() {
+		state.Password = types.StringNull()
 	}
 
 	return nil
