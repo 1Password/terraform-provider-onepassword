@@ -122,7 +122,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		var createErr error
 		sdkItem, createErr = c.sdkClient.Items().Create(ctx, params)
 		return createErr
-	})
+	}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item using sdk: %w", err)
 	}
@@ -157,6 +157,8 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		var updateErr error
 		updatedItem, updateErr = c.sdkClient.Items().Put(ctx, currentItem)
 		return updateErr
+	}, func() error {
+		return c.refreshItemVersion(ctx, item.ID, vaultUuid, &currentItem, item)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update item using sdk: %w", err)
@@ -174,7 +176,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
 	err := util.RetryOnConflict(ctx, func() error {
 		return c.sdkClient.Items().Delete(ctx, vaultUuid, item.ID)
-	})
+	}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete item using sdk: %w", err)
 	}
@@ -195,6 +197,17 @@ func (c *Client) GetFileContent(ctx context.Context, file *model.ItemFile, itemU
 	}
 
 	return content, nil
+}
+
+// refreshItemVersion fetches the latest item version and updates both currentItem and model item
+func (c *Client) refreshItemVersion(ctx context.Context, itemID, vaultUuid string, currentItem *sdk.Item, item *model.Item) error {
+	latestItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, itemID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch latest item version: %w", err)
+	}
+	currentItem.Version = latestItem.Version
+	item.Version = int(latestItem.Version)
+	return nil
 }
 
 func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {

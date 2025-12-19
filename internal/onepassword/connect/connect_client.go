@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/1Password/connect-sdk-go/connect"
 	"github.com/1Password/connect-sdk-go/onepassword"
@@ -58,36 +57,44 @@ func (c *Client) GetVaultsByTitle(_ context.Context, title string) ([]model.Vaul
 // the parameter as a title and looks up the item by title instead.
 func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
 	var connectItem *onepassword.Item
-	var err error
 
 	if util.IsValidUUID(itemUuid) {
 		// Try GetItemByUUID with retry for eventual consistency
-		for attempt := 0; attempt < 5; attempt++ {
-			if attempt > 0 {
-				time.Sleep(time.Duration(attempt*100) * time.Millisecond)
+		err := util.RetryUntilCondition(context.Background(), func() (bool, error) {
+			var fetchErr error
+			connectItem, fetchErr = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
+			if fetchErr == nil && connectItem != nil {
+				return true, nil
 			}
-			connectItem, err = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
-
-			if err == nil && connectItem != nil {
-				// Convert to model Item
-				modelItem := &model.Item{}
-				err := modelItem.FromConnectItemToModel(connectItem)
-				if err != nil {
-					return nil, err
+			// Check if it's a 404 error
+			if fetchErr != nil {
+				errStr := fetchErr.Error()
+				if strings.Contains(errStr, "404") || strings.Contains(errStr, "not found") {
+					return false, nil
 				}
 
-				return modelItem, nil
+				return false, fetchErr
 			}
-			// If error is not 404, don't retry
-			if err != nil && !strings.Contains(err.Error(), "404") && !strings.Contains(err.Error(), "not found") {
-				return nil, fmt.Errorf("failed to get item using connect: %w", err)
-			}
+
+			return false, nil
+		})
+
+		if err != nil {
+			return nil, fmt.Errorf("failed to get item using connect: %w", err)
 		}
-		return nil, err
+
+		// Convert to model Item
+		modelItem := &model.Item{}
+		err = modelItem.FromConnectItemToModel(connectItem)
+		if err != nil {
+			return nil, err
+		}
+
+		return modelItem, nil
 	}
 
 	// Not a UUID, use GetItemByTitle
-	connectItem, err = c.connectClient.GetItemByTitle(itemUuid, vaultUuid)
+	connectItem, err := c.connectClient.GetItemByTitle(itemUuid, vaultUuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get item using connect: %w", err)
 	}
@@ -130,7 +137,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		var createErr error
 		createdItem, createErr = c.connectClient.CreateItem(connectItem, vaultUuid)
 		return createErr
-	})
+	}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item using connect: %w", err)
 	}
@@ -139,7 +146,8 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Verify the item exists (newly created items have version 1).
 	// Ignore errors from wait - if create succeeded, we return the created item even if wait times out
-	_ = c.wait(ctx, createdItem.ID, vaultUuid, func(fetchedItem *onepassword.Item, err error) (bool, error) {
+	_ = util.RetryUntilCondition(ctx, func() (bool, error) {
+		fetchedItem, err := c.connectClient.GetItemByUUID(createdItem.ID, vaultUuid)
 		if err != nil {
 			// If error is 404, item not available yet, continue retrying
 			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
@@ -177,7 +185,10 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		var updateErr error
 		updatedItem, updateErr = c.connectClient.UpdateItem(connectItem, vaultUuid)
 		return updateErr
+	}, func() error {
+		return c.refreshItemVersion(item.ID, vaultUuid, connectItem, item)
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to update item using connect: %w", err)
 	}
@@ -187,7 +198,8 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 	// Wait for Connect to propagate the update to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Verify the item version matches the expected version.
-	err = c.wait(ctx, updatedItem.ID, vaultUuid, func(fetchedItem *onepassword.Item, err error) (bool, error) {
+	err = util.RetryUntilCondition(ctx, func() (bool, error) {
+		fetchedItem, err := c.connectClient.GetItemByUUID(updatedItem.ID, vaultUuid)
 		if err != nil {
 			// For updates, any error (including 404) means something is wrong since the item should exist
 			// Return error immediately - don't retry
@@ -222,6 +234,8 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	err = util.RetryOnConflict(ctx, func() error {
 		return c.connectClient.DeleteItem(connectItem, vaultUuid)
+	}, func() error {
+		return c.refreshItemVersion(item.ID, vaultUuid, connectItem, item)
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete item using connect: %w", err)
@@ -231,7 +245,8 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Verify the item is deleted by checking it returns 404.
 	// Ignore errors from wait - if delete succeeded, we return nil even if wait times out
-	_ = c.wait(ctx, item.ID, vaultUuid, func(fetchedItem *onepassword.Item, err error) (bool, error) {
+	_ = util.RetryUntilCondition(ctx, func() (bool, error) {
+		_, err := c.connectClient.GetItemByUUID(item.ID, vaultUuid)
 		if err != nil {
 			// 404 means item is deleted, which is what we want
 			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
@@ -268,47 +283,15 @@ func (c *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUI
 	return content, err
 }
 
-// waitCondition is a function that checks if a condition is met.
-// It returns (done bool, err error) where:
-//   - done=true means the condition is met and we can stop waiting
-//   - done=false means we should continue retrying
-//   - err!=nil means a non-retryable error occurred
-type waitCondition func(fetchedItem *onepassword.Item, err error) (bool, error)
-
-// wait waits for a condition to be met by polling the item with exponential backoff.
-// The condition function is called with the fetched item (or nil) and any error from the fetch.
-// This ensures the sync service has propagated changes from the remote service to the local database.
-// Returns an error if the condition function returns a non-retryable error or if max retry attempts are reached.
-func (c *Client) wait(ctx context.Context, itemUUID, vaultUUID string, condition waitCondition) error {
-	maxAttempts := c.config.MaxRetries
-
-	for attempt := 0; attempt < maxAttempts; attempt++ {
-		fetchedItem, err := c.connectClient.GetItemByUUID(itemUUID, vaultUUID)
-
-		// Check the condition
-		done, conditionErr := condition(fetchedItem, err)
-		if conditionErr != nil {
-			// Non-retryable error, return it
-			return conditionErr
-		}
-		if done {
-			// Condition met, stop waiting
-			return nil
-		}
-
-		// Condition not met yet, continue retrying
-		// Exponential backoff: 50ms, 100ms, 200ms, 400ms, etc., capped at 500ms
-		backoff := time.Duration(50*(1<<uint(attempt))) * time.Millisecond
-		if backoff > 500*time.Millisecond {
-			backoff = 500 * time.Millisecond
-		}
-
-		// Don't sleep on the last attempt
-		if attempt < maxAttempts-1 {
-			time.Sleep(backoff)
-		}
+// refreshItemVersion fetches the latest item version and updates both connectItem and model item
+func (c *Client) refreshItemVersion(itemID, vaultUuid string, connectItem *onepassword.Item, item *model.Item) error {
+	latestItem, err := c.connectClient.GetItemByUUID(itemID, vaultUuid)
+	if err != nil {
+		return fmt.Errorf("failed to fetch latest item version: %w", err)
 	}
-	return fmt.Errorf("max retry attempts (%d) reached waiting for Connect sync service to propagate changes to local database", maxAttempts)
+	connectItem.Version = latestItem.Version
+	item.Version = latestItem.Version
+	return nil
 }
 
 func NewClient(connectHost, connectToken string, config Config) *Client {
