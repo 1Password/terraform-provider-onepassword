@@ -27,6 +27,7 @@ type ClientConfig struct {
 	ServiceAccountToken string
 	Account             string
 	ProviderUserAgent   string
+	MaxRetries          int
 }
 
 func NewClient(ctx context.Context, config ClientConfig) (Client, error) {
@@ -35,10 +36,12 @@ func NewClient(ctx context.Context, config ClientConfig) (Client, error) {
 			ProviderUserAgent:   config.ProviderUserAgent,
 			ServiceAccountToken: config.ServiceAccountToken,
 			Account:             config.Account,
+			MaxRetries:          config.MaxRetries,
 		})
 	} else if config.ConnectHost != "" && config.ConnectToken != "" {
 		return connect.NewClient(config.ConnectHost, config.ConnectToken, connect.Config{
 			ProviderUserAgent: config.ProviderUserAgent,
+			MaxRetries:        config.MaxRetries,
 		}), nil
 	}
 	return nil, errors.New("Invalid provider configuration. Either Connect credentials (\"connect_token\" and \"connect_url\") or Service Account (\"service_account_token\") or \"account\"  should be set.")

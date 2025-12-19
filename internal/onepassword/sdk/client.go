@@ -13,12 +13,14 @@ import (
 
 type Client struct {
 	sdkClient *sdk.Client
+	config    SDKConfig
 }
 
 type SDKConfig struct {
 	ProviderUserAgent   string
 	ServiceAccountToken string
 	Account             string
+	MaxRetries          int
 }
 
 func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error) {
@@ -122,7 +124,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		var createErr error
 		sdkItem, createErr = c.sdkClient.Items().Create(ctx, params)
 		return createErr
-	}, nil)
+	}, nil, c.maxRetries())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item using sdk: %w", err)
 	}
@@ -158,8 +160,8 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		updatedItem, updateErr = c.sdkClient.Items().Put(ctx, currentItem)
 		return updateErr
 	}, func() error {
-		return c.refreshItemVersion(ctx, item.ID, vaultUuid, &currentItem, item)
-	})
+		return c.refreshVersion(ctx, item.ID, vaultUuid, &currentItem, item)
+	}, c.maxRetries())
 	if err != nil {
 		return nil, fmt.Errorf("failed to update item using sdk: %w", err)
 	}
@@ -176,7 +178,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error {
 	err := util.RetryOnConflict(ctx, func() error {
 		return c.sdkClient.Items().Delete(ctx, vaultUuid, item.ID)
-	}, nil)
+	}, nil, c.maxRetries())
 	if err != nil {
 		return fmt.Errorf("failed to delete item using sdk: %w", err)
 	}
@@ -199,8 +201,8 @@ func (c *Client) GetFileContent(ctx context.Context, file *model.ItemFile, itemU
 	return content, nil
 }
 
-// refreshItemVersion fetches the latest item version and updates both currentItem and model item
-func (c *Client) refreshItemVersion(ctx context.Context, itemID, vaultUuid string, currentItem *sdk.Item, item *model.Item) error {
+// refreshVersion fetches the latest item version and updates both currentItem and model item
+func (c *Client) refreshVersion(ctx context.Context, itemID, vaultUuid string, currentItem *sdk.Item, item *model.Item) error {
 	latestItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, itemID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest item version: %w", err)
@@ -208,6 +210,14 @@ func (c *Client) refreshItemVersion(ctx context.Context, itemID, vaultUuid strin
 	currentItem.Version = latestItem.Version
 	item.Version = int(latestItem.Version)
 	return nil
+}
+
+// maxRetries returns the configured max retry attempts, defaulting to 5
+func (c *Client) maxRetries() int {
+	if c.config.MaxRetries > 0 {
+		return c.config.MaxRetries
+	}
+	return 5
 }
 
 func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {
@@ -239,5 +249,8 @@ func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {
 		}
 	}
 
-	return &Client{sdkClient: sdkClient}, nil
+	return &Client{
+		sdkClient: sdkClient,
+		config:    config,
+	}, nil
 }

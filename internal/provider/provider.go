@@ -36,6 +36,7 @@ type OnePasswordProviderModel struct {
 	ConnectToken        types.String `tfsdk:"connect_token"`
 	ServiceAccountToken types.String `tfsdk:"service_account_token"`
 	Account             types.String `tfsdk:"account"`
+	MaxRetries          types.Int64  `tfsdk:"max_retries"`
 	// Old field names - these are deprecated and will be removed in a future version.
 	ConnectHostOld  types.String `tfsdk:"url"`
 	ConnectTokenOld types.String `tfsdk:"token"`
@@ -91,6 +92,10 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 			"account": schema.StringAttribute{
 				Description: "A valid account name or ID to use desktop app authentication. Can also be sourced from `OP_ACCOUNT` environment variable.",
 				Optional:    true,
+			},
+			"max_retries": schema.Int64Attribute{
+				MarkdownDescription: "Maximum number of retry attempts for Connect operations (defaults to 5). Only applies when using Connect server.",
+				Optional:            true,
 			},
 		},
 	}
@@ -149,6 +154,11 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 		}
 	}
 
+	maxRetries := 0 // Default to 0, which will use the default in connect.NewClient
+	if !config.MaxRetries.IsNull() {
+		maxRetries = int(config.MaxRetries.ValueInt64())
+	}
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -161,6 +171,7 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 		ServiceAccountToken: serviceAccountToken,
 		Account:             account,
 		ProviderUserAgent:   providerUserAgent,
+		MaxRetries:          maxRetries,
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Client init failure", fmt.Sprintf("Client failed to initialize, got error: %s", err))

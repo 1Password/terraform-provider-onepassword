@@ -14,7 +14,7 @@ import (
 
 type Config struct {
 	// MaxRetries is the maximum number of retry attempts when waiting for Connect to
-	// propagate changes. The wait function uses exponential backoff between retries.
+	// propagate changes. RetryOnNotFound/RetryOnConflict uses exponential backoff between retries.
 	MaxRetries        int
 	ProviderUserAgent string
 }
@@ -66,18 +66,9 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 			if fetchErr == nil && connectItem != nil {
 				return true, nil
 			}
-			// Check if it's a 404 error
-			if fetchErr != nil {
-				errStr := fetchErr.Error()
-				if strings.Contains(errStr, "404") || strings.Contains(errStr, "not found") {
-					return false, nil
-				}
-
-				return false, fetchErr
-			}
-
-			return false, nil
-		})
+			// Return the error (404 will be retried, others returned immediately)
+			return false, fetchErr
+		}, c.maxRetries())
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to get item using connect: %w", err)
@@ -137,15 +128,14 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		var createErr error
 		createdItem, createErr = c.connectClient.CreateItem(connectItem, vaultUuid)
 		return createErr
-	}, nil)
+	}, nil, c.maxRetries())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item using connect: %w", err)
 	}
-
 	// Wait for Connect to propagate the create to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
-	// Verify the item exists (newly created items have version 1).
-	// Ignore errors from wait - if create succeeded, we return the created item even if wait times out
+	// Verify the item exists and has version 1 (newly created items start at version 1).
+	// Ignore errors from RetryUntilCondition - if create succeeded, we return the created item even if retry times out
 	_ = util.RetryUntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(createdItem.ID, vaultUuid)
 		if err != nil {
@@ -186,8 +176,8 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		updatedItem, updateErr = c.connectClient.UpdateItem(connectItem, vaultUuid)
 		return updateErr
 	}, func() error {
-		return c.refreshItemVersion(item.ID, vaultUuid, connectItem, item)
-	})
+		return c.refreshVersion(item.ID, vaultUuid, connectItem, item)
+	}, c.maxRetries())
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to update item using connect: %w", err)
@@ -197,11 +187,11 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	// Wait for Connect to propagate the update to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
-	// Verify the item version matches the expected version.
+	// Use RetryUntilCondition to retry until the item version matches the expected version.
+	// Note: Any error (including 404) is returned immediately since the item should exist after update.
 	err = util.RetryUntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(updatedItem.ID, vaultUuid)
 		if err != nil {
-			// For updates, any error (including 404) means something is wrong since the item should exist
 			// Return error immediately - don't retry
 			return false, err
 		}
@@ -235,8 +225,8 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 	err = util.RetryOnConflict(ctx, func() error {
 		return c.connectClient.DeleteItem(connectItem, vaultUuid)
 	}, func() error {
-		return c.refreshItemVersion(item.ID, vaultUuid, connectItem, item)
-	})
+		return c.refreshVersion(item.ID, vaultUuid, connectItem, item)
+	}, c.maxRetries())
 	if err != nil {
 		return fmt.Errorf("failed to delete item using connect: %w", err)
 	}
@@ -244,7 +234,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 	// Wait for Connect to propagate the delete to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Verify the item is deleted by checking it returns 404.
-	// Ignore errors from wait - if delete succeeded, we return nil even if wait times out
+	// Ignore errors from RetryUntilCondition - if delete succeeded, we return nil even if retry times out
 	_ = util.RetryUntilCondition(ctx, func() (bool, error) {
 		_, err := c.connectClient.GetItemByUUID(item.ID, vaultUuid)
 		if err != nil {
@@ -283,8 +273,8 @@ func (c *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUI
 	return content, err
 }
 
-// refreshItemVersion fetches the latest item version and updates both connectItem and model item
-func (c *Client) refreshItemVersion(itemID, vaultUuid string, connectItem *onepassword.Item, item *model.Item) error {
+// refreshVersion fetches the latest item version and updates both connectItem and model item
+func (c *Client) refreshVersion(itemID, vaultUuid string, connectItem *onepassword.Item, item *model.Item) error {
 	latestItem, err := c.connectClient.GetItemByUUID(itemID, vaultUuid)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest item version: %w", err)
@@ -292,6 +282,14 @@ func (c *Client) refreshItemVersion(itemID, vaultUuid string, connectItem *onepa
 	connectItem.Version = latestItem.Version
 	item.Version = latestItem.Version
 	return nil
+}
+
+// maxRetries returns the configured max retry attempts, defaulting to 5
+func (c *Client) maxRetries() int {
+	if c.config.MaxRetries > 0 {
+		return c.config.MaxRetries
+	}
+	return 5
 }
 
 func NewClient(connectHost, connectToken string, config Config) *Client {
