@@ -57,19 +57,19 @@ func retry(ctx context.Context, operation func() error, errorKeywords []string, 
 }
 
 // RetryOnConflict retries an operation when it returns 409 Conflict errors
-func RetryOnConflict(ctx context.Context, operation func() error, refreshVersion func() error, maxAttempts ...int) error {
+func RetryOnConflict(ctx context.Context, operation func() error, refreshVersion func() error, maxAttempts int) error {
 	attempts := defaultMaxRetryAttempts
-	if len(maxAttempts) > 0 && maxAttempts[0] > 0 {
-		attempts = maxAttempts[0]
+	if maxAttempts > 0 {
+		attempts = maxAttempts
 	}
 	return retry(ctx, operation, []string{"409", "Conflict", "conflict"}, refreshVersion, "409 Conflict errors", attempts)
 }
 
 // RetryUntilCondition retries an operation when it returns 404 Not Found errors
-func RetryUntilCondition(ctx context.Context, operation func() (bool, error), maxAttempts ...int) error {
+func RetryUntilCondition(ctx context.Context, operation func() (bool, error), maxAttempts int) error {
 	attempts := defaultMaxRetryAttempts
-	if len(maxAttempts) > 0 && maxAttempts[0] > 0 {
-		attempts = maxAttempts[0]
+	if maxAttempts > 0 {
+		attempts = maxAttempts
 	}
 	var lastErr error
 

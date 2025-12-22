@@ -14,7 +14,7 @@ import (
 
 type Config struct {
 	// MaxRetries is the maximum number of retry attempts when waiting for Connect to
-	// propagate changes. RetryOnNotFound/RetryOnConflict uses exponential backoff between retries.
+	// propagate changes. RetryOnNotFound/RetryUntilCondition uses exponential backoff between retries.
 	MaxRetries        int
 	ProviderUserAgent string
 }
@@ -134,7 +134,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	}
 	// Wait for Connect to propagate the create to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
-	// Verify the item exists and has version 1 (newly created items start at version 1).
+	// Verify the item exists (newly created items have version 1).
 	// Ignore errors from RetryUntilCondition - if create succeeded, we return the created item even if retry times out
 	_ = util.RetryUntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(createdItem.ID, vaultUuid)
@@ -152,7 +152,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		}
 		// Item exists but version doesn't match yet, continue retrying
 		return false, nil
-	})
+	}, c.maxRetries())
 
 	// Convert created Connect Item back to model Item
 	modelItem := &model.Item{}
@@ -188,7 +188,6 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 	// Wait for Connect to propagate the update to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Use RetryUntilCondition to retry until the item version matches the expected version.
-	// Note: Any error (including 404) is returned immediately since the item should exist after update.
 	err = util.RetryUntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(updatedItem.ID, vaultUuid)
 		if err != nil {
@@ -201,7 +200,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		}
 		// Version doesn't match yet, continue retrying
 		return false, nil
-	})
+	}, c.maxRetries())
 	if err != nil {
 		return nil, err
 	}
@@ -247,7 +246,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 		}
 		// Item still exists, deletion hasn't propagated yet
 		return false, nil
-	})
+	}, c.maxRetries())
 
 	return nil
 }

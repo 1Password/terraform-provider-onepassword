@@ -94,7 +94,7 @@ func (p *OnePasswordProvider) Schema(ctx context.Context, req provider.SchemaReq
 				Optional:    true,
 			},
 			"max_retries": schema.Int64Attribute{
-				MarkdownDescription: "Maximum number of retry attempts for Connect operations (defaults to 5). Only applies when using Connect server.",
+				MarkdownDescription: "Maximum number of retry attempts for operations (defaults to 5).",
 				Optional:            true,
 			},
 		},
@@ -154,7 +154,7 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 		}
 	}
 
-	maxRetries := 0 // Default to 0, which will use the default in connect.NewClient
+	maxRetries := 0
 	if !config.MaxRetries.IsNull() {
 		maxRetries = int(config.MaxRetries.ValueInt64())
 	}
