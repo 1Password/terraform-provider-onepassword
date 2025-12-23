@@ -57,7 +57,7 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 
 	if util.IsValidUUID(itemUuid) {
 		// Try GetItemByUUID with retry for eventual consistency
-		err := util.RetryUntilCondition(context.Background(), func() (bool, error) {
+		err := util.Retry404UntilCondition(context.Background(), func() (bool, error) {
 			var fetchErr error
 			connectItem, fetchErr = c.connectClient.GetItemByUUID(itemUuid, vaultUuid)
 			if fetchErr == nil && connectItem != nil {
@@ -132,8 +132,8 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	// Wait for Connect to propagate the create to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Verify the item exists (newly created items have version 1).
-	// Ignore errors from RetryUntilCondition - if create succeeded, we return the created item even if retry times out
-	_ = util.RetryUntilCondition(ctx, func() (bool, error) {
+	// Ignore errors from Retry404UntilCondition - if create succeeded, we return the created item even if retry times out
+	_ = util.Retry404UntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(createdItem.ID, vaultUuid)
 		if err != nil {
 			// If error is 404, item not available yet, continue retrying
@@ -147,8 +147,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		if fetchedItem != nil && fetchedItem.Version == 1 {
 			return true, nil
 		}
-		// Item exists but version doesn't match yet, continue retrying
-		return false, nil
+		return false, fmt.Errorf("condition not met: item version is %d, expected 1", fetchedItem.Version)
 	})
 
 	// Convert created Connect Item back to model Item
@@ -181,8 +180,8 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	// Wait for Connect to propagate the update to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
-	// Use RetryUntilCondition to retry until the item version matches the expected version.
-	err = util.RetryUntilCondition(ctx, func() (bool, error) {
+	// Use Retry404UntilCondition to retry until the item version matches the expected version.
+	err = util.Retry404UntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(updatedItem.ID, vaultUuid)
 		if err != nil {
 			// Return error immediately - don't retry
@@ -193,7 +192,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 			return true, nil
 		}
 		// Version doesn't match yet, continue retrying
-		return false, nil
+		return false, fmt.Errorf("condition not met: item version is %d, expected %d", fetchedItem.Version, expectedVersion)
 	})
 	if err != nil {
 		return nil, err
@@ -225,8 +224,8 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 	// Wait for Connect to propagate the delete to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Verify the item is deleted by checking it returns 404.
-	// Ignore errors from RetryUntilCondition - if delete succeeded, we return nil even if retry times out
-	_ = util.RetryUntilCondition(ctx, func() (bool, error) {
+	// Ignore errors from Retry404UntilCondition - if delete succeeded, we return nil even if retry times out
+	_ = util.Retry404UntilCondition(ctx, func() (bool, error) {
 		_, err := c.connectClient.GetItemByUUID(item.ID, vaultUuid)
 		if err != nil {
 			// 404 means item is deleted, which is what we want
@@ -237,7 +236,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 			return false, err
 		}
 		// Item still exists, deletion hasn't propagated yet
-		return false, nil
+		return false, fmt.Errorf("condition not met: item still exists")
 	})
 
 	return nil

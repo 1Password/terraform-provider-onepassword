@@ -14,8 +14,10 @@ const (
 
 // retry retries an operation when it returns a retryable error
 func retry(ctx context.Context, operation func() error, errorKeywords []string, errorMsg string, maxAttempts int) error {
+	var err error
+
 	for attempt := range maxAttempts {
-		err := operation()
+		err = operation()
 		if err == nil {
 			return nil
 		}
@@ -45,7 +47,7 @@ func retry(ctx context.Context, operation func() error, errorKeywords []string, 
 		}
 	}
 
-	return fmt.Errorf("max retry attempts (%d) reached for operation due to %s", maxAttempts, errorMsg)
+	return err
 }
 
 // RetryOnConflict retries an operation when it returns 409 Conflict errors
@@ -53,31 +55,20 @@ func RetryOnConflict(ctx context.Context, operation func() error) error {
 	return retry(ctx, operation, []string{"409", "Conflict", "conflict"}, "409 Conflict errors", maxRetryAttempts)
 }
 
-// RetryUntilCondition retries an operation when it returns 404 Not Found errors
-func RetryUntilCondition(ctx context.Context, operation func() (bool, error)) error {
-	var lastErr error
-
-	err := retry(ctx, func() error {
+// Retry404UntilCondition retries an operation when it returns 404 Not Found errors
+func Retry404UntilCondition(ctx context.Context, operation func() (bool, error)) error {
+	return retry(ctx, func() error {
 		done, opErr := operation()
 		if opErr != nil {
-			lastErr = opErr // Save the error for later
 			return opErr
 		}
-
 		if done {
-			// Condition met - success
 			return nil
 		}
-		// Condition not met - return a retryable error
+
+		// Fallback: callers should return errors with "condition not met" when condition isn't satisfied
 		return fmt.Errorf("condition not met")
 	}, []string{"condition not met", "404", "not found"}, "item not found or condition not satisfied", maxRetryAttempts)
-
-	// If all retries failed so return the last error instead of generic message
-	if err != nil && lastErr != nil && strings.Contains(err.Error(), "max retry attempts") {
-		return fmt.Errorf("%w (after %d retry attempts)", lastErr, maxRetryAttempts)
-	}
-
-	return err
 }
 
 // calculateBackoff calculates backoff with jitter
@@ -86,12 +77,12 @@ func calculateBackoff(attempt int) time.Duration {
 	maxDelay := 500 * time.Millisecond
 
 	exponentialDelay := baseDelay * time.Duration(1<<uint(attempt))
-
-	if exponentialDelay > maxDelay {
-		exponentialDelay = maxDelay
-	}
-
 	jitter := time.Duration(rand.Int63n(int64(baseDelay)))
 
-	return exponentialDelay + jitter
+	delay := exponentialDelay + jitter
+	if delay > maxDelay {
+		delay = maxDelay
+	}
+
+	return delay
 }

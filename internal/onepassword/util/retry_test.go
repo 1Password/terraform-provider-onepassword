@@ -3,11 +3,12 @@ package util
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
 
-func TestRetryUntilCondition(t *testing.T) {
+func TestRetry404UntilCondition(t *testing.T) {
 	tests := map[string]struct {
 		operation       func() (bool, error)
 		expectedErr     string
@@ -34,11 +35,11 @@ func TestRetryUntilCondition(t *testing.T) {
 			expectedErr:     "",
 			expectedRetries: 3,
 		},
-		"should return wrapped 404 error after max retries": {
+		"should return 404 error after max retries": {
 			operation: func() (bool, error) {
 				return false, errors.New("status 404: item not found")
 			},
-			expectedErr:     "status 404: item not found (after 5 retry attempts)",
+			expectedErr:     "status 404: item not found",
 			expectedRetries: 5,
 		},
 		"should return non-retryable error immediately": {
@@ -54,7 +55,7 @@ func TestRetryUntilCondition(t *testing.T) {
 				return func() (bool, error) {
 					attempt++
 					if attempt < 3 {
-						return false, nil // Condition not met, no error
+						return false, fmt.Errorf("condition not met: item version does not match")
 					}
 					return true, nil
 				}
@@ -62,11 +63,18 @@ func TestRetryUntilCondition(t *testing.T) {
 			expectedErr:     "",
 			expectedRetries: 3,
 		},
-		"should return generic error when condition not met and no error after max retries": {
+		"should return condition not met error after max retries": {
 			operation: func() (bool, error) {
-				return false, nil // Condition not met, no error
+				return false, fmt.Errorf("condition not met: item version does not match")
 			},
-			expectedErr:     "max retry attempts (5) reached for operation due to item not found or condition not satisfied",
+			expectedErr:     "condition not met: item version does not match",
+			expectedRetries: 5,
+		},
+		"should return fallback error when condition not met with no error": {
+			operation: func() (bool, error) {
+				return false, nil // Condition not met, no error (fallback case)
+			},
+			expectedErr:     "condition not met",
 			expectedRetries: 5,
 		},
 	}
@@ -82,7 +90,7 @@ func TestRetryUntilCondition(t *testing.T) {
 				return originalOp()
 			}
 
-			err := RetryUntilCondition(context.Background(), operation)
+			err := Retry404UntilCondition(context.Background(), operation)
 
 			// Check error
 			if test.expectedErr == "" {
@@ -143,7 +151,7 @@ func TestRetryOnConflict(t *testing.T) {
 				return errors.New("status 409: Conflict")
 			},
 			refreshVersion:  nil,
-			expectedErr:     "max retry attempts (5) reached for operation due to 409 Conflict errors",
+			expectedErr:     "status 409: Conflict",
 			expectedRetries: 5,
 			expectedRefresh: 0,
 		},
