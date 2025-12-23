@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -331,7 +329,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, createdItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, createdItem, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -369,7 +367,7 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, item, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, item, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -404,7 +402,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, updatedItem, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -468,147 +466,30 @@ func isNotFoundError(err error) bool {
 		strings.Contains(errMsg, "item is not in an active state")
 }
 
-func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
-	data.ID = setStringValue(itemTerraformID(item))
-	data.UUID = setStringValue(item.ID)
-	data.Vault = setStringValue(item.VaultID)
-	data.Title = setStringValuePreservingEmpty(item.Title, data.Title)
+func modelToState(ctx context.Context, modelItem *model.Item, state *OnePasswordItemResourceModel) diag.Diagnostics {
+	state.ID = setStringValue(itemTerraformID(modelItem))
+	state.UUID = setStringValue(modelItem.ID)
+	state.Vault = setStringValue(modelItem.VaultID)
+	state.Title = setStringValuePreservingEmpty(modelItem.Title, state.Title)
+	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
+	state.Section = toStateSectionsAndFields(modelItem.Sections, modelItem.Fields, state.Section)
+	toStateTopLevelFields(modelItem.Fields, state)
 
-	for _, u := range item.URLs {
+	for _, u := range modelItem.URLs {
 		if u.Primary {
-			data.URL = setStringValuePreservingEmpty(u.URL, data.URL)
+			state.URL = setStringValuePreservingEmpty(u.URL, state.URL)
 		}
 	}
 
-	var dataTags []string
-	diagnostics := data.Tags.ElementsAs(ctx, &dataTags, false)
+	tags, diagnostics := toStateTags(ctx, modelItem.Tags, state.Tags)
 	if diagnostics.HasError() {
 		return diagnostics
 	}
+	state.Tags = tags
 
-	sort.Strings(dataTags)
-	if !reflect.DeepEqual(dataTags, item.Tags) {
-		// If item.Tags is empty, preserve null if the original state was null
-		if len(item.Tags) == 0 && data.Tags.IsNull() {
-			data.Tags = types.ListNull(types.StringType)
-		} else {
-			tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
-			if diagnostics.HasError() {
-				return diagnostics
-			}
-			data.Tags = tags
-		}
-	}
-
-	data.Category = setStringValue(strings.ToLower(string(item.Category)))
-
-	dataSections := data.Section
-	for _, s := range item.Sections {
-		section := OnePasswordItemResourceSectionModel{}
-		posSection := -1
-		newSection := true
-
-		for i := range dataSections {
-			existingID := dataSections[i].ID.ValueString()
-			existingLabel := dataSections[i].Label.ValueString()
-			if (s.ID != "" && s.ID == existingID) || s.Label == existingLabel {
-				section = dataSections[i]
-				posSection = i
-				newSection = false
-			}
-		}
-
-		section.ID = setStringValue(s.ID)
-		section.Label = setStringValuePreservingEmpty(s.Label, section.Label)
-
-		var existingFields []OnePasswordItemResourceFieldModel
-		if section.Field != nil {
-			existingFields = section.Field
-		}
-		for _, f := range item.Fields {
-			if f.SectionID != "" && f.SectionID == s.ID {
-				dataField := OnePasswordItemResourceFieldModel{}
-				posField := -1
-				newField := true
-
-				for i := range existingFields {
-					existingID := existingFields[i].ID.ValueString()
-					existingLabel := existingFields[i].Label.ValueString()
-
-					if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
-						dataField = existingFields[i]
-						posField = i
-						newField = false
-					}
-				}
-
-				dataField.ID = setStringValue(f.ID)
-				dataField.Label = setStringValuePreservingEmpty(f.Label, dataField.Label)
-				dataField.Purpose = setStringValue(string(f.Purpose))
-				dataField.Type = setStringValue(string(f.Type))
-				dataField.Value = setStringValuePreservingEmpty(f.Value, dataField.Value)
-
-				if f.Recipe != nil {
-					charSets := map[string]bool{}
-					for _, s := range f.Recipe.CharacterSets {
-						charSets[strings.ToLower(string(s))] = true
-					}
-
-					dataField.Recipe = []PasswordRecipeModel{{
-						Length:  types.Int64Value(int64(f.Recipe.Length)),
-						Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
-						Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
-					}}
-				}
-
-				if newField {
-					existingFields = append(existingFields, dataField)
-				} else {
-					existingFields[posField] = dataField
-				}
-			}
-		}
-		section.Field = existingFields
-
-		if newSection {
-			dataSections = append(dataSections, section)
-		} else {
-			dataSections[posSection] = section
-		}
-	}
-
-	data.Section = dataSections
-
-	for _, f := range item.Fields {
-		switch f.Purpose {
-		case model.FieldPurposeUsername:
-			data.Username = setStringValuePreservingEmpty(f.Value, data.Username)
-		case model.FieldPurposePassword:
-			data.Password = setStringValue(f.Value)
-		case model.FieldPurposeNotes:
-			data.NoteValue = setStringValuePreservingEmpty(f.Value, data.NoteValue)
-		default:
-			if f.SectionID == "" {
-				switch f.Label {
-				case "username":
-					data.Username = setStringValuePreservingEmpty(f.Value, data.Username)
-				case "password":
-					data.Password = setStringValue(f.Value)
-				case "hostname", "server":
-					data.Hostname = setStringValuePreservingEmpty(f.Value, data.Hostname)
-				case "database":
-					data.Database = setStringValuePreservingEmpty(f.Value, data.Database)
-				case "port":
-					data.Port = setStringValuePreservingEmpty(f.Value, data.Port)
-				case "type":
-					data.Type = setStringValue(f.Value)
-				}
-			}
-		}
-	}
-
-	if item.Category == model.SecureNote && data.Password.IsUnknown() {
-		data.Password = types.StringNull()
+	// Password is not set for secure notes
+	if modelItem.Category == model.SecureNote && state.Password.IsUnknown() {
+		state.Password = types.StringNull()
 	}
 
 	return nil
