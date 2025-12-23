@@ -12,101 +12,100 @@ import (
 func TestToStateTags(t *testing.T) {
 	ctx := context.Background()
 
-	tests := []struct {
-		name      string
-		modelTags []string
-		stateTags types.List
-		want      types.List
-		wantErr   bool
+	// Build test cases with context available
+	testCases := []struct {
+		name          string
+		modelTags     []string
+		stateTags     []string // Use []string for easier initialization
+		wantTags      []string // Use []string for easier initialization
+		stateTagsNull bool
+		wantNull      bool
+		wantErr       bool
 	}{
 		{
 			name:      "tags match",
 			modelTags: []string{"tag1", "tag2"},
+			stateTags: []string{"tag1", "tag2"},
+			wantTags:  []string{"tag1", "tag2"},
 		},
 		{
 			name:      "single tag",
 			modelTags: []string{"tag1"},
+			stateTags: []string{"tag1"},
+			wantTags:  []string{"tag1"},
 		},
 		{
 			name:      "tags differ",
 			modelTags: []string{"tag1", "tag2"},
+			stateTags: []string{"tag3"},
+			wantTags:  []string{"tag1", "tag2"},
 		},
 		{
-			name:      "empty tags preserve null",
-			modelTags: []string{},
-			stateTags: types.ListNull(types.StringType),
-			want:      types.ListNull(types.StringType),
+			name:          "empty tags preserve null",
+			modelTags:     []string{},
+			stateTagsNull: true,
+			wantNull:      true,
 		},
 		{
 			name:      "empty tags with existing list",
 			modelTags: []string{},
+			stateTags: []string{"tag1"},
+			wantTags:  []string{},
 		},
 		{
-			name:      "null current tags",
-			modelTags: []string{"tag1"},
-			stateTags: types.ListNull(types.StringType),
+			name:          "null current tags",
+			modelTags:     []string{"tag1"},
+			stateTagsNull: true,
+			wantTags:      []string{"tag1"},
 		},
 		{
 			name:      "tags match with different order",
 			modelTags: []string{"tag2", "tag1", "tag3"},
+			stateTags: []string{"tag1", "tag2", "tag3"},
+			wantTags:  []string{"tag1", "tag2", "tag3"},
 		},
 		{
 			name:      "tags with special characters",
 			modelTags: []string{"tag-1", "tag_2", "tag.3", "tag@4"},
+			stateTags: []string{"tag-1", "tag_2", "tag.3", "tag@4"},
+			wantTags:  []string{"tag-1", "tag_2", "tag.3", "tag@4"}, // Correct lexicographic order
 		},
 		{
 			name:      "empty string in tags",
 			modelTags: []string{"tag1", "", "tag2"},
+			stateTags: []string{"tag1", "tag2"},
+			wantTags:  []string{"", "tag1", "tag2"},
 		},
 		{
 			name:      "state has more tags than model",
 			modelTags: []string{"tag1", "tag2"},
+			stateTags: []string{"tag1", "tag2", "tag3", "tag4"},
+			wantTags:  []string{"tag1", "tag2"},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set up test-specific values
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Convert []string to types.List using context
 			var stateTags, want types.List
-			switch tt.name {
-			case "tags match":
-				stateTags, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2"})
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2"})
-			case "single tag":
-				stateTags, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1"})
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1"})
-			case "tags differ":
-				stateTags, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag3"})
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2"})
-			case "empty tags preserve null":
-				stateTags = tt.stateTags
-				want = tt.want
-			case "empty tags with existing list":
-				stateTags, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1"})
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{})
-			case "null current tags":
-				stateTags = tt.stateTags
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1"})
-			case "tags match with different order":
-				stateTags, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2", "tag3"})
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2", "tag3"})
-			case "tags with special characters":
-				stateTags, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag-1", "tag_2", "tag.3", "tag@4"})
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag-1", "tag_2", "tag.3", "tag@4"}) // Correct lexicographic order
-			case "empty string in tags":
-				stateTags, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2"})
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"", "tag1", "tag2"})
-			case "state has more tags than model":
-				stateTags, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2", "tag3", "tag4"})
-				want, _ = types.ListValueFrom(ctx, types.StringType, []string{"tag1", "tag2"})
+			if tc.stateTagsNull {
+				stateTags = types.ListNull(types.StringType)
+			} else {
+				stateTags, _ = types.ListValueFrom(ctx, types.StringType, tc.stateTags)
 			}
 
-			got, diags := toStateTags(ctx, tt.modelTags, stateTags)
-			if (diags.HasError()) != tt.wantErr {
-				t.Errorf("processTags() error = %v, wantErr %v", diags.HasError(), tt.wantErr)
+			if tc.wantNull {
+				want = types.ListNull(types.StringType)
+			} else {
+				want, _ = types.ListValueFrom(ctx, types.StringType, tc.wantTags)
+			}
+
+			got, diags := toStateTags(ctx, tc.modelTags, stateTags)
+			if (diags.HasError()) != tc.wantErr {
+				t.Errorf("processTags() error = %v, wantErr %v", diags.HasError(), tc.wantErr)
 				return
 			}
-			if !tt.wantErr {
+			if !tc.wantErr {
 				if got.IsNull() != want.IsNull() {
 					t.Errorf("processTags() IsNull = %v, want %v", got.IsNull(), want.IsNull())
 					return
