@@ -34,6 +34,7 @@ func NewClient(ctx context.Context, config ClientConfig) (Client, error) {
 		return sdk.NewClient(ctx, sdk.SDKConfig{
 			ProviderUserAgent:   config.ProviderUserAgent,
 			ServiceAccountToken: config.ServiceAccountToken,
+			Account:             config.Account,
 		})
 	} else if config.ConnectHost != "" && config.ConnectToken != "" {
 		return connect.NewClient(config.ConnectHost, config.ConnectToken, connect.Config{
