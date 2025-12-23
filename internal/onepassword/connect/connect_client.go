@@ -13,9 +13,6 @@ import (
 )
 
 type Config struct {
-	// MaxRetries is the maximum number of retry attempts when waiting for Connect to
-	// propagate changes. RetryOnNotFound/RetryUntilCondition uses exponential backoff between retries.
-	MaxRetries        int
 	ProviderUserAgent string
 }
 
@@ -68,7 +65,7 @@ func (c *Client) GetItem(_ context.Context, itemUuid, vaultUuid string) (*model.
 			}
 			// Return the error (404 will be retried, others returned immediately)
 			return false, fetchErr
-		}, c.maxRetries())
+		})
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to get item using connect: %w", err)
@@ -128,7 +125,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		var createErr error
 		createdItem, createErr = c.connectClient.CreateItem(connectItem, vaultUuid)
 		return createErr
-	}, nil, c.maxRetries())
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item using connect: %w", err)
 	}
@@ -152,7 +149,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		}
 		// Item exists but version doesn't match yet, continue retrying
 		return false, nil
-	}, c.maxRetries())
+	})
 
 	// Convert created Connect Item back to model Item
 	modelItem := &model.Item{}
@@ -175,10 +172,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		var updateErr error
 		updatedItem, updateErr = c.connectClient.UpdateItem(connectItem, vaultUuid)
 		return updateErr
-	}, func() error {
-		return c.refreshVersion(item.ID, vaultUuid, connectItem, item)
-	}, c.maxRetries())
-
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update item using connect: %w", err)
 	}
@@ -200,7 +194,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		}
 		// Version doesn't match yet, continue retrying
 		return false, nil
-	}, c.maxRetries())
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -223,9 +217,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 
 	err = util.RetryOnConflict(ctx, func() error {
 		return c.connectClient.DeleteItem(connectItem, vaultUuid)
-	}, func() error {
-		return c.refreshVersion(item.ID, vaultUuid, connectItem, item)
-	}, c.maxRetries())
+	})
 	if err != nil {
 		return fmt.Errorf("failed to delete item using connect: %w", err)
 	}
@@ -246,7 +238,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 		}
 		// Item still exists, deletion hasn't propagated yet
 		return false, nil
-	}, c.maxRetries())
+	})
 
 	return nil
 }
@@ -272,31 +264,7 @@ func (c *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUI
 	return content, err
 }
 
-// refreshVersion fetches the latest item version and updates both connectItem and model item
-func (c *Client) refreshVersion(itemID, vaultUuid string, connectItem *onepassword.Item, item *model.Item) error {
-	latestItem, err := c.connectClient.GetItemByUUID(itemID, vaultUuid)
-	if err != nil {
-		return fmt.Errorf("failed to fetch latest item version: %w", err)
-	}
-	connectItem.Version = latestItem.Version
-	item.Version = latestItem.Version
-	return nil
-}
-
-// maxRetries returns the configured max retry attempts, defaulting to 5
-func (c *Client) maxRetries() int {
-	if c.config.MaxRetries > 0 {
-		return c.config.MaxRetries
-	}
-	return 5
-}
-
 func NewClient(connectHost, connectToken string, config Config) *Client {
-	// Set the default max retries to 10 if not provided
-	if config.MaxRetries == 0 {
-		config.MaxRetries = 10
-	}
-
 	return &Client{
 		connectClient: connect.NewClientWithUserAgent(connectHost, connectToken, config.ProviderUserAgent),
 		config:        config,

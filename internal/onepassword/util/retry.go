@@ -9,12 +9,11 @@ import (
 )
 
 const (
-	defaultMaxRetryAttempts = 5
+	maxRetryAttempts = 5
 )
 
 // retry retries an operation when it returns a retryable error
-// If refreshVersion is provided, it will be called when an error occurs
-func retry(ctx context.Context, operation func() error, errorKeywords []string, refreshVersion func() error, errorMsg string, maxAttempts int) error {
+func retry(ctx context.Context, operation func() error, errorKeywords []string, errorMsg string, maxAttempts int) error {
 	for attempt := range maxAttempts {
 		err := operation()
 		if err == nil {
@@ -36,13 +35,6 @@ func retry(ctx context.Context, operation func() error, errorKeywords []string, 
 			return err
 		}
 
-		// Retryable error occurred, refresh version if callback provided
-		if refreshVersion != nil {
-			if refreshErr := refreshVersion(); refreshErr != nil {
-				return fmt.Errorf("failed to refresh version after retryable error: %w (original error: %w)", refreshErr, err)
-			}
-		}
-
 		// Don't sleep on the last attempt
 		if attempt < maxAttempts-1 {
 			if ctx.Err() != nil {
@@ -57,20 +49,12 @@ func retry(ctx context.Context, operation func() error, errorKeywords []string, 
 }
 
 // RetryOnConflict retries an operation when it returns 409 Conflict errors
-func RetryOnConflict(ctx context.Context, operation func() error, refreshVersion func() error, maxAttempts int) error {
-	attempts := defaultMaxRetryAttempts
-	if maxAttempts > 0 {
-		attempts = maxAttempts
-	}
-	return retry(ctx, operation, []string{"409", "Conflict", "conflict"}, refreshVersion, "409 Conflict errors", attempts)
+func RetryOnConflict(ctx context.Context, operation func() error) error {
+	return retry(ctx, operation, []string{"409", "Conflict", "conflict"}, "409 Conflict errors", maxRetryAttempts)
 }
 
 // RetryUntilCondition retries an operation when it returns 404 Not Found errors
-func RetryUntilCondition(ctx context.Context, operation func() (bool, error), maxAttempts int) error {
-	attempts := defaultMaxRetryAttempts
-	if maxAttempts > 0 {
-		attempts = maxAttempts
-	}
+func RetryUntilCondition(ctx context.Context, operation func() (bool, error)) error {
 	var lastErr error
 
 	err := retry(ctx, func() error {
@@ -86,11 +70,11 @@ func RetryUntilCondition(ctx context.Context, operation func() (bool, error), ma
 		}
 		// Condition not met - return a retryable error
 		return fmt.Errorf("condition not met")
-	}, []string{"condition not met", "404", "not found"}, nil, "item not found or condition not satisfied", attempts)
+	}, []string{"condition not met", "404", "not found"}, "item not found or condition not satisfied", maxRetryAttempts)
 
-	// If all retries failed, return the last error instead of generic message
+	// If all retries failed so return the last error instead of generic message
 	if err != nil && lastErr != nil && strings.Contains(err.Error(), "max retry attempts") {
-		return fmt.Errorf("%w (after %d retry attempts)", lastErr, attempts)
+		return fmt.Errorf("%w (after %d retry attempts)", lastErr, maxRetryAttempts)
 	}
 
 	return err
