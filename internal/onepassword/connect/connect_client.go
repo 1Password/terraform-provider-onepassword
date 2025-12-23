@@ -147,6 +147,8 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		if fetchedItem != nil && fetchedItem.Version == 1 {
 			return true, nil
 		}
+
+		// Item exists but version doesn't match yet, continue retrying with "condition not met" error
 		return false, fmt.Errorf("condition not met: item version is %d, expected 1", fetchedItem.Version)
 	})
 
@@ -191,7 +193,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		if fetchedItem != nil && fetchedItem.Version == expectedVersion {
 			return true, nil
 		}
-		// Version doesn't match yet, continue retrying
+		// Version doesn't match yet, continue retrying with "condition not met" error
 		return false, fmt.Errorf("condition not met: item version is %d, expected %d", fetchedItem.Version, expectedVersion)
 	})
 	if err != nil {
@@ -235,7 +237,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 			// Other errors are not retryable
 			return false, err
 		}
-		// Item still exists, deletion hasn't propagated yet
+		// Item still exists, deletion hasn't propagated yet with "condition not met" error
 		return false, fmt.Errorf("condition not met: item still exists")
 	})
 
