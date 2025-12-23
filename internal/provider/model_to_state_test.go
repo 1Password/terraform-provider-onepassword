@@ -16,8 +16,8 @@ func TestToStateTags(t *testing.T) {
 	testCases := []struct {
 		name          string
 		modelTags     []string
-		stateTags     []string // Use []string for easier initialization
-		wantTags      []string // Use []string for easier initialization
+		stateTags     []string
+		wantTags      []string
 		stateTagsNull bool
 		wantNull      bool
 		wantErr       bool
@@ -68,7 +68,7 @@ func TestToStateTags(t *testing.T) {
 			name:      "tags with special characters",
 			modelTags: []string{"tag-1", "tag_2", "tag.3", "tag@4"},
 			stateTags: []string{"tag-1", "tag_2", "tag.3", "tag@4"},
-			wantTags:  []string{"tag-1", "tag_2", "tag.3", "tag@4"}, // Correct lexicographic order
+			wantTags:  []string{"tag-1", "tag_2", "tag.3", "tag@4"},
 		},
 		{
 			name:      "empty string in tags",
