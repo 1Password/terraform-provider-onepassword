@@ -237,7 +237,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 			// Other errors are not retryable
 			return false, err
 		}
-		// Item still exists, deletion hasn't propagated yet with "condition not met" error
+		// Item still exists, deletion hasn't propagated yet so retry with "condition not met" error
 		return false, fmt.Errorf("condition not met: item still exists")
 	})
 
