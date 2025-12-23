@@ -13,7 +13,7 @@ const (
 )
 
 // retry retries an operation when it returns a retryable error
-func retry(ctx context.Context, operation func() error, errorKeywords []string, errorMsg string, maxAttempts int) error {
+func retry(ctx context.Context, operation func() error, errorKeywords []string, maxAttempts int) error {
 	var err error
 
 	for attempt := range maxAttempts {
@@ -52,7 +52,7 @@ func retry(ctx context.Context, operation func() error, errorKeywords []string, 
 
 // RetryOnConflict retries an operation when it returns 409 Conflict errors
 func RetryOnConflict(ctx context.Context, operation func() error) error {
-	return retry(ctx, operation, []string{"409", "Conflict", "conflict"}, "409 Conflict errors", maxRetryAttempts)
+	return retry(ctx, operation, []string{"409", "Conflict", "conflict"}, maxRetryAttempts)
 }
 
 // Retry404UntilCondition retries an operation when it returns 404 Not Found errors
@@ -68,7 +68,7 @@ func Retry404UntilCondition(ctx context.Context, operation func() (bool, error))
 
 		// Fallback: callers should return errors with "condition not met" when condition isn't satisfied
 		return fmt.Errorf("condition not met")
-	}, []string{"condition not met", "404", "not found"}, "item not found or condition not satisfied", maxRetryAttempts)
+	}, []string{"condition not met", "404", "not found"}, maxRetryAttempts)
 }
 
 // calculateBackoff calculates backoff with jitter
