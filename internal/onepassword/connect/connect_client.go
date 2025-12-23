@@ -136,11 +136,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	_ = util.Retry404UntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(createdItem.ID, vaultUuid)
 		if err != nil {
-			// If error is 404, item not available yet, continue retrying
-			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
-				return false, nil
-			}
-			// Other errors are not retryable
+			// 404 will be retried, others returned immediately
 			return false, err
 		}
 		// Item exists, check if it has version 1 (newly created)
