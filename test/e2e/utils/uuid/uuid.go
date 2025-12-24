@@ -54,8 +54,8 @@ func VerifyItemUUIDUnchanged(t *testing.T, resourceName string, expectedUUID *st
 // CaptureItemUUIDAndRegisterCleanup captures the UUID and registers cleanup
 func CaptureItemUUIDAndRegisterCleanup(t *testing.T, resourceName string, uuidPtr *string, vaultID string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
-
-		err := CaptureItemUUID(t, resourceName, uuidPtr)(s)
+		captureUUIDFunc := CaptureItemUUID(t, resourceName, uuidPtr)
+		err := captureUUIDFunc(s)
 		if err != nil {
 			return err
 		}

@@ -1050,9 +1050,9 @@ func TestAccItemResourceNullVsEmptyString(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "username"),
-					//resource.TestCheckNoResourceAttr("onepassword_item.test_item", "url"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "url"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "hostname"),
-					//resource.TestCheckNoResourceAttr("onepassword_item.test_item", "database"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "database"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "port"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "note_value"),
 				),
