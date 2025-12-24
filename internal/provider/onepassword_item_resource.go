@@ -73,12 +73,11 @@ type OnePasswordItemResourceSectionModel struct {
 }
 
 type OnePasswordItemResourceFieldModel struct {
-	ID      types.String          `tfsdk:"id"`
-	Label   types.String          `tfsdk:"label"`
-	Purpose types.String          `tfsdk:"purpose"`
-	Type    types.String          `tfsdk:"type"`
-	Value   types.String          `tfsdk:"value"`
-	Recipe  []PasswordRecipeModel `tfsdk:"password_recipe"`
+	ID     types.String          `tfsdk:"id"`
+	Label  types.String          `tfsdk:"label"`
+	Type   types.String          `tfsdk:"type"`
+	Value  types.String          `tfsdk:"value"`
+	Recipe []PasswordRecipeModel `tfsdk:"password_recipe"`
 }
 
 func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -245,13 +244,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 									"label": schema.StringAttribute{
 										MarkdownDescription: fieldLabelDescription,
 										Required:            true,
-									},
-									"purpose": schema.StringAttribute{
-										MarkdownDescription: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
-										Optional:            true,
-										Validators: []validator.String{
-											stringvalidator.OneOfCaseInsensitive(fieldPurposes...),
-										},
 									},
 									"type": schema.StringAttribute{
 										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),

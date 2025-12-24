@@ -82,7 +82,6 @@ func toStateSectionsAndFields(modelSections []model.ItemSection, modelFields []m
 
 				stateField.ID = setStringValue(f.ID)
 				stateField.Label = setStringValuePreservingEmpty(f.Label, stateField.Label)
-				stateField.Purpose = setStringValue(string(f.Purpose))
 				stateField.Type = setStringValue(string(f.Type))
 				stateField.Value = setStringValuePreservingEmpty(f.Value, stateField.Value)
 
