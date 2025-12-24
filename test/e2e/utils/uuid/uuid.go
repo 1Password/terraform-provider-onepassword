@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/cleanup"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/cleanup"
 )
 
 // CaptureItemUUID captures the UUID of a resource item

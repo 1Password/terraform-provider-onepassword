@@ -955,7 +955,7 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 			attrs := maps.Clone(tc.attrs)
 			attrs["title"] = addUniqueIDToTitle(attrs["title"].(string), uniqueID)
 
-			// Build checks to verify password was generated - register cleanup FIRST
+			// Build checks to verify password was generated
 			checks := []resource.TestCheckFunc{
 				uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 			}
