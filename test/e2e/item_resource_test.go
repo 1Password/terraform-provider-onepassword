@@ -651,6 +651,7 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	// Build check functions for recreate step - verify the item was recreated
 	recreateChecks := []resource.TestCheckFunc{
 		logStep(t, "RECREATE"),
+		uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
 	}
 	bcRecreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 	recreateChecks = append(recreateChecks, bcRecreate...)
