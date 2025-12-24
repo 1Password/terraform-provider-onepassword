@@ -100,7 +100,6 @@ Optional:
 
 - `id` (String) A unique identifier for the field.
 - `password_recipe` (Block List) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedblock--section--field--password_recipe))
-- `purpose` (String) Purpose indicates this is a special field: a username, password, or notes field. One of ["USERNAME" "PASSWORD" "NOTES"]
 - `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
 - `value` (String, Sensitive) The value of the field.
 
