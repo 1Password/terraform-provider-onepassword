@@ -1,8 +1,7 @@
 terraform {
   required_providers {
     onepassword = {
-      source  = "1Password/onepassword"
-      version = "~> 2.0.0"
+      source = "1Password/onepassword"
     }
   }
 }
