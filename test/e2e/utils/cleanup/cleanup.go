@@ -3,6 +3,7 @@ package cleanup
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/client"
@@ -32,11 +33,11 @@ func RegisterItemCleanup(t *testing.T, itemUUID, vaultID string) {
 			VaultID: vaultID,
 		}
 
+		// Try to delete, retry once after 1s if it fails
 		err = testClient.DeleteItem(ctx, itemToDelete, vaultID)
 		if err != nil {
-			t.Logf("Cleanup: failed to delete item %s: %v", itemUUID, err)
-		} else {
-			t.Logf("Cleanup: successfully deleted item %s", itemUUID)
+			time.Sleep(1 * time.Second)
+			_ = testClient.DeleteItem(ctx, itemToDelete, vaultID)
 		}
 	})
 }
