@@ -374,6 +374,9 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 					tfconfig.ProviderConfig(),
 					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
 				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+				),
 			},
 			// Read item with data source
 			{
