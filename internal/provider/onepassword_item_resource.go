@@ -247,9 +247,10 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							MarkdownDescription: sectionIDDescription,
+							Optional:            true,
 							Computed:            true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
+								stringplanmodifier.UseNonNullStateForUnknown(),
 							},
 						},
 						"label": schema.StringAttribute{
@@ -267,7 +268,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Optional:            true,
 										Computed:            true,
 										PlanModifiers: []planmodifier.String{
-											stringplanmodifier.UseStateForUnknown(),
+											stringplanmodifier.UseNonNullStateForUnknown(),
 										},
 									},
 									"label": schema.StringAttribute{
