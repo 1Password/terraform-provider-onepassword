@@ -17,6 +17,8 @@ const (
 	tagsDescription              = "An array of strings of the tags assigned to the item."
 	usernameDescription          = "Username for this item."
 	passwordDescription          = "Password for this item."
+	passwordWriteOnceDescription        = "A write-only password for this item. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later."
+	passwordWriteOnceVersionDescription = "An integer that must be incremented to trigger an update to the 'password_wo' field."
 	credentialDescription        = "API credential for this item."
 	noteValueDescription         = "Secure Note value."
 	publicKeyDescription         = "SSH Public Key for this item."

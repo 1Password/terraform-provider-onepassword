@@ -35,3 +35,4 @@ override.tf.json
 /dist
 .idea
 .DS_Store
+local-testing/
