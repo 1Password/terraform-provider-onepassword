@@ -359,8 +359,6 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		}
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client plan and make a call using it.
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -378,7 +376,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// Once created, clear password from state if wo variant is used as password should never be stored
+	// Once created, clear password from state if write only password is used
 	if writeOnly {
 		plan.Password = types.StringNull()
 	}
@@ -401,8 +399,6 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client state and make a call using it.
 	vaultUUID, itemUUID := vaultAndItemUUID(state.ID.ValueString())
 	item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
 	if err != nil {
@@ -421,13 +417,13 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	// Once read, clear password from state if write only password is used and as password should never be stored in state
+	// Once read, clear password from state if write only password is used
 	writeOnly := !state.PasswordWOVersion.IsNull()
 	if writeOnly {
 		state.Password = types.StringNull()
 	}
 
-	// Save updated state into Terraform state
+	// Save updated state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -454,7 +450,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	// Handle password_wo: update if version increased, preserve if version unchanged.
+	// Handle password_wo: update if version increased, preserve if version unchanged or decreased
 	if !config.PasswordWOVersion.IsNull() {
 		configVersion := config.PasswordWOVersion.ValueInt64()
 		stateVersion := int64(0)
@@ -489,8 +485,6 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		}
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client plan and make a call using it.
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -511,7 +505,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	// Once updated, always clear password from state - as it should never be stored when wo variant is used.
+	// Once updated, always clear password from state - as it should never be stored when write only password is used.
 	if !config.PasswordWOVersion.IsNull() {
 		plan.Password = types.StringNull()
 	}
@@ -530,8 +524,6 @@ func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.Delet
 		return
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client state and make a call using it.
 	item, diagnostics := stateToModel(ctx, state)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
