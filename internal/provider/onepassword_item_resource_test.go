@@ -182,8 +182,8 @@ func TestAccItemResourceDocument(t *testing.T) {
 
 func TestAccItemResource_PasswordWriteOnly(t *testing.T) {
 	expectedItem := generatePasswordItem()
-	expectedVault := op.Vault{
-		ID:   expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:   expectedItem.VaultID,
 		Name: "VaultName",
 	}
 
@@ -210,8 +210,8 @@ func TestAccItemResource_PasswordWriteOnly(t *testing.T) {
 
 func TestAccItemResource_PasswordWriteOnlyAttributes(t *testing.T) {
 	expectedItem := generatePasswordItem()
-	expectedVault := op.Vault{
-		ID:   expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:   expectedItem.VaultID,
 		Name: "VaultName",
 	}
 
@@ -271,7 +271,7 @@ resource "onepassword_item" "test-database" {
 }`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value)
 }
 
-func testAccPasswordWriteOnlyResourceConfig(expectedItem *op.Item, version string) string {
+func testAccPasswordWriteOnlyResourceConfig(expectedItem *model.Item, version string) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -284,10 +284,10 @@ resource "onepassword_item" "test_wo" {
   username = "%s"
   password_wo = "%s"
   password_wo_version = "%s"
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value, version)
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value, version)
 }
 
-func testAccPasswordWriteOnlyMissingVersionConfig(expectedItem *op.Item) string {
+func testAccPasswordWriteOnlyMissingVersionConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -299,10 +299,10 @@ resource "onepassword_item" "test_wo" {
   category = "%s"
   username = "%s"
   password_wo = "%s"
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value)
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value)
 }
 
-func testAccPasswordWriteOnlyMissingPasswordConfig(expectedItem *op.Item) string {
+func testAccPasswordWriteOnlyMissingPasswordConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -314,10 +314,10 @@ resource "onepassword_item" "test_wo" {
   category = "%s"
   username = "%s"
   password_wo_version = "1"
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value)
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value)
 }
 
-func testAccPasswordWriteOnlyConflictPasswordConfig(expectedItem *op.Item) string {
+func testAccPasswordWriteOnlyConflictPasswordConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
 data "onepassword_vault" "acceptance-tests" {
@@ -331,7 +331,7 @@ resource "onepassword_item" "test_wo" {
   password = "%s"
   password_wo = "%s"
   password_wo_version = "1"
-}`, expectedItem.Vault.ID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value, expectedItem.Fields[1].Value)
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value, expectedItem.Fields[1].Value)
 }
 
 func testAccLoginResourceConfig(expectedItem *model.Item) string {
