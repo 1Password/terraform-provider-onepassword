@@ -86,9 +86,6 @@ Required:
 Optional:
 
 - `field` (Block List) A list of custom fields in the section. (see [below for nested schema](#nestedblock--section--field))
-
-Read-Only:
-
 - `id` (String) A unique identifier for the section.
 
 <a id="nestedblock--section--field"></a>
