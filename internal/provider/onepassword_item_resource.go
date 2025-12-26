@@ -435,12 +435,12 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 }
 
 func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data OnePasswordItemResourceModel
+	var plan OnePasswordItemResourceModel
 	var config OnePasswordItemResourceModel
 	var state OnePasswordItemResourceModel
 
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Read Terraform plan into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -457,16 +457,45 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	// Ensure password is field with new wo value if the current config version is != from the previous state one.
-	writeOnce := false
-	if !config.PasswordWOVersion.IsNull() && config.PasswordWOVersion != state.PasswordWOVersion {
-		data.Password = config.PasswordWO
-		writeOnce = true
+	// Handle password_wo: update if version increased, preserve if version unchanged.
+	if !config.PasswordWOVersion.IsNull() {
+		configVersion := config.PasswordWOVersion.ValueInt64()
+		stateVersion := int64(0)
+		if !state.PasswordWOVersion.IsNull() {
+			stateVersion = state.PasswordWOVersion.ValueInt64()
+		}
+
+		if configVersion > stateVersion {
+			// Version increased (or first time using password_wo) - use new password_wo value
+			plan.Password = config.PasswordWO
+		} else if configVersion == stateVersion {
+			// Version unchanged - preserve existing password by reading current item
+			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
+			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
+			if err != nil {
+				resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read item '%s' from vault '%s' to preserve password, got error: %s", itemUUID, vaultUUID, err))
+				return
+			}
+			// Extract password from current item, or set to null if password field doesn't exist
+			passwordFound := false
+			for _, f := range currentItem.Fields {
+				if f.Purpose == model.FieldPurposePassword {
+					plan.Password = types.StringValue(f.Value)
+					passwordFound = true
+					break
+				}
+			}
+			// password field not found (user removed it in 1Password), sync to that state
+			if !passwordFound {
+				plan.Password = types.StringNull()
+			}
+		}
+		// If version decreased, we don't update password (defensive: version should only increment)
 	}
 
 	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	item, diagnostics := stateToModel(ctx, data)
+	// provider client plan and make a call using it.
+	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -475,24 +504,24 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	payload, _ := json.Marshal(item)
 	tflog.Info(ctx, "update op payload: "+string(payload))
 
-	updatedItem, err := r.client.UpdateItem(ctx, item, data.Vault.ValueString())
+	updatedItem, err := r.client.UpdateItem(ctx, item, plan.Vault.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", plan.UUID.ValueString(), plan.Vault.ValueString(), err))
 		return
 	}
 
-	resp.Diagnostics.Append(modelToState(ctx, updatedItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, updatedItem, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Once updated, always clear password from state - as it should never be stored when wo variant is used.
-	if writeOnce {
-		data.Password = types.StringNull()
+	if !config.PasswordWOVersion.IsNull() {
+		plan.Password = types.StringNull()
 	}
 
-	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// Save updated plan into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
