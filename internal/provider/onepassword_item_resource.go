@@ -335,11 +335,11 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 }
 
 func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data OnePasswordItemResourceModel
+	var plan OnePasswordItemResourceModel
 	var config OnePasswordItemResourceModel
 
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Read Terraform plan into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -350,16 +350,19 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// Use the password_wo as password for creation when wo variant is used.
+	// Use the password_wo as password for creation when wo version is used.
 	writeOnly := false
-	if !config.PasswordWO.IsNull() && !config.PasswordWO.IsUnknown() {
-		data.Password = config.PasswordWO
+	if !config.PasswordWOVersion.IsNull() {
 		writeOnly = true
+		// Set password from password_wo if provided (validators ensure both are set together)
+		if !config.PasswordWO.IsNull() && !config.PasswordWO.IsUnknown() {
+			plan.Password = config.PasswordWO
+		}
 	}
 
 	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	item, diagnostics := stateToModel(ctx, data)
+	// provider client plan and make a call using it.
+	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -371,22 +374,22 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	resp.Diagnostics.Append(modelToState(ctx, createdItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, createdItem, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Once created, clear password from state if wo variant is used as password should never be stored
 	if writeOnly {
-		data.Password = types.StringNull()
+		plan.Password = types.StringNull()
 	}
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
 	tflog.Trace(ctx, "created a resource")
 
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// Save plan into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
