@@ -351,9 +351,8 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	// Use the password_wo as password for creation when wo version is used.
-	writeOnly := false
-	if !config.PasswordWOVersion.IsNull() {
-		writeOnly = true
+	writeOnly := !config.PasswordWOVersion.IsNull()
+	if writeOnly {
 		// Set password from password_wo if provided (validators ensure both are set together)
 		if !config.PasswordWO.IsNull() && !config.PasswordWO.IsUnknown() {
 			plan.Password = config.PasswordWO
@@ -393,24 +392,18 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 }
 
 func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data OnePasswordItemResourceModel
+	var state OnePasswordItemResourceModel
 
-	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	// Read Terraform prior state state into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Check if wo variant is used based on the wo_version stored in the prior state
-	writeOnly := false
-	if !data.PasswordWOVersion.IsNull() {
-		writeOnly = true
-	}
-
 	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	vaultUUID, itemUUID := vaultAndItemUUID(data.ID.ValueString())
+	// provider client state and make a call using it.
+	vaultUUID, itemUUID := vaultAndItemUUID(state.ID.ValueString())
 	item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
 	if err != nil {
 		// If the resource no longer exists, remove it from state
@@ -423,18 +416,19 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	resp.Diagnostics.Append(modelToState(ctx, item, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, item, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Once read, clear password from state if wo variant is used as password should never be stored
+	// Once read, clear password from state if write only password is used and as password should never be stored in state
+	writeOnly := !state.PasswordWOVersion.IsNull()
 	if writeOnly {
-		data.Password = types.StringNull()
+		state.Password = types.StringNull()
 	}
 
-	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// Save updated state into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -527,26 +521,26 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 }
 
 func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data OnePasswordItemResourceModel
+	var state OnePasswordItemResourceModel
 
-	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	// Read Terraform prior state state into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	item, diagnostics := stateToModel(ctx, data)
+	// provider client state and make a call using it.
+	item, diagnostics := stateToModel(ctx, state)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.client.DeleteItem(ctx, item, data.Vault.ValueString())
+	err := r.client.DeleteItem(ctx, item, state.Vault.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("1Password Item delete error", fmt.Sprintf("Could not delete item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		resp.Diagnostics.AddError("1Password Item delete error", fmt.Sprintf("Could not delete item '%s' from vault '%s', got error: %s", state.UUID.ValueString(), state.Vault.ValueString(), err))
 		return
 	}
 }
