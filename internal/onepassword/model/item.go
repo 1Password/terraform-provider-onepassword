@@ -19,12 +19,13 @@ const (
 	CharacterSetDigits  CharacterSet = "DIGITS"
 	CharacterSetSymbols CharacterSet = "SYMBOLS"
 
-	Login      ItemCategory = "LOGIN"
-	Password   ItemCategory = "PASSWORD"
-	SecureNote ItemCategory = "SECURE_NOTE"
-	Document   ItemCategory = "DOCUMENT"
-	SSHKey     ItemCategory = "SSH_KEY"
-	Database   ItemCategory = "DATABASE"
+	Login         ItemCategory = "LOGIN"
+	Password      ItemCategory = "PASSWORD"
+	SecureNote    ItemCategory = "SECURE_NOTE"
+	Document      ItemCategory = "DOCUMENT"
+	SSHKey        ItemCategory = "SSH_KEY"
+	Database      ItemCategory = "DATABASE"
+	APICredential ItemCategory = "API_CREDENTIAL"
 
 	FieldPurposeUsername ItemFieldPurpose = "USERNAME"
 	FieldPurposePassword ItemFieldPurpose = "PASSWORD"
@@ -427,7 +428,7 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 		// Provider handles dates in `YYYY-MM-DD` format.
 		// Connect returns dates as timestamp
 		// Converting timestamp to `YYYY-MM-DD` string.
-		if f.Type == connect.FieldTypeDate {
+		if f.Type == connect.FieldTypeDate && field.Value != "" {
 			dateStr, err := util.SecondsToYYYYMMDD(field.Value)
 			if err != nil {
 				return modelFields, fmt.Errorf("fromConnectFields: failed to parse timestamp %s to 'YYYY-MM-DD' string format: %w", field.Value, err)
@@ -510,7 +511,7 @@ func toConnectFields(fields []ItemField) ([]*connect.ItemField, error) {
 			Purpose:  connect.ItemFieldPurpose(f.Purpose),
 		}
 
-		if field.Type == connect.FieldTypeDate {
+		if field.Type == connect.FieldTypeDate && field.Value != "" {
 			// Convert date string to timestamp to bypass Connect's timezone-dependent parsing
 			// and ensure consistent storage regardless of where Connect is deployed.
 			timestamp, err := util.YYYYMMDDToSeconds(field.Value)
@@ -617,12 +618,13 @@ func fromModelCategoryToSDK(itemCategory ItemCategory) sdk.ItemCategory {
 }
 
 var sdkToModelCategoryMap = map[sdk.ItemCategory]ItemCategory{
-	sdk.ItemCategoryLogin:      Login,
-	sdk.ItemCategoryPassword:   Password,
-	sdk.ItemCategorySecureNote: SecureNote,
-	sdk.ItemCategoryDocument:   Document,
-	sdk.ItemCategorySSHKey:     SSHKey,
-	sdk.ItemCategoryDatabase:   Database,
+	sdk.ItemCategoryLogin:          Login,
+	sdk.ItemCategoryPassword:       Password,
+	sdk.ItemCategorySecureNote:     SecureNote,
+	sdk.ItemCategoryDocument:       Document,
+	sdk.ItemCategorySSHKey:         SSHKey,
+	sdk.ItemCategoryDatabase:       Database,
+	sdk.ItemCategoryAPICredentials: APICredential,
 }
 
 func fromSDKCategoryToModel(itemCategory sdk.ItemCategory) ItemCategory {

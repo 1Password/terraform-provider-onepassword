@@ -11,8 +11,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh"
 	"math/big"
+
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -49,6 +50,10 @@ func PrivateKeyToOpenSSH(pemBytes []byte, uuid string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("error during parsing from PCKS#1, invalid PEM private key passed in: %w", err)
 		}
+	// Already in OpenSSH format; just normalize and return.
+	case "OPENSSH PRIVATE KEY":
+		encoded := pem.EncodeToMemory(&pem.Block{Type: pemBlock.Type, Bytes: pemBlock.Bytes})
+		return openSSHLineBreaker(encoded), nil
 	default:
 		return "", fmt.Errorf("unsupported key type %q passed with the PEM", pemBlock.Type)
 	}

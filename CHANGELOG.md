@@ -12,6 +12,20 @@
 
 ---
 
+[//]: # (START/v3.0.1)
+# v3.0.1
+
+## Fixes
+
+  * Provider produces consistent results after apply. {#223, #170}
+  * Database item doesn't throw an error anymore. {#215}
+  * Provider doesn't throw an error for sensitive attibutes. {#185}
+  * SSH private keys in OpenSSH format are properly handled. {#286}
+  * Provider reads API credential items correctly. {#287}
+  * Provider properly handles string values in sections. {#214}
+
+---
+
 [//]: # (START/v3.0.0)
 # v3.0.0
 

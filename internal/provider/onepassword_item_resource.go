@@ -4,12 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"regexp"
-	"sort"
 	"strings"
 
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -25,8 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-
-	op "github.com/1Password/connect-sdk-go/onepassword"
 
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
@@ -292,7 +287,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Computed:            true,
 										Default:             stringdefault.StaticString("STRING"),
 										Validators: []validator.String{
-											stringvalidator.OneOfCaseInsensitive(fieldTypes...),
+											stringvalidator.OneOf(fieldTypes...),
 										},
 									},
 									"value": schema.StringAttribute{
@@ -363,7 +358,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, diagnostics := dataToItem(ctx, data)
+	item, diagnostics := stateToModel(ctx, data)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -375,7 +370,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, createdItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, createdItem, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -424,7 +419,7 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, item, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, item, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -470,7 +465,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, diagnostics := dataToItem(ctx, data)
+	item, diagnostics := stateToModel(ctx, data)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -485,7 +480,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	resp.Diagnostics.Append(itemToData(ctx, updatedItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, updatedItem, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -511,7 +506,7 @@ func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.Delet
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, diagnostics := dataToItem(ctx, data)
+	item, diagnostics := stateToModel(ctx, data)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -554,174 +549,50 @@ func isNotFoundError(err error) bool {
 		strings.Contains(errMsg, "item is not in an active state")
 }
 
-func itemToData(ctx context.Context, item *model.Item, data *OnePasswordItemResourceModel) diag.Diagnostics {
-	data.ID = setStringValue(itemTerraformID(item))
-	data.UUID = setStringValue(item.ID)
-	data.Vault = setStringValue(item.VaultID)
-	data.Title = setStringValue(item.Title)
+func modelToState(ctx context.Context, modelItem *model.Item, state *OnePasswordItemResourceModel) diag.Diagnostics {
+	state.ID = setStringValue(itemTerraformID(modelItem))
+	state.UUID = setStringValue(modelItem.ID)
+	state.Vault = setStringValue(modelItem.VaultID)
+	state.Title = setStringValuePreservingEmpty(modelItem.Title, state.Title)
+	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
+	state.Section = toStateSectionsAndFields(modelItem.Sections, modelItem.Fields, state.Section)
+	toStateTopLevelFields(modelItem.Fields, state)
 
-	for _, u := range item.URLs {
+	for _, u := range modelItem.URLs {
 		if u.Primary {
-			data.URL = setStringValue(u.URL)
+			state.URL = setStringValuePreservingEmpty(u.URL, state.URL)
 		}
 	}
 
-	var dataTags []string
-	diagnostics := data.Tags.ElementsAs(ctx, &dataTags, false)
+	tags, diagnostics := toStateTags(ctx, modelItem.Tags, state.Tags)
 	if diagnostics.HasError() {
 		return diagnostics
 	}
+	state.Tags = tags
 
-	sort.Strings(dataTags)
-	if !reflect.DeepEqual(dataTags, item.Tags) {
-		// If item.Tags is empty, preserve null if the original state was null
-		if len(item.Tags) == 0 && data.Tags.IsNull() {
-			data.Tags = types.ListNull(types.StringType)
-		} else {
-			tags, diagnostics := types.ListValueFrom(ctx, types.StringType, item.Tags)
-			if diagnostics.HasError() {
-				return diagnostics
-			}
-			data.Tags = tags
-		}
-	}
-
-	data.Category = setStringValue(strings.ToLower(string(item.Category)))
-
-	dataSections := data.Section
-	for _, s := range item.Sections {
-		section := OnePasswordItemResourceSectionModel{}
-		posSection := -1
-		newSection := true
-
-		for i := range dataSections {
-			existingID := dataSections[i].ID.ValueString()
-			existingLabel := dataSections[i].Label.ValueString()
-			if (s.ID != "" && s.ID == existingID) || s.Label == existingLabel {
-				section = dataSections[i]
-				posSection = i
-				newSection = false
-			}
-		}
-
-		section.ID = setStringValue(s.ID)
-		section.Label = setStringValue(s.Label)
-
-		var existingFields []OnePasswordItemResourceFieldModel
-		if section.Field != nil {
-			existingFields = section.Field
-		}
-		for _, f := range item.Fields {
-			if f.SectionID != "" && f.SectionID == s.ID {
-				dataField := OnePasswordItemResourceFieldModel{}
-				posField := -1
-				newField := true
-
-				for i := range existingFields {
-					existingID := existingFields[i].ID.ValueString()
-					existingLabel := existingFields[i].Label.ValueString()
-
-					if (f.ID != "" && f.ID == existingID) || f.Label == existingLabel {
-						dataField = existingFields[i]
-						posField = i
-						newField = false
-					}
-				}
-
-				dataField.ID = setStringValue(f.ID)
-				dataField.Label = setStringValue(f.Label)
-				dataField.Purpose = setStringValue(string(f.Purpose))
-				dataField.Type = setStringValue(string(f.Type))
-				dataField.Value = setStringValue(f.Value)
-
-				if f.Recipe != nil {
-					charSets := map[string]bool{}
-					for _, s := range f.Recipe.CharacterSets {
-						charSets[strings.ToLower(string(s))] = true
-					}
-
-					dataField.Recipe = []PasswordRecipeModel{{
-						Length:  types.Int64Value(int64(f.Recipe.Length)),
-						Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
-						Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
-					}}
-				}
-
-				if newField {
-					existingFields = append(existingFields, dataField)
-				} else {
-					existingFields[posField] = dataField
-				}
-			}
-		}
-		section.Field = existingFields
-
-		if newSection {
-			dataSections = append(dataSections, section)
-		} else {
-			dataSections[posSection] = section
-		}
-	}
-
-	data.Section = dataSections
-
-	for _, f := range item.Fields {
-		switch f.Purpose {
-		case model.FieldPurposeUsername:
-			data.Username = setStringValue(f.Value)
-		case model.FieldPurposePassword:
-			data.Password = setStringValue(f.Value)
-		case model.FieldPurposeNotes:
-			data.NoteValue = setStringValue(f.Value)
-		default:
-			if f.SectionID == "" {
-				switch f.Label {
-				case "username":
-					data.Username = setStringValue(f.Value)
-				case "password":
-					data.Password = setStringValue(f.Value)
-				case "hostname", "server":
-					data.Hostname = setStringValue(f.Value)
-				case "database":
-					data.Database = setStringValue(f.Value)
-				case "port":
-					data.Port = setStringValue(f.Value)
-				case "type":
-					data.Type = setStringValue(f.Value)
-				}
-			}
-		}
-	}
-
-	if item.Category == model.SecureNote && data.Password.IsUnknown() {
-		data.Password = types.StringNull()
+	// Password is not set for secure notes
+	if modelItem.Category == model.SecureNote && state.Password.IsUnknown() {
+		state.Password = types.StringNull()
 	}
 
 	return nil
 }
 
-func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.Item, diag.Diagnostics) {
-	item := &model.Item{
-		ID:      data.UUID.ValueString(),
-		VaultID: data.Vault.ValueString(),
-		Title:   data.Title.ValueString(),
+func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*model.Item, diag.Diagnostics) {
+	modelItem := &model.Item{
+		ID:      state.UUID.ValueString(),
+		VaultID: state.Vault.ValueString(),
+		Title:   state.Title.ValueString(),
 		URLs: []model.ItemURL{
 			{
 				Primary: true,
-				URL:     data.URL.ValueString(),
+				URL:     state.URL.ValueString(),
 			},
 		},
 	}
 
-	var tags []string
-	diagnostics := data.Tags.ElementsAs(ctx, &tags, false)
-	if diagnostics.HasError() {
-		return nil, diagnostics
-	}
-	item.Tags = tags
-
-	password := data.Password.ValueString()
-	recipe, err := parseGeneratorRecipe(data.Recipe)
+	password := state.Password.ValueString()
+	recipe, err := parseGeneratorRecipe(state.Recipe)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
 			"Error parsing generator recipe",
@@ -729,181 +600,33 @@ func dataToItem(ctx context.Context, data OnePasswordItemResourceModel) (*model.
 		)}
 	}
 
-	switch data.Category.ValueString() {
+	switch state.Category.ValueString() {
 	case "login":
-		item.Category = model.Login
-		item.Fields = []model.ItemField{
-			{
-				ID:      "username",
-				Label:   "username",
-				Purpose: model.FieldPurposeUsername,
-				Type:    model.FieldTypeString,
-				Value:   data.Username.ValueString(),
-			},
-			{
-				ID:       "password",
-				Label:    "password",
-				Purpose:  model.FieldPurposePassword,
-				Type:     model.FieldTypeConcealed,
-				Value:    password,
-				Generate: password == "",
-				Recipe:   recipe,
-			},
-			{
-				ID:      "notesPlain",
-				Label:   "notesPlain",
-				Type:    model.FieldTypeString,
-				Purpose: model.FieldPurposeNotes,
-				Value:   data.NoteValue.ValueString(),
-			},
-		}
+		modelItem.Category = model.Login
+		modelItem.Fields = toModelLoginFields(state, password, recipe)
 	case "password":
-		item.Category = model.Password
-		item.Fields = []model.ItemField{
-			{
-				ID:       "password",
-				Label:    "password",
-				Purpose:  model.FieldPurposePassword,
-				Type:     model.FieldTypeConcealed,
-				Value:    password,
-				Generate: password == "",
-				Recipe:   recipe,
-			},
-			{
-				ID:      "notesPlain",
-				Label:   "notesPlain",
-				Type:    model.FieldTypeString,
-				Purpose: model.FieldPurposeNotes,
-				Value:   data.NoteValue.ValueString(),
-			},
-		}
+		modelItem.Category = model.Password
+		modelItem.Fields = toModelPasswordFields(state, password, recipe)
 	case "database":
-		item.Category = model.Database
-		item.Fields = []model.ItemField{
-			{
-				ID:    "username",
-				Label: "username",
-				Type:  model.FieldTypeString,
-				Value: data.Username.ValueString(),
-			},
-			{
-				ID:       "password",
-				Label:    "password",
-				Type:     model.FieldTypeConcealed,
-				Value:    password,
-				Generate: password == "",
-				Recipe:   recipe,
-			},
-			{
-				ID:    "hostname",
-				Label: "hostname",
-				Type:  model.FieldTypeString,
-				Value: data.Hostname.ValueString(),
-			},
-			{
-				ID:    "database",
-				Label: "database",
-				Type:  model.FieldTypeString,
-				Value: data.Database.ValueString(),
-			},
-			{
-				ID:    "port",
-				Label: "port",
-				Type:  model.FieldTypeString,
-				Value: data.Port.ValueString(),
-			},
-			{
-				ID:    "database_type",
-				Label: "type",
-				Type:  model.FieldTypeString,
-				Value: data.Type.ValueString(),
-			},
-			{
-				ID:      "notesPlain",
-				Label:   "notesPlain",
-				Type:    model.FieldTypeString,
-				Purpose: model.FieldPurposeNotes,
-				Value:   data.NoteValue.ValueString(),
-			},
-		}
+		modelItem.Category = model.Database
+		modelItem.Fields = toModelDatabaseFields(state, password, recipe)
 	case "secure_note":
-		item.Category = model.SecureNote
-		item.Fields = []model.ItemField{
-			{
-				ID:      "notesPlain",
-				Label:   "notesPlain",
-				Type:    model.FieldTypeString,
-				Purpose: model.FieldPurposeNotes,
-				Value:   data.NoteValue.ValueString(),
-			},
-		}
+		modelItem.Category = model.SecureNote
+		modelItem.Fields = toModelSecureNoteFields(state)
 	}
 
-	sections := data.Section
+	tags, diagnostics := toModelTags(ctx, state)
+	if diagnostics.HasError() {
+		return nil, diagnostics
+	}
+	modelItem.Tags = tags
 
-	for _, section := range sections {
-		sectionID := section.ID.ValueString()
-		if sectionID == "" {
-			sid, err := uuid.GenerateUUID()
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-					"Item conversion error",
-					fmt.Sprintf("Unable to generate a section ID, has error: %v", err),
-				)}
-			}
-			sectionID = sid
-		}
-
-		s := model.ItemSection{
-			ID:    sectionID,
-			Label: section.Label.ValueString(),
-		}
-		item.Sections = append(item.Sections, s)
-
-		sectionFields := section.Field
-		for _, field := range sectionFields {
-			fieldID := field.ID.ValueString()
-			// Generate field ID if empty
-			if fieldID == "" {
-				sid, err := uuid.GenerateUUID()
-				if err != nil {
-					return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-						"Item conversion error",
-						fmt.Sprintf("Unable to generate a field ID, has error: %v", err),
-					)}
-				}
-				fieldID = sid
-			}
-
-			fieldType := op.ItemFieldType(field.Type.ValueString())
-			fieldValue := field.Value.ValueString()
-
-			f := model.ItemField{
-				SectionID:    s.ID,
-				SectionLabel: s.Label,
-				ID:           fieldID,
-				Type:         model.ItemFieldType(fieldType),
-				Purpose:      model.ItemFieldPurpose(field.Purpose.ValueString()),
-				Label:        field.Label.ValueString(),
-				Value:        fieldValue,
-			}
-			recipe, err := parseGeneratorRecipe(field.Recipe)
-			if err != nil {
-				return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
-					"Item conversion error",
-					fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
-				)}
-			}
-
-			if recipe != nil {
-				addRecipe(&f, recipe)
-			}
-
-			item.Fields = append(item.Fields, f)
-		}
+	diagnostics = toModelSections(state, modelItem)
+	if diagnostics.HasError() {
+		return nil, diagnostics
 	}
 
-	return item, nil
+	return modelItem, nil
 }
 
 func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {

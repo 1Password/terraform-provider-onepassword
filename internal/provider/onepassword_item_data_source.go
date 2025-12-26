@@ -387,11 +387,9 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 						resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to convert private key to OpenSSH format, got error: %s", err))
 					}
 					data.PrivateKeyOpenSSH = types.StringValue(openSSHPrivateKey)
+				case "credential":
+					data.Credential = types.StringValue(f.Value)
 				}
-			}
-
-			if f.ID == "credential" && item.Category == "API_CREDENTIAL" {
-				data.Credential = types.StringValue(f.Value)
 			}
 		}
 	}
