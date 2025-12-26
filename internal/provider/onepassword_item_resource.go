@@ -468,8 +468,8 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		if configVersion > stateVersion {
 			// Version increased (or first time using password_wo) - use new password_wo value
 			plan.Password = config.PasswordWO
-		} else if configVersion == stateVersion {
-			// Version unchanged - preserve existing password by reading current item
+		} else {
+			// Version unchanged or decreased - preserve existing password by reading current item
 			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
 			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
 			if err != nil {
@@ -490,7 +490,6 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 				plan.Password = types.StringNull()
 			}
 		}
-		// If version decreased, we don't update password (defensive: version should only increment)
 	}
 
 	// If applicable, this is a great opportunity to initialize any necessary
