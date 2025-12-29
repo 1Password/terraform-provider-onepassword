@@ -15,6 +15,7 @@ import (
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/attributes"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/cleanup"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/client"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
@@ -139,6 +140,7 @@ func TestAccItemResource(t *testing.T) {
 			createChecks := []resource.TestCheckFunc{
 				logStep(t, "CREATE"),
 				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				cleanup.RegisterItem(t, &itemUUID, testVaultID),
 			}
 			bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 			createChecks = append(createChecks, bcCreate...)
@@ -248,7 +250,12 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 				if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
 					testStep.ExpectError = regexp.MustCompile(`length value must be between 1 and 64`)
 				} else {
-					checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)
+					var itemUUID string
+					checks := []resource.TestCheckFunc{
+						uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					}
+					checks = append(checks, password.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)...)
 					testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
 				}
 
@@ -361,7 +368,12 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 			if tc.recipe.Length < 1 || tc.recipe.Length > 64 {
 				testStep.ExpectError = regexp.MustCompile(`Invalid Attribute Value`)
 			} else {
-				checks := password.BuildPasswordRecipeChecksForField("onepassword_item.test_item", "section.0.field.0", tc.recipe)
+				var itemUUID string
+				checks := []resource.TestCheckFunc{
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+				}
+				checks = append(checks, password.BuildPasswordRecipeChecksForField("onepassword_item.test_item", "section.0.field.0", tc.recipe)...)
 				testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
 			}
 
@@ -507,6 +519,7 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 				createChecks := []resource.TestCheckFunc{
 					logStep(t, "CREATE"),
 					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 				}
 				createChecks = append(createChecks, checks.BuildItemChecks("onepassword_item.test_item", createAttrs)...)
 
@@ -562,12 +575,23 @@ func TestAccItemResourceTags(t *testing.T) {
 
 	var testSteps []resource.TestStep
 
-	for _, step := range testCases {
+	for i, step := range testCases {
 		attrs := maps.Clone(item.Attrs)
 		attrs["title"] = addUniqueIDToTitle(attrs["title"].(string), uniqueID)
 		attrs["tags"] = step.tags
 
-		testChecks := []resource.TestCheckFunc{logStep(t, step.name)}
+		var itemUUID string
+		testChecks := []resource.TestCheckFunc{}
+
+		// Capture UUID and register cleanup
+		if i == 0 {
+			testChecks = append(testChecks,
+				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				cleanup.RegisterItem(t, &itemUUID, testVaultID),
+			)
+		}
+
+		testChecks = append(testChecks, logStep(t, step.name))
 		testChecks = append(testChecks, checks.BuildItemChecks("onepassword_item.test_item", attrs)...)
 
 		testSteps = append(testSteps, resource.TestStep{
@@ -602,6 +626,7 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	createChecks := []resource.TestCheckFunc{
 		logStep(t, "CREATE"),
 		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+		cleanup.RegisterItem(t, &itemUUID, testVaultID),
 	}
 	bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 	createChecks = append(createChecks, bcCreate...)
@@ -634,6 +659,8 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	// Build check functions for recreate step - verify the item was recreated
 	recreateChecks := []resource.TestCheckFunc{
 		logStep(t, "RECREATE"),
+		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+		cleanup.RegisterItem(t, &itemUUID, testVaultID),
 	}
 	bcRecreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 	recreateChecks = append(recreateChecks, bcRecreate...)
@@ -716,6 +743,7 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	createChecks := []resource.TestCheckFunc{
 		logStep(t, "CREATE"),
 		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+		cleanup.RegisterItem(t, &itemUUID, testVaultID),
 	}
 	bcCreate := checks.BuildItemChecks("onepassword_item.test_item", initialAttrs)
 	createChecks = append(createChecks, bcCreate...)
@@ -931,12 +959,17 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 	for _, tc := range categories {
 		t.Run(tc.name, func(t *testing.T) {
 			uniqueID := uuid.New().String()
+			var itemUUID string
 
 			attrs := maps.Clone(tc.attrs)
 			attrs["title"] = addUniqueIDToTitle(attrs["title"].(string), uniqueID)
 
 			// Build checks to verify password was generated
-			checks := password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipe)
+			checks := []resource.TestCheckFunc{
+				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				cleanup.RegisterItem(t, &itemUUID, testVaultID),
+			}
+			checks = append(checks, password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipe)...)
 			checks = append(checks, resource.TestCheckResourceAttrSet("onepassword_item.test_item", "password"))
 
 			resource.Test(t, resource.TestCase{
@@ -957,6 +990,7 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 
 func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 	testVaultID := vault.GetTestVaultID(t)
+	var itemUUID string
 
 	attrs := map[string]any{
 		"title":      "",
@@ -990,6 +1024,8 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrs),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", ""),
@@ -1005,6 +1041,7 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 }
 
 func TestAccItemResourceNullVsEmptyString(t *testing.T) {
+	var itemUUID string
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 
@@ -1022,6 +1059,8 @@ func TestAccItemResourceNullVsEmptyString(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrsWithoutFields),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "username"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "url"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "hostname"),
@@ -1038,6 +1077,7 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test Clear Fields", uniqueID)
+	var itemUUID string
 
 	attrsWithValues := map[string]any{
 		"title":      title,
@@ -1092,6 +1132,8 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrsWithValues),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "testuser"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", "db.example.com"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", "mydb"),
@@ -1119,6 +1161,232 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 			},
 		},
 	})
+}
+
+// TestAccItemResourcePasswordWriteOnly tests the password_wo (write-only) functionality
+func TestAccItemResourcePasswordWriteOnly(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Password Write-Only", uniqueID)
+
+	var itemUUID string
+
+	// Step 1: Create item with password_wo
+	createAttrs := map[string]any{
+		"title":               title,
+		"category":            "login",
+		"username":            "testuser@example.com",
+		"password_wo":         "initial-password-123",
+		"password_wo_version": 1,
+	}
+
+	// Step 2: Update password by incrementing version
+	updatePasswordAttrs := map[string]any{
+		"title":               title,
+		"category":            "login",
+		"username":            "testuser@example.com",
+		"password_wo":         "updated-password-456",
+		"password_wo_version": 2,
+	}
+
+	// Step 3: Update other fields without changing password (version unchanged)
+	updateOtherFieldsAttrs := map[string]any{
+		"title":               title,
+		"category":            "login",
+		"username":            "updateduser@example.com",
+		"url":                 "https://example.com",
+		"password_wo":         "updated-password-456", // Same password, but won't be in plan
+		"password_wo_version": 2,                      // Same version - password should be preserved
+	}
+
+	// Step 4: Add section while preserving password
+	updateWithSectionAttrs := map[string]any{
+		"title":               title,
+		"category":            "login",
+		"username":            "updateduser@example.com",
+		"url":                 "https://example.com",
+		"password_wo":         "updated-password-456",
+		"password_wo_version": 2, // Same version - password should be preserved
+		"section": sections.MapSections([]sections.TestSection{
+			{
+				Label: "Test Section",
+				Fields: []sections.TestField{
+					{Label: "Test Field", Value: "test-value", Type: "STRING"},
+				},
+			},
+		}),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create with password_wo
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_PASSWORD_WO"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "category", "login"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "testuser@example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password_wo_version", "1"),
+					// Verify password_wo is not in state (write-only)
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "password_wo"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "password"),
+					// Verify password was set in 1Password by checking via client
+					verifyPasswordIn1Password(t, testVaultID, &itemUUID, "initial-password-123"),
+				),
+			},
+			// Step 2: Update password by incrementing version
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, updatePasswordAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_PASSWORD_VERSION_INCREMENT"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password_wo_version", "2"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "password_wo"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "password"),
+					// Verify password was updated in 1Password
+					verifyPasswordIn1Password(t, testVaultID, &itemUUID, "updated-password-456"),
+				),
+			},
+			// Step 3: Update other fields without changing password (version unchanged)
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, updateOtherFieldsAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_OTHER_FIELDS_PRESERVE_PASSWORD"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "updateduser@example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", "https://example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password_wo_version", "2"),
+					// Verify password was preserved (not changed)
+					verifyPasswordIn1Password(t, testVaultID, &itemUUID, "updated-password-456"),
+				),
+			},
+			// Step 4: Add section while preserving password
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, updateWithSectionAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "ADD_SECTION_PRESERVE_PASSWORD"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.#", "1"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", "Test Section"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.#", "1"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.label", "Test Field"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value", "test-value"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password_wo_version", "2"),
+					// Verify password was preserved when adding section
+					verifyPasswordIn1Password(t, testVaultID, &itemUUID, "updated-password-456"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourcePasswordWriteOnlyVersionDecrement tests that password is not updated when version is decremented
+func TestAccItemResourcePasswordWriteOnlyVersionDecrement(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Password WO Version Decrement", uniqueID)
+
+	var itemUUID string
+
+	createAttrs := map[string]any{
+		"title":               title,
+		"category":            "login",
+		"username":            "testuser@example.com",
+		"password_wo":         "initial-password-123",
+		"password_wo_version": 2,
+	}
+
+	// Try to decrement version (should not update password)
+	decrementVersionAttrs := map[string]any{
+		"title":               title,
+		"category":            "login",
+		"username":            "testuser@example.com",
+		"password_wo":         "should-not-be-used",
+		"password_wo_version": 1, // Decremented - password should not be updated
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create with version 2
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_VERSION_2"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password_wo_version", "2"),
+					verifyPasswordIn1Password(t, testVaultID, &itemUUID, "initial-password-123"),
+				),
+			},
+			// Try to decrement version - password should not be updated
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, decrementVersionAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "DECREMENT_VERSION"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "password_wo_version", "1"),
+					// Password should still be the original one (not updated)
+					verifyPasswordIn1Password(t, testVaultID, &itemUUID, "initial-password-123"),
+				),
+			},
+		},
+	})
+}
+
+// verifyPasswordIn1Password verifies that the password in 1Password matches the expected value
+func verifyPasswordIn1Password(t *testing.T, vaultID string, itemUUID *string, expectedPassword string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ctx := context.Background()
+		client, err := client.CreateTestClient(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create client: %w", err)
+		}
+
+		item, err := client.GetItem(ctx, *itemUUID, vaultID)
+		if err != nil {
+			return fmt.Errorf("failed to get item: %w", err)
+		}
+
+		// Find password field
+		for _, f := range item.Fields {
+			if f.Purpose == model.FieldPurposePassword {
+				if f.Value != expectedPassword {
+					return fmt.Errorf("password mismatch: expected %q, got %q", expectedPassword, f.Value)
+				}
+				t.Logf("Password verified in 1Password: %q", f.Value)
+				return nil
+			}
+		}
+
+		// If password field not found and expected password is empty, that's OK
+		if expectedPassword == "" {
+			t.Log("Password field not found in 1Password (as expected)")
+			return nil
+		}
+
+		return fmt.Errorf("password field not found in item")
+	}
 }
 
 // addUniqueIDToTitle appends a UUID to the title to avoid conflicts in parallel test execution

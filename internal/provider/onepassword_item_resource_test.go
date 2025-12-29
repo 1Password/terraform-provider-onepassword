@@ -180,6 +180,63 @@ func TestAccItemResourceDocument(t *testing.T) {
 	})
 }
 
+func TestAccItemResource_PasswordWriteOnly(t *testing.T) {
+	expectedItem := generatePasswordItem()
+	expectedVault := model.Vault{
+		ID:   expectedItem.VaultID,
+		Name: "VaultName",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				// Test read
+				Config: testAccProviderConfig(testServer.URL) + testAccPasswordWriteOnlyResourceConfig(expectedItem, "1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test_wo", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("onepassword_item.test_wo", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("onepassword_item.test_wo", "password_wo_version", "1"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_wo", "password"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_wo", "password_wo"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResource_PasswordWriteOnlyAttributes(t *testing.T) {
+	expectedItem := generatePasswordItem()
+	expectedVault := model.Vault{
+		ID:   expectedItem.VaultID,
+		Name: "VaultName",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProviderConfig(testServer.URL) + testAccPasswordWriteOnlyMissingVersionConfig(expectedItem),
+				ExpectError: regexp.MustCompile("Attribute \"password_wo_version\" must be specified when \"password_wo\" is"),
+			},
+			{
+				Config:      testAccProviderConfig(testServer.URL) + testAccPasswordWriteOnlyMissingPasswordConfig(expectedItem),
+				ExpectError: regexp.MustCompile("Attribute \"password_wo\" must be specified when \"password_wo_version\" is"),
+			},
+			{
+				Config:      testAccProviderConfig(testServer.URL) + testAccPasswordWriteOnlyConflictPasswordConfig(expectedItem),
+				ExpectError: regexp.MustCompile("Attribute \"password\" cannot be specified when \"password_wo\" is specified"),
+			},
+		},
+	})
+}
+
 func testAccDataBaseResourceConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
@@ -212,6 +269,69 @@ resource "onepassword_item" "test-database" {
   username = "%s"
   password_recipe {}
 }`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value)
+}
+
+func testAccPasswordWriteOnlyResourceConfig(expectedItem *model.Item, version string) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test_wo" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  username = "%s"
+  password_wo = "%s"
+  password_wo_version = "%s"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value, version)
+}
+
+func testAccPasswordWriteOnlyMissingVersionConfig(expectedItem *model.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test_wo" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  username = "%s"
+  password_wo = "%s"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value)
+}
+
+func testAccPasswordWriteOnlyMissingPasswordConfig(expectedItem *model.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test_wo" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  username = "%s"
+  password_wo_version = "1"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value)
+}
+
+func testAccPasswordWriteOnlyConflictPasswordConfig(expectedItem *model.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test_wo" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  username = "%s"
+  password = "%s"
+  password_wo = "%s"
+  password_wo_version = "1"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value, expectedItem.Fields[1].Value)
 }
 
 func testAccLoginResourceConfig(expectedItem *model.Item) string {

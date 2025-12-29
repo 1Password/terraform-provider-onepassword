@@ -42,22 +42,24 @@ type OnePasswordItemResource struct {
 
 // OnePasswordItemResourceModel describes the resource data model.
 type OnePasswordItemResourceModel struct {
-	ID        types.String                          `tfsdk:"id"`
-	UUID      types.String                          `tfsdk:"uuid"`
-	Vault     types.String                          `tfsdk:"vault"`
-	Category  types.String                          `tfsdk:"category"`
-	Title     types.String                          `tfsdk:"title"`
-	URL       types.String                          `tfsdk:"url"`
-	Hostname  types.String                          `tfsdk:"hostname"`
-	Database  types.String                          `tfsdk:"database"`
-	Port      types.String                          `tfsdk:"port"`
-	Type      types.String                          `tfsdk:"type"`
-	Tags      types.List                            `tfsdk:"tags"`
-	Username  types.String                          `tfsdk:"username"`
-	Password  types.String                          `tfsdk:"password"`
-	NoteValue types.String                          `tfsdk:"note_value"`
-	Section   []OnePasswordItemResourceSectionModel `tfsdk:"section"`
-	Recipe    []PasswordRecipeModel                 `tfsdk:"password_recipe"`
+	ID                types.String                          `tfsdk:"id"`
+	UUID              types.String                          `tfsdk:"uuid"`
+	Vault             types.String                          `tfsdk:"vault"`
+	Category          types.String                          `tfsdk:"category"`
+	Title             types.String                          `tfsdk:"title"`
+	URL               types.String                          `tfsdk:"url"`
+	Hostname          types.String                          `tfsdk:"hostname"`
+	Database          types.String                          `tfsdk:"database"`
+	Port              types.String                          `tfsdk:"port"`
+	Type              types.String                          `tfsdk:"type"`
+	Tags              types.List                            `tfsdk:"tags"`
+	Username          types.String                          `tfsdk:"username"`
+	Password          types.String                          `tfsdk:"password"`
+	PasswordWO        types.String                          `tfsdk:"password_wo"`
+	PasswordWOVersion types.Int64                           `tfsdk:"password_wo_version"`
+	NoteValue         types.String                          `tfsdk:"note_value"`
+	Section           []OnePasswordItemResourceSectionModel `tfsdk:"section"`
+	Recipe            []PasswordRecipeModel                 `tfsdk:"password_recipe"`
 }
 
 type PasswordRecipeModel struct {
@@ -205,6 +207,32 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					ValueModifier(),
 				},
 			},
+			"password_wo": schema.StringAttribute{
+				MarkdownDescription: passwordWriteOnceDescription,
+				Optional:            true,
+				Sensitive:           true,
+				WriteOnly:           true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{path.MatchRoot("password")}...,
+					),
+					stringvalidator.AlsoRequires(
+						path.Expressions{path.MatchRoot("password_wo_version")}...,
+					),
+				},
+			},
+			"password_wo_version": schema.Int64Attribute{
+				MarkdownDescription: passwordWriteOnceVersionDescription,
+				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.ConflictsWith(
+						path.Expressions{path.MatchRoot("password")}...,
+					),
+					int64validator.AlsoRequires(
+						path.Expressions{path.MatchRoot("password_wo")}...,
+					),
+				},
+			},
 			"note_value": schema.StringAttribute{
 				MarkdownDescription: noteValueDescription,
 				Optional:            true,
@@ -218,9 +246,10 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
 							MarkdownDescription: sectionIDDescription,
+							Optional:            true,
 							Computed:            true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
+								stringplanmodifier.UseNonNullStateForUnknown(),
 							},
 						},
 						"label": schema.StringAttribute{
@@ -238,7 +267,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Optional:            true,
 										Computed:            true,
 										PlanModifiers: []planmodifier.String{
-											stringplanmodifier.UseStateForUnknown(),
+											stringplanmodifier.UseNonNullStateForUnknown(),
 										},
 									},
 									"label": schema.StringAttribute{
@@ -298,18 +327,31 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 }
 
 func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data OnePasswordItemResourceModel
+	var plan OnePasswordItemResourceModel
+	var config OnePasswordItemResourceModel
 
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
-
+	// Read Terraform plan into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	item, diagnostics := stateToModel(ctx, data)
+	// Read the config to get the original password_wo value as it's not stored nor inside plan neither the state.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Use the password_wo as password for creation when wo version is used.
+	writeOnly := !config.PasswordWOVersion.IsNull()
+	if writeOnly {
+		// Set password from password_wo if provided (validators ensure both are set together)
+		if !config.PasswordWO.IsNull() && !config.PasswordWO.IsUnknown() {
+			plan.Password = config.PasswordWO
+		}
+	}
+
+	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -321,32 +363,35 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	resp.Diagnostics.Append(modelToState(ctx, createdItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, createdItem, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Once created, clear password from state if write only password is used
+	if writeOnly {
+		plan.Password = types.StringNull()
 	}
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
 	tflog.Trace(ctx, "created a resource")
 
-	// Save data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// Save plan into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data OnePasswordItemResourceModel
+	var state OnePasswordItemResourceModel
 
-	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	// Read Terraform prior state state into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	vaultUUID, itemUUID := vaultAndItemUUID(data.ID.ValueString())
+	vaultUUID, itemUUID := vaultAndItemUUID(state.ID.ValueString())
 	item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
 	if err != nil {
 		// If the resource no longer exists, remove it from state
@@ -359,27 +404,80 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	resp.Diagnostics.Append(modelToState(ctx, item, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, item, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// Once read, clear password from state if write only password is used
+	writeOnly := !state.PasswordWOVersion.IsNull()
+	if writeOnly {
+		state.Password = types.StringNull()
+	}
+
+	// Save updated state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data OnePasswordItemResourceModel
+	var plan OnePasswordItemResourceModel
+	var config OnePasswordItemResourceModel
+	var state OnePasswordItemResourceModel
 
-	// Read Terraform plan data into the model
-	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
+	// Read Terraform plan into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	item, diagnostics := stateToModel(ctx, data)
+	// Read the config to get the current password_wo value as it's not stored nor inside plan neither the state.
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Read the previous state to detect if the password_wo_version should trigger a password update.
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Handle password_wo: update if version increased, preserve if version unchanged or decreased
+	if !config.PasswordWOVersion.IsNull() {
+		configVersion := config.PasswordWOVersion.ValueInt64()
+		stateVersion := int64(0)
+		if !state.PasswordWOVersion.IsNull() {
+			stateVersion = state.PasswordWOVersion.ValueInt64()
+		}
+
+		if configVersion > stateVersion {
+			// Version increased (or first time using password_wo) - use new password_wo value
+			plan.Password = config.PasswordWO
+		} else {
+			// Version unchanged or decreased - preserve existing password by reading current item
+			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
+			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
+			if err != nil {
+				resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read item '%s' from vault '%s' to preserve password, got error: %s", itemUUID, vaultUUID, err))
+				return
+			}
+			// Extract password from current item, or set to null if password field doesn't exist
+			passwordFound := false
+			for _, f := range currentItem.Fields {
+				if f.Purpose == model.FieldPurposePassword {
+					plan.Password = types.StringValue(f.Value)
+					passwordFound = true
+					break
+				}
+			}
+			// password field not found (user removed it in 1Password), sync to that state
+			if !passwordFound {
+				plan.Password = types.StringNull()
+			}
+		}
+	}
+
+	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -388,42 +486,45 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	payload, _ := json.Marshal(item)
 	tflog.Info(ctx, "update op payload: "+string(payload))
 
-	updatedItem, err := r.client.UpdateItem(ctx, item, data.Vault.ValueString())
+	updatedItem, err := r.client.UpdateItem(ctx, item, plan.Vault.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", plan.UUID.ValueString(), plan.Vault.ValueString(), err))
 		return
 	}
 
-	resp.Diagnostics.Append(modelToState(ctx, updatedItem, &data)...)
+	resp.Diagnostics.Append(modelToState(ctx, updatedItem, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Save updated data into Terraform state
-	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
+	// Once updated, always clear password from state - as it should never be stored when write only password is used.
+	if !config.PasswordWOVersion.IsNull() {
+		plan.Password = types.StringNull()
+	}
+
+	// Save updated plan into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data OnePasswordItemResourceModel
+	var state OnePasswordItemResourceModel
 
-	// Read Terraform prior state data into the model
-	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
+	// Read Terraform prior state state into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// If applicable, this is a great opportunity to initialize any necessary
-	// provider client data and make a call using it.
-	item, diagnostics := stateToModel(ctx, data)
+	item, diagnostics := stateToModel(ctx, state)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.client.DeleteItem(ctx, item, data.Vault.ValueString())
+	err := r.client.DeleteItem(ctx, item, state.Vault.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError("1Password Item delete error", fmt.Sprintf("Could not delete item '%s' from vault '%s', got error: %s", data.UUID.ValueString(), data.Vault.ValueString(), err))
+		resp.Diagnostics.AddError("1Password Item delete error", fmt.Sprintf("Could not delete item '%s' from vault '%s', got error: %s", state.UUID.ValueString(), state.Vault.ValueString(), err))
 		return
 	}
 }
