@@ -141,7 +141,6 @@ func toModelSectionField(field OnePasswordItemResourceFieldModel, sectionID, sec
 		SectionLabel: sectionLabel,
 		ID:           fieldID,
 		Type:         model.ItemFieldType(op.ItemFieldType(field.Type.ValueString())),
-		Purpose:      model.ItemFieldPurpose(field.Purpose.ValueString()),
 		Label:        field.Label.ValueString(),
 		Value:        field.Value.ValueString(),
 	}
