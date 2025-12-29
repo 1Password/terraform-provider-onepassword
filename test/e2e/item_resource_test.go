@@ -15,6 +15,7 @@ import (
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/attributes"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/cleanup"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/client"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/password"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
@@ -138,7 +139,8 @@ func TestAccItemResource(t *testing.T) {
 			// Build check functions for create step
 			createChecks := []resource.TestCheckFunc{
 				logStep(t, "CREATE"),
-				uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				cleanup.RegisterItem(t, &itemUUID, testVaultID),
 			}
 			bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 			createChecks = append(createChecks, bcCreate...)
@@ -250,7 +252,8 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 				} else {
 					var itemUUID string
 					checks := []resource.TestCheckFunc{
-						uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+						uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					}
 					checks = append(checks, password.BuildPasswordRecipeChecks("onepassword_item.test_item", tc.recipe)...)
 					testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
@@ -367,7 +370,8 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 			} else {
 				var itemUUID string
 				checks := []resource.TestCheckFunc{
-					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 				}
 				checks = append(checks, password.BuildPasswordRecipeChecksForField("onepassword_item.test_item", "section.0.field.0", tc.recipe)...)
 				testStep.Check = resource.ComposeAggregateTestCheckFunc(checks...)
@@ -514,7 +518,8 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 				// Build check functions for create step
 				createChecks := []resource.TestCheckFunc{
 					logStep(t, "CREATE"),
-					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 				}
 				createChecks = append(createChecks, checks.BuildItemChecks("onepassword_item.test_item", createAttrs)...)
 
@@ -581,7 +586,8 @@ func TestAccItemResourceTags(t *testing.T) {
 		// Capture UUID and register cleanup
 		if i == 0 {
 			testChecks = append(testChecks,
-				uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				cleanup.RegisterItem(t, &itemUUID, testVaultID),
 			)
 		}
 
@@ -619,7 +625,8 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	// Build check functions for create step
 	createChecks := []resource.TestCheckFunc{
 		logStep(t, "CREATE"),
-		uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+		cleanup.RegisterItem(t, &itemUUID, testVaultID),
 	}
 	bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 	createChecks = append(createChecks, bcCreate...)
@@ -652,7 +659,8 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 	// Build check functions for recreate step - verify the item was recreated
 	recreateChecks := []resource.TestCheckFunc{
 		logStep(t, "RECREATE"),
-		uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+		cleanup.RegisterItem(t, &itemUUID, testVaultID),
 	}
 	bcRecreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 	recreateChecks = append(recreateChecks, bcRecreate...)
@@ -734,7 +742,8 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 	// Build check functions for create step
 	createChecks := []resource.TestCheckFunc{
 		logStep(t, "CREATE"),
-		uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+		uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+		cleanup.RegisterItem(t, &itemUUID, testVaultID),
 	}
 	bcCreate := checks.BuildItemChecks("onepassword_item.test_item", initialAttrs)
 	createChecks = append(createChecks, bcCreate...)
@@ -957,7 +966,8 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 
 			// Build checks to verify password was generated
 			checks := []resource.TestCheckFunc{
-				uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+				cleanup.RegisterItem(t, &itemUUID, testVaultID),
 			}
 			checks = append(checks, password.BuildPasswordRecipeChecks("onepassword_item.test_item", recipe)...)
 			checks = append(checks, resource.TestCheckResourceAttrSet("onepassword_item.test_item", "password"))
@@ -1014,7 +1024,8 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrs),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", ""),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", ""),
@@ -1048,7 +1059,8 @@ func TestAccItemResourceNullVsEmptyString(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrsWithoutFields),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "username"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "url"),
 					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "hostname"),
@@ -1120,7 +1132,8 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, attrsWithValues),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "testuser"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "hostname", "db.example.com"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "database", "mydb"),

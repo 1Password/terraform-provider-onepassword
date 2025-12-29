@@ -15,6 +15,7 @@ import (
 	tfconfig "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/terraform/config"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/attributes"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/checks"
+	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/cleanup"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/client"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/sections"
 	"github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/ssh"
@@ -375,7 +376,8 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					uuidutil.CaptureItemUUIDAndRegisterCleanup(t, "onepassword_item.test_item", &itemUUID, testVaultID),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 				),
 			},
 			// Read item with data source
