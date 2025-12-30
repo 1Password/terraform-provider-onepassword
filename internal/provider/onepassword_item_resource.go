@@ -30,6 +30,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ resource.Resource = &OnePasswordItemResource{}
 var _ resource.ResourceWithImportState = &OnePasswordItemResource{}
+var _ resource.ResourceWithValidateConfig = &OnePasswordItemResource{}
 
 func NewOnePasswordItemResource() resource.Resource {
 	return &OnePasswordItemResource{}
@@ -42,25 +43,25 @@ type OnePasswordItemResource struct {
 
 // OnePasswordItemResourceModel describes the resource data model.
 type OnePasswordItemResourceModel struct {
-	ID                types.String                          `tfsdk:"id"`
-	UUID              types.String                          `tfsdk:"uuid"`
-	Vault             types.String                          `tfsdk:"vault"`
-	Category          types.String                          `tfsdk:"category"`
-	Title             types.String                          `tfsdk:"title"`
-	URL               types.String                          `tfsdk:"url"`
-	Hostname          types.String                          `tfsdk:"hostname"`
-	Database          types.String                          `tfsdk:"database"`
-	Port              types.String                          `tfsdk:"port"`
-	Type              types.String                          `tfsdk:"type"`
-	Tags              types.List                            `tfsdk:"tags"`
-	Username          types.String                          `tfsdk:"username"`
-	Password          types.String                          `tfsdk:"password"`
-	PasswordWO        types.String                          `tfsdk:"password_wo"`
-	PasswordWOVersion types.Int64                           `tfsdk:"password_wo_version"`
-	NoteValue         types.String                          `tfsdk:"note_value"`
-	SectionList       []OnePasswordItemResourceSectionModel `tfsdk:"section"`
-	SectionMap        types.Map                             `tfsdk:"section_map"`
-	Recipe            []PasswordRecipeModel                 `tfsdk:"password_recipe"`
+	ID                types.String                                      `tfsdk:"id"`
+	UUID              types.String                                      `tfsdk:"uuid"`
+	Vault             types.String                                      `tfsdk:"vault"`
+	Category          types.String                                      `tfsdk:"category"`
+	Title             types.String                                      `tfsdk:"title"`
+	URL               types.String                                      `tfsdk:"url"`
+	Hostname          types.String                                      `tfsdk:"hostname"`
+	Database          types.String                                      `tfsdk:"database"`
+	Port              types.String                                      `tfsdk:"port"`
+	Type              types.String                                      `tfsdk:"type"`
+	Tags              types.List                                        `tfsdk:"tags"`
+	Username          types.String                                      `tfsdk:"username"`
+	Password          types.String                                      `tfsdk:"password"`
+	PasswordWO        types.String                                      `tfsdk:"password_wo"`
+	PasswordWOVersion types.Int64                                       `tfsdk:"password_wo_version"`
+	NoteValue         types.String                                      `tfsdk:"note_value"`
+	SectionList       []OnePasswordItemResourceSectionListModel         `tfsdk:"section"`
+	SectionMap        map[string]OnePasswordItemResourceSectionMapModel `tfsdk:"section_map"`
+	Recipe            []PasswordRecipeModel                             `tfsdk:"password_recipe"`
 }
 
 type PasswordRecipeModel struct {
@@ -69,11 +70,27 @@ type PasswordRecipeModel struct {
 	Symbols types.Bool  `tfsdk:"symbols"`
 }
 
-type OnePasswordItemResourceSectionModel struct {
+// OnePasswordItemResourceSectionListModel is used for list-based sections
+type OnePasswordItemResourceSectionListModel struct {
 	ID        types.String                        `tfsdk:"id"`
 	Label     types.String                        `tfsdk:"label"`
 	FieldList []OnePasswordItemResourceFieldModel `tfsdk:"field"`
-	FieldMap  types.Map                           `tfsdk:"field_map"`
+}
+
+// OnePasswordItemResourceSectionMapModel is used for map-based sections
+// The map key serves as the section label
+type OnePasswordItemResourceSectionMapModel struct {
+	ID       types.String                                    `tfsdk:"id"`
+	FieldMap map[string]OnePasswordItemResourceFieldMapModel `tfsdk:"field_map"`
+}
+
+// OnePasswordItemResourceFieldMapModel is used for map-based fields (field_map attribute)
+// The map key serves as the field label
+type OnePasswordItemResourceFieldMapModel struct {
+	ID     types.String         `tfsdk:"id"`
+	Type   types.String         `tfsdk:"type"`
+	Value  types.String         `tfsdk:"value"`
+	Recipe *PasswordRecipeModel `tfsdk:"password_recipe"`
 }
 
 type OnePasswordItemResourceFieldModel struct {
@@ -136,10 +153,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					stringplanmodifier.UseNonNullStateForUnknown(),
 				},
 			},
-			"label": schema.StringAttribute{
-				MarkdownDescription: sectionLabelDescription,
-				Required:            true,
-			},
 			"field_map": schema.MapNestedAttribute{
 				MarkdownDescription: sectionFieldsDescription,
 				Optional:            true,
@@ -152,10 +165,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 							PlanModifiers: []planmodifier.String{
 								stringplanmodifier.UseNonNullStateForUnknown(),
 							},
-						},
-						"label": schema.StringAttribute{
-							MarkdownDescription: fieldLabelDescription,
-							Required:            true,
 						},
 						"type": schema.StringAttribute{
 							MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
@@ -173,6 +182,33 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 							Sensitive:           true,
 							PlanModifiers: []planmodifier.String{
 								ValueModifier(),
+							},
+						},
+						"password_recipe": schema.SingleNestedAttribute{
+							MarkdownDescription: passwordRecipeDescription,
+							Optional:            true,
+							Attributes: map[string]schema.Attribute{
+								"length": schema.Int64Attribute{
+									MarkdownDescription: passwordLengthDescription,
+									Optional:            true,
+									Computed:            true,
+									Default:             int64default.StaticInt64(32),
+									Validators: []validator.Int64{
+										int64validator.Between(1, 64),
+									},
+								},
+								"digits": schema.BoolAttribute{
+									MarkdownDescription: passwordDigitsDescription,
+									Optional:            true,
+									Computed:            true,
+									Default:             booldefault.StaticBool(true),
+								},
+								"symbols": schema.BoolAttribute{
+									MarkdownDescription: passwordSymbolsDescription,
+									Optional:            true,
+									Computed:            true,
+									Default:             booldefault.StaticBool(true),
+								},
 							},
 						},
 					},
@@ -397,6 +433,27 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 	}
 
 	r.client = client
+}
+
+func (r *OnePasswordItemResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config OnePasswordItemResourceModel
+
+	// Read Terraform configuration data into the model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if both section_map and section are set
+	hasSectionMap := len(config.SectionMap) > 0
+	hasSectionList := len(config.SectionList) > 0
+
+	if hasSectionMap && hasSectionList {
+		resp.Diagnostics.AddError(
+			"Conflicting Section Definitions",
+			"Cannot use both 'section' (list) and 'section' (map) at the same time. Please use only one of them.",
+		)
+	}
 }
 
 func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

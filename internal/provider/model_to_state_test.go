@@ -128,8 +128,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 		name          string
 		modelSections []model.ItemSection
 		modelFields   []model.ItemField
-		stateSections []OnePasswordItemResourceSectionModel
-		want          []OnePasswordItemResourceSectionModel
+		stateSections []OnePasswordItemResourceSectionListModel
+		want          []OnePasswordItemResourceSectionListModel
 	}{
 		{
 			name: "new section with field",
@@ -139,8 +139,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 			modelFields: []model.ItemField{
 				{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -162,14 +162,14 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "section1", Label: "Updated Label"},
 			},
 			modelFields: []model.ItemField{},
-			stateSections: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:        types.StringValue("section1"),
 					Label:     types.StringValue("Old Label"),
 					FieldList: []OnePasswordItemResourceFieldModel{},
 				},
 			},
-			want: []OnePasswordItemResourceSectionModel{
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:        types.StringValue("section1"),
 					Label:     types.StringValue("Updated Label"),
@@ -194,8 +194,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 					},
 				},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -222,14 +222,14 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "", Label: "Section 1"},
 			},
 			modelFields: []model.ItemField{},
-			stateSections: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:        types.StringNull(),
 					Label:     types.StringValue("Section 1"),
 					FieldList: []OnePasswordItemResourceFieldModel{},
 				},
 			},
-			want: []OnePasswordItemResourceSectionModel{
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:        types.StringNull(),
 					Label:     types.StringValue("Section 1"),
@@ -245,7 +245,7 @@ func TestToStateSectionsAndFields(t *testing.T) {
 			modelFields: []model.ItemField{
 				{ID: "", Label: "Field 1", Type: model.FieldTypeString, Value: "updated value", SectionID: "section1"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -260,7 +260,7 @@ func TestToStateSectionsAndFields(t *testing.T) {
 					},
 				},
 			},
-			want: []OnePasswordItemResourceSectionModel{
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -284,7 +284,7 @@ func TestToStateSectionsAndFields(t *testing.T) {
 			modelFields: []model.ItemField{
 				{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "updated value", SectionID: "section1"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -299,7 +299,7 @@ func TestToStateSectionsAndFields(t *testing.T) {
 					},
 				},
 			},
-			want: []OnePasswordItemResourceSectionModel{
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -327,8 +327,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "field3", Label: "Field 3", Type: model.FieldTypeString, Value: "value3", SectionID: "section2"},
 				{ID: "field4", Label: "Field 4", Type: model.FieldTypeString, Value: "value4", SectionID: "section2"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -380,8 +380,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
 				{ID: "field2", Label: "Field 2", Type: model.FieldTypeString, Value: "value2", SectionID: "nonexistent-section"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -404,8 +404,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "section1", Label: ""},
 			},
 			modelFields:   []model.ItemField{},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:        types.StringValue("section1"),
 					Label:     types.StringNull(),
@@ -421,8 +421,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 			modelFields: []model.ItemField{
 				{ID: "field1", Label: "", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
@@ -455,8 +455,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 					},
 				},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),

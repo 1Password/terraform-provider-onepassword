@@ -445,7 +445,7 @@ func TestToModelSections(t *testing.T) {
 	}{
 		"with sections and fields": {
 			state: OnePasswordItemResourceModel{
-				SectionList: []OnePasswordItemResourceSectionModel{
+				SectionList: []OnePasswordItemResourceSectionListModel{
 					{
 						ID:    types.StringValue("section-1"),
 						Label: types.StringValue("Test Section"),
@@ -500,7 +500,7 @@ func TestToModelSections(t *testing.T) {
 		},
 		"with section without ID generates UUID": {
 			state: OnePasswordItemResourceModel{
-				SectionList: []OnePasswordItemResourceSectionModel{
+				SectionList: []OnePasswordItemResourceSectionListModel{
 					{
 						ID:    types.StringValue(""),
 						Label: types.StringValue("New Section"),
@@ -537,7 +537,7 @@ func TestToModelSections(t *testing.T) {
 		},
 		"with multiple sections": {
 			state: OnePasswordItemResourceModel{
-				SectionList: []OnePasswordItemResourceSectionModel{
+				SectionList: []OnePasswordItemResourceSectionListModel{
 					{
 						ID:    types.StringValue("section-1"),
 						Label: types.StringValue("Section 1"),
@@ -584,7 +584,7 @@ func TestToModelSections(t *testing.T) {
 		},
 		"with empty sections": {
 			state: OnePasswordItemResourceModel{
-				SectionList: []OnePasswordItemResourceSectionModel{},
+				SectionList: []OnePasswordItemResourceSectionListModel{},
 			},
 			wantErr: false,
 			validate: func(t *testing.T, item *model.Item) {

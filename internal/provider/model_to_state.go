@@ -40,9 +40,9 @@ func toStateTags(ctx context.Context, modelTags []string, stateTags types.List) 
 	return stateTags, nil
 }
 
-func toStateSectionsAndFields(modelSections []model.ItemSection, modelFields []model.ItemField, stateSections []OnePasswordItemResourceSectionModel) []OnePasswordItemResourceSectionModel {
+func toStateSectionsAndFields(modelSections []model.ItemSection, modelFields []model.ItemField, stateSections []OnePasswordItemResourceSectionListModel) []OnePasswordItemResourceSectionListModel {
 	for _, s := range modelSections {
-		section := OnePasswordItemResourceSectionModel{}
+		section := OnePasswordItemResourceSectionListModel{}
 		posSection := -1
 		newSection := true
 
