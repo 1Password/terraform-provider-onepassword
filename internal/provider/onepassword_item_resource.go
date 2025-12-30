@@ -58,7 +58,8 @@ type OnePasswordItemResourceModel struct {
 	PasswordWO        types.String                          `tfsdk:"password_wo"`
 	PasswordWOVersion types.Int64                           `tfsdk:"password_wo_version"`
 	NoteValue         types.String                          `tfsdk:"note_value"`
-	Section           []OnePasswordItemResourceSectionModel `tfsdk:"section"`
+	SectionList       []OnePasswordItemResourceSectionModel `tfsdk:"section"`
+	SectionMap        types.Map                             `tfsdk:"section_map"`
 	Recipe            []PasswordRecipeModel                 `tfsdk:"password_recipe"`
 }
 
@@ -69,9 +70,10 @@ type PasswordRecipeModel struct {
 }
 
 type OnePasswordItemResourceSectionModel struct {
-	ID    types.String                        `tfsdk:"id"`
-	Label types.String                        `tfsdk:"label"`
-	Field []OnePasswordItemResourceFieldModel `tfsdk:"field"`
+	ID        types.String                        `tfsdk:"id"`
+	Label     types.String                        `tfsdk:"label"`
+	FieldList []OnePasswordItemResourceFieldModel `tfsdk:"field"`
+	FieldMap  types.Map                           `tfsdk:"field_map"`
 }
 
 type OnePasswordItemResourceFieldModel struct {
@@ -116,6 +118,64 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					Optional:            true,
 					Computed:            true,
 					Default:             booldefault.StaticBool(true),
+				},
+			},
+		},
+	}
+
+	// Reusable section nested object schema for map attributes
+	// Note: password_recipe is not supported in the map structure as it requires blocks
+	// Users should use the list-based section/field structure if they need password_recipe
+	sectionNestedObjectSchemaForMap := schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: sectionIDDescription,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseNonNullStateForUnknown(),
+				},
+			},
+			"label": schema.StringAttribute{
+				MarkdownDescription: sectionLabelDescription,
+				Required:            true,
+			},
+			"field_map": schema.MapNestedAttribute{
+				MarkdownDescription: sectionFieldsDescription,
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: fieldIDDescription,
+							Optional:            true,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseNonNullStateForUnknown(),
+							},
+						},
+						"label": schema.StringAttribute{
+							MarkdownDescription: fieldLabelDescription,
+							Required:            true,
+						},
+						"type": schema.StringAttribute{
+							MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+							Optional:            true,
+							Computed:            true,
+							Default:             stringdefault.StaticString("STRING"),
+							Validators: []validator.String{
+								stringvalidator.OneOf(fieldTypes...),
+							},
+						},
+						"value": schema.StringAttribute{
+							MarkdownDescription: fieldValueDescription,
+							Optional:            true,
+							Computed:            true,
+							Sensitive:           true,
+							PlanModifiers: []planmodifier.String{
+								ValueModifier(),
+							},
+						},
+					},
 				},
 			},
 		},
@@ -238,6 +298,11 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				MarkdownDescription: noteValueDescription,
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"section_map": schema.MapNestedAttribute{
+				MarkdownDescription: "A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label.",
+				Optional:            true,
+				NestedObject:        sectionNestedObjectSchemaForMap,
 			},
 		},
 		Blocks: map[string]schema.Block{
@@ -573,7 +638,7 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 	state.Vault = setStringValue(modelItem.VaultID)
 	state.Title = setStringValuePreservingEmpty(modelItem.Title, state.Title)
 	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
-	state.Section = toStateSectionsAndFields(modelItem.Sections, modelItem.Fields, state.Section)
+	state.SectionList = toStateSectionsAndFields(modelItem.Sections, modelItem.Fields, state.SectionList)
 	toStateTopLevelFields(modelItem.Fields, state)
 
 	for _, u := range modelItem.URLs {

@@ -60,8 +60,8 @@ func toStateSectionsAndFields(modelSections []model.ItemSection, modelFields []m
 		section.Label = setStringValuePreservingEmpty(s.Label, section.Label)
 
 		var existingFields []OnePasswordItemResourceFieldModel
-		if section.Field != nil {
-			existingFields = section.Field
+		if section.FieldList != nil {
+			existingFields = section.FieldList
 		}
 		for _, f := range modelFields {
 			if f.SectionID != "" && f.SectionID == s.ID {
@@ -106,7 +106,7 @@ func toStateSectionsAndFields(modelSections []model.ItemSection, modelFields []m
 				}
 			}
 		}
-		section.Field = existingFields
+		section.FieldList = existingFields
 
 		if newSection {
 			stateSections = append(stateSections, section)

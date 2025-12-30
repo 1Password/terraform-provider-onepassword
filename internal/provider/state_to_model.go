@@ -162,7 +162,7 @@ func toModelSectionField(field OnePasswordItemResourceFieldModel, sectionID, sec
 }
 
 func toModelSections(state OnePasswordItemResourceModel, modelItem *model.Item) diag.Diagnostics {
-	for _, section := range state.Section {
+	for _, section := range state.SectionList {
 		sectionID := section.ID.ValueString()
 		if sectionID == "" {
 			sid, err := uuid.GenerateUUID()
@@ -181,7 +181,7 @@ func toModelSections(state OnePasswordItemResourceModel, modelItem *model.Item) 
 		}
 		modelItem.Sections = append(modelItem.Sections, s)
 
-		for _, field := range section.Field {
+		for _, field := range section.FieldList {
 			modelItemField, diagnostics := toModelSectionField(field, s.ID, s.Label)
 			if diagnostics.HasError() {
 				return diagnostics

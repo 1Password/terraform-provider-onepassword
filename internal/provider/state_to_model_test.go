@@ -445,11 +445,11 @@ func TestToModelSections(t *testing.T) {
 	}{
 		"with sections and fields": {
 			state: OnePasswordItemResourceModel{
-				Section: []OnePasswordItemResourceSectionModel{
+				SectionList: []OnePasswordItemResourceSectionModel{
 					{
 						ID:    types.StringValue("section-1"),
 						Label: types.StringValue("Test Section"),
-						Field: []OnePasswordItemResourceFieldModel{
+						FieldList: []OnePasswordItemResourceFieldModel{
 							{
 								ID:      types.StringValue("field-1"),
 								Label:   types.StringValue("Field 1"),
@@ -500,11 +500,11 @@ func TestToModelSections(t *testing.T) {
 		},
 		"with section without ID generates UUID": {
 			state: OnePasswordItemResourceModel{
-				Section: []OnePasswordItemResourceSectionModel{
+				SectionList: []OnePasswordItemResourceSectionModel{
 					{
 						ID:    types.StringValue(""),
 						Label: types.StringValue("New Section"),
-						Field: []OnePasswordItemResourceFieldModel{
+						FieldList: []OnePasswordItemResourceFieldModel{
 							{
 								ID:     types.StringValue("field-1"),
 								Label:  types.StringValue("Field 1"),
@@ -537,11 +537,11 @@ func TestToModelSections(t *testing.T) {
 		},
 		"with multiple sections": {
 			state: OnePasswordItemResourceModel{
-				Section: []OnePasswordItemResourceSectionModel{
+				SectionList: []OnePasswordItemResourceSectionModel{
 					{
 						ID:    types.StringValue("section-1"),
 						Label: types.StringValue("Section 1"),
-						Field: []OnePasswordItemResourceFieldModel{
+						FieldList: []OnePasswordItemResourceFieldModel{
 							{
 								ID:     types.StringValue("field-1"),
 								Label:  types.StringValue("Field 1"),
@@ -554,7 +554,7 @@ func TestToModelSections(t *testing.T) {
 					{
 						ID:    types.StringValue("section-2"),
 						Label: types.StringValue("Section 2"),
-						Field: []OnePasswordItemResourceFieldModel{
+						FieldList: []OnePasswordItemResourceFieldModel{
 							{
 								ID:     types.StringValue("field-2"),
 								Label:  types.StringValue("Field 2"),
@@ -584,7 +584,7 @@ func TestToModelSections(t *testing.T) {
 		},
 		"with empty sections": {
 			state: OnePasswordItemResourceModel{
-				Section: []OnePasswordItemResourceSectionModel{},
+				SectionList: []OnePasswordItemResourceSectionModel{},
 			},
 			wantErr: false,
 			validate: func(t *testing.T, item *model.Item) {
