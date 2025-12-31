@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -40,7 +42,7 @@ func toStateTags(ctx context.Context, modelTags []string, stateTags types.List) 
 	return stateTags, nil
 }
 
-func toStateSectionsAndFields(modelSections []model.ItemSection, modelFields []model.ItemField, stateSections []OnePasswordItemResourceSectionListModel) []OnePasswordItemResourceSectionListModel {
+func toStateSectionsAndFieldsList(modelSections []model.ItemSection, modelFields []model.ItemField, stateSections []OnePasswordItemResourceSectionListModel) []OnePasswordItemResourceSectionListModel {
 	for _, s := range modelSections {
 		section := OnePasswordItemResourceSectionListModel{}
 		posSection := -1
@@ -116,6 +118,108 @@ func toStateSectionsAndFields(modelSections []model.ItemSection, modelFields []m
 	}
 
 	return stateSections
+}
+
+func validateSectionsAndFieldsMap(item *model.Item) diag.Diagnostics {
+	var diagnostics diag.Diagnostics
+
+	// Check for duplicate section labels
+	sectionLabels := make(map[string]bool)
+	for _, s := range item.Sections {
+		if s.Label == "" {
+			diagnostics.AddError(
+				"Section Label Missing",
+				"Item section is missing a label. Section labels are required when using section_map.",
+			)
+			continue
+		}
+
+		// section with the label exists
+		if sectionLabels[s.Label] {
+			diagnostics.AddError(
+				"Duplicate Section Label",
+				fmt.Sprintf("Multiple sections have the same label '%s'. Section labels must be unique when using section_map.", s.Label),
+			)
+			continue
+		}
+
+		sectionLabels[s.Label] = true
+	}
+
+	// Check for duplicate field labels within each section
+	for _, s := range item.Sections {
+		fieldLabels := make(map[string]bool)
+		for _, f := range item.Fields {
+			if f.SectionID == s.ID {
+				if f.Label == "" {
+					diagnostics.AddError(
+						"Field Label Missing",
+						fmt.Sprintf("Field in section '%s' is missing a label. Field labels are required when using field_map.", s.Label),
+					)
+					continue
+				}
+
+				// field with the label exists
+				if fieldLabels[f.Label] {
+					diagnostics.AddError(
+						"Duplicate Field Label",
+						fmt.Sprintf("Multiple fields in section '%s' have the same label '%s'. Field labels must be unique within a section when using field_map.", s.Label, f.Label),
+					)
+					continue
+				}
+
+				fieldLabels[f.Label] = true
+			}
+		}
+	}
+
+	return diagnostics
+}
+
+func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]OnePasswordItemResourceSectionMapModel) diag.Diagnostics {
+	for _, modelSection := range item.Sections {
+		stateSection, exists := stateSectionMap[modelSection.Label]
+		if !exists {
+			stateSection = OnePasswordItemResourceSectionMapModel{
+				ID:       types.StringValue(modelSection.ID),
+				FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
+			}
+		}
+
+		for _, modelField := range item.Fields {
+			// Only process fields that belong to this section
+			if modelField.SectionID != modelSection.ID {
+				continue
+			}
+
+			stateField := OnePasswordItemResourceFieldMapModel{
+				ID:   setStringValue(modelField.ID),
+				Type: setStringValue(string(modelField.Type)),
+			}
+
+			existingFieldValue := stateSection.FieldMap[modelField.Label].Value
+			stateField.Value = setStringValuePreservingEmpty(modelField.Value, existingFieldValue)
+
+			if modelField.Recipe == nil {
+				stateField.Recipe = nil
+			} else {
+				hasDigits, _ := regexp.MatchString("[0-9]", modelField.Value)
+				hasSymbols, _ := regexp.MatchString("[^a-zA-Z0-9]", modelField.Value)
+
+				stateField.Recipe = &PasswordRecipeModel{
+					Length:  types.Int64Value(int64(modelField.Recipe.Length)),
+					Digits:  types.BoolValue(hasDigits),
+					Symbols: types.BoolValue(hasSymbols),
+				}
+			}
+
+			stateSection.FieldMap[modelField.Label] = stateField
+		}
+
+		stateSectionMap[modelSection.Label] = stateSection
+	}
+
+	return nil
 }
 
 func toStateTopLevelFields(modelFields []model.ItemField, state *OnePasswordItemResourceModel) {
