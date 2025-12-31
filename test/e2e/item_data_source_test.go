@@ -452,7 +452,7 @@ func TestAccItemDataSourceSectionMap(t *testing.T) {
 
 	// Build checks for section_map
 	sectionMapChecks := []resource.TestCheckFunc{
-		//resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.%", "2"),
+		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.%", "2"),
 		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Credentials.id"),
 		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Database Config.id"),
 		// Field access via field_map
@@ -461,6 +461,11 @@ func TestAccItemDataSourceSectionMap(t *testing.T) {
 		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.Credentials.field_map.api_key.type", "CONCEALED"),
 		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Credentials.field_map.api_key.value"),
 		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Credentials.field_map.api_secret.value"),
+		// File in Database Config section
+		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.Database Config.file.0.name", "test.txt"),
+		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.Database Config.file.0.content", "This is a test"),
+		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.Database Config.file.0.content_base64", "VGhpcyBpcyBhIHRlc3Q="),
+		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Database Config.file.0.id"),
 
 		// Verify section_map matches section list
 		resource.TestCheckFunc(func(s *terraform.State) error {
