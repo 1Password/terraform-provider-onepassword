@@ -258,6 +258,38 @@ func TestAccItemSSHKey(t *testing.T) {
 	})
 }
 
+func TestAccItemDataSourceSectionMap(t *testing.T) {
+	expectedItem := generateItemWithSections()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.id", expectedItem.Sections[0].Label), expectedItem.Sections[0].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.label", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), expectedItem.Fields[0].Label),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.value", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), expectedItem.Fields[0].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.type", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), string(expectedItem.Fields[0].Type)),
+				),
+			},
+		},
+	})
+}
+
 func testAccItemDataSourceConfig(vault, uuid string) string {
 	return fmt.Sprintf(`
 data "onepassword_item" "test" {
