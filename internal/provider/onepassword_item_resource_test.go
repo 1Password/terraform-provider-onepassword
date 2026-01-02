@@ -376,7 +376,7 @@ EOT
 %s
 EOT
   note_value_wo_version = "1"
-}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), strings.TrimSuffix(expectedItem.Fields[0].Value, "\n"), strings.TrimSuffix(expectedItem.Fields[0].Value, "\n"))
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[0].Value)
 }
 
 func testAccPasswordResourceConfig(expectedItem *model.Item) string {
