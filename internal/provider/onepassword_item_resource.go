@@ -42,24 +42,26 @@ type OnePasswordItemResource struct {
 
 // OnePasswordItemResourceModel describes the resource data model.
 type OnePasswordItemResourceModel struct {
-	ID                types.String                          `tfsdk:"id"`
-	UUID              types.String                          `tfsdk:"uuid"`
-	Vault             types.String                          `tfsdk:"vault"`
-	Category          types.String                          `tfsdk:"category"`
-	Title             types.String                          `tfsdk:"title"`
-	URL               types.String                          `tfsdk:"url"`
-	Hostname          types.String                          `tfsdk:"hostname"`
-	Database          types.String                          `tfsdk:"database"`
-	Port              types.String                          `tfsdk:"port"`
-	Type              types.String                          `tfsdk:"type"`
-	Tags              types.List                            `tfsdk:"tags"`
-	Username          types.String                          `tfsdk:"username"`
-	Password          types.String                          `tfsdk:"password"`
-	PasswordWO        types.String                          `tfsdk:"password_wo"`
-	PasswordWOVersion types.Int64                           `tfsdk:"password_wo_version"`
-	NoteValue         types.String                          `tfsdk:"note_value"`
-	Section           []OnePasswordItemResourceSectionModel `tfsdk:"section"`
-	Recipe            []PasswordRecipeModel                 `tfsdk:"password_recipe"`
+	ID                 types.String                          `tfsdk:"id"`
+	UUID               types.String                          `tfsdk:"uuid"`
+	Vault              types.String                          `tfsdk:"vault"`
+	Category           types.String                          `tfsdk:"category"`
+	Title              types.String                          `tfsdk:"title"`
+	URL                types.String                          `tfsdk:"url"`
+	Hostname           types.String                          `tfsdk:"hostname"`
+	Database           types.String                          `tfsdk:"database"`
+	Port               types.String                          `tfsdk:"port"`
+	Type               types.String                          `tfsdk:"type"`
+	Tags               types.List                            `tfsdk:"tags"`
+	Username           types.String                          `tfsdk:"username"`
+	Password           types.String                          `tfsdk:"password"`
+	PasswordWO         types.String                          `tfsdk:"password_wo"`
+	PasswordWOVersion  types.Int64                           `tfsdk:"password_wo_version"`
+	NoteValue          types.String                          `tfsdk:"note_value"`
+	NoteValueWO        types.String                          `tfsdk:"note_value_wo"`
+	NoteValueWOVersion types.Int64                           `tfsdk:"note_value_wo_version"`
+	Section            []OnePasswordItemResourceSectionModel `tfsdk:"section"`
+	Recipe             []PasswordRecipeModel                 `tfsdk:"password_recipe"`
 }
 
 type PasswordRecipeModel struct {
@@ -239,6 +241,32 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 				Sensitive:           true,
 			},
+			"note_value_wo": schema.StringAttribute{
+				MarkdownDescription: noteValueWriteOnceDescription,
+				Optional:            true,
+				Sensitive:           true,
+				WriteOnly:           true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{path.MatchRoot("note_value")}...,
+					),
+					stringvalidator.AlsoRequires(
+						path.Expressions{path.MatchRoot("note_value_wo_version")}...,
+					),
+				},
+			},
+			"note_value_wo_version": schema.Int64Attribute{
+				MarkdownDescription: noteValueWriteOnceVersionDescription,
+				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.ConflictsWith(
+						path.Expressions{path.MatchRoot("note_value")}...,
+					),
+					int64validator.AlsoRequires(
+						path.Expressions{path.MatchRoot("note_value_wo")}...,
+					),
+				},
+			},
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
@@ -351,13 +379,8 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	// Use the password_wo as password for creation when wo version is used.
-	writeOnly := !config.PasswordWOVersion.IsNull()
-	if writeOnly {
-		// Set password from password_wo if provided (validators ensure both are set together)
-		if !config.PasswordWO.IsNull() && !config.PasswordWO.IsUnknown() {
-			plan.Password = config.PasswordWO
-		}
-	}
+	handleWriteOnlyField(config.PasswordWOVersion, config.PasswordWO, &plan.Password)
+	handleWriteOnlyField(config.NoteValueWOVersion, config.NoteValueWO, &plan.NoteValue)
 
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
@@ -377,9 +400,8 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	// Once created, clear password from state if write only password is used
-	if writeOnly {
-		plan.Password = types.StringNull()
-	}
+	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
+	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -418,10 +440,8 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	// Once read, clear password from state if write only password is used
-	writeOnly := !state.PasswordWOVersion.IsNull()
-	if writeOnly {
-		state.Password = types.StringNull()
-	}
+	clearWriteOnlyFieldFromState(state.PasswordWOVersion, &state.Password)
+	clearWriteOnlyFieldFromState(state.NoteValueWOVersion, &state.NoteValue)
 
 	// Save updated state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -451,38 +471,35 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Handle password_wo: update if version increased, preserve if version unchanged or decreased
-	if !config.PasswordWOVersion.IsNull() {
-		configVersion := config.PasswordWOVersion.ValueInt64()
-		stateVersion := int64(0)
-		if !state.PasswordWOVersion.IsNull() {
-			stateVersion = state.PasswordWOVersion.ValueInt64()
-		}
+	passwordErr := r.handleWriteOnlyFieldUpdate(
+		ctx,
+		config.PasswordWOVersion,
+		state.PasswordWOVersion,
+		config.PasswordWO,
+		&plan.Password,
+		plan.ID,
+		model.FieldPurposePassword,
+		"password",
+	)
+	if passwordErr != nil {
+		resp.Diagnostics.AddError("1Password Item read error", passwordErr.Error())
+		return
+	}
 
-		if configVersion > stateVersion {
-			// Version increased (or first time using password_wo) - use new password_wo value
-			plan.Password = config.PasswordWO
-		} else {
-			// Version unchanged or decreased - preserve existing password by reading current item
-			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
-			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
-			if err != nil {
-				resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read item '%s' from vault '%s' to preserve password, got error: %s", itemUUID, vaultUUID, err))
-				return
-			}
-			// Extract password from current item, or set to null if password field doesn't exist
-			passwordFound := false
-			for _, f := range currentItem.Fields {
-				if f.Purpose == model.FieldPurposePassword {
-					plan.Password = types.StringValue(f.Value)
-					passwordFound = true
-					break
-				}
-			}
-			// password field not found (user removed it in 1Password), sync to that state
-			if !passwordFound {
-				plan.Password = types.StringNull()
-			}
-		}
+	// Handle note_value_wo: update if version increased, preserve if version unchanged or decreased
+	noteValueErr := r.handleWriteOnlyFieldUpdate(
+		ctx,
+		config.NoteValueWOVersion,
+		state.NoteValueWOVersion,
+		config.NoteValueWO,
+		&plan.NoteValue,
+		plan.ID,
+		model.FieldPurposeNotes,
+		"note_value",
+	)
+	if noteValueErr != nil {
+		resp.Diagnostics.AddError("1Password Item read error", noteValueErr.Error())
+		return
 	}
 
 	item, diagnostics := stateToModel(ctx, plan)
@@ -506,9 +523,8 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Once updated, always clear password from state - as it should never be stored when write only password is used.
-	if !config.PasswordWOVersion.IsNull() {
-		plan.Password = types.StringNull()
-	}
+	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
+	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
 
 	// Save updated plan into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
