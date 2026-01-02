@@ -379,21 +379,8 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	// Use the password_wo as password for creation when wo version is used.
-	writeOnly := !config.PasswordWOVersion.IsNull()
-	if writeOnly {
-		// Set password from password_wo if provided (validators ensure both are set together)
-		if !config.PasswordWO.IsNull() && !config.PasswordWO.IsUnknown() {
-			plan.Password = config.PasswordWO
-		}
-	}
-
-	writeOnlyNoteValue := !config.NoteValueWOVersion.IsNull()
-	if writeOnlyNoteValue {
-		// Set note_value from note_value_wo if provided
-		if !config.NoteValueWO.IsNull() && !config.NoteValueWO.IsUnknown() {
-			plan.NoteValue = config.NoteValueWO
-		}
-	}
+	handleWriteOnlyField(config.PasswordWOVersion, config.PasswordWO, &plan.Password)
+	handleWriteOnlyField(config.NoteValueWOVersion, config.NoteValueWO, &plan.NoteValue)
 
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
@@ -413,14 +400,8 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	// Once created, clear password from state if write only password is used
-	if writeOnly {
-		plan.Password = types.StringNull()
-	}
-
-	// Once created, clear note_value from state if write only is used
-	if writeOnlyNoteValue {
-		plan.NoteValue = types.StringNull()
-	}
+	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
+	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -459,16 +440,8 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	// Once read, clear password from state if write only password is used
-	writeOnly := !state.PasswordWOVersion.IsNull()
-	if writeOnly {
-		state.Password = types.StringNull()
-	}
-
-	// Once read, clear note_value from state if write only is used
-	writeOnlyNoteValue := !state.NoteValueWOVersion.IsNull()
-	if writeOnlyNoteValue {
-		state.NoteValue = types.StringNull()
-	}
+	clearWriteOnlyFieldFromState(state.PasswordWOVersion, &state.Password)
+	clearWriteOnlyFieldFromState(state.NoteValueWOVersion, &state.NoteValue)
 
 	// Save updated state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -587,14 +560,8 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Once updated, always clear password from state - as it should never be stored when write only password is used.
-	if !config.PasswordWOVersion.IsNull() {
-		plan.Password = types.StringNull()
-	}
-
-	// Once updated, always clear note_value from state if write only is used
-	if !config.NoteValueWOVersion.IsNull() {
-		plan.NoteValue = types.StringNull()
-	}
+	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
+	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
 
 	// Save updated plan into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -786,5 +753,21 @@ func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {
 		hasSymbols != recipeSymbols ||
 		len(f.Value) != r.Length {
 		f.Generate = true
+	}
+}
+
+// handleWriteOnlyField sets a plan field from its write-only counterpart if the version is set
+func handleWriteOnlyField(version types.Int64, woValue types.String, planValue *types.String) {
+	if !version.IsNull() {
+		if !woValue.IsNull() && !woValue.IsUnknown() {
+			*planValue = woValue
+		}
+	}
+}
+
+// clearWriteOnlyFieldFromState clears a field from state if write-only version is set
+func clearWriteOnlyFieldFromState(version types.Int64, stateValue *types.String) {
+	if !version.IsNull() {
+		*stateValue = types.StringNull()
 	}
 }
