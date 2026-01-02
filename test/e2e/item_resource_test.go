@@ -1537,8 +1537,8 @@ func TestAccItemResourceNoteValueWriteOnlyVersionDecrement(t *testing.T) {
 	})
 }
 
-// verifyNoteValueIn1Password verifies that the note_value in 1Password matches the expected value
-func verifyNoteValueIn1Password(t *testing.T, vaultID string, itemUUID *string, expectedNoteValue string) resource.TestCheckFunc {
+// verifyFieldValueIn1Password verifies that a field value in 1Password matches the expected value
+func verifyFieldValueIn1Password(t *testing.T, vaultID string, itemUUID *string, fieldPurpose model.ItemFieldPurpose, fieldName string, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		ctx := context.Background()
 		client, err := client.CreateTestClient(ctx)
@@ -1551,60 +1551,35 @@ func verifyNoteValueIn1Password(t *testing.T, vaultID string, itemUUID *string, 
 			return fmt.Errorf("failed to get item: %w", err)
 		}
 
-		// Find note_value field (FieldPurposeNotes)
+		// Find field with the specified purpose
 		for _, f := range item.Fields {
-			if f.Purpose == model.FieldPurposeNotes {
-				if f.Value != expectedNoteValue {
-					return fmt.Errorf("note_value mismatch: expected %q, got %q", expectedNoteValue, f.Value)
+			if f.Purpose == fieldPurpose {
+				if f.Value != expectedValue {
+					return fmt.Errorf("%s mismatch: expected %q, got %q", fieldName, expectedValue, f.Value)
 				}
-				t.Logf("Note value verified in 1Password: %q", f.Value)
+				t.Logf("%s verified in 1Password: %q", fieldName, f.Value)
 				return nil
 			}
 		}
 
-		// If note_value field not found and expected note_value is empty, that's OK
-		if expectedNoteValue == "" {
-			t.Log("Note value field not found in 1Password (as expected)")
+		// If field not found and expected value is empty, that's OK
+		if expectedValue == "" {
+			t.Logf("%s field not found in 1Password (as expected)", fieldName)
 			return nil
 		}
 
-		return fmt.Errorf("note_value field not found in item")
+		return fmt.Errorf("%s field not found in item", fieldName)
 	}
+}
+
+// verifyNoteValueIn1Password verifies that the note_value in 1Password matches the expected value
+func verifyNoteValueIn1Password(t *testing.T, vaultID string, itemUUID *string, expectedNoteValue string) resource.TestCheckFunc {
+	return verifyFieldValueIn1Password(t, vaultID, itemUUID, model.FieldPurposeNotes, "note_value", expectedNoteValue)
 }
 
 // verifyPasswordIn1Password verifies that the password in 1Password matches the expected value
 func verifyPasswordIn1Password(t *testing.T, vaultID string, itemUUID *string, expectedPassword string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		ctx := context.Background()
-		client, err := client.CreateTestClient(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to create client: %w", err)
-		}
-
-		item, err := client.GetItem(ctx, *itemUUID, vaultID)
-		if err != nil {
-			return fmt.Errorf("failed to get item: %w", err)
-		}
-
-		// Find password field
-		for _, f := range item.Fields {
-			if f.Purpose == model.FieldPurposePassword {
-				if f.Value != expectedPassword {
-					return fmt.Errorf("password mismatch: expected %q, got %q", expectedPassword, f.Value)
-				}
-				t.Logf("Password verified in 1Password: %q", f.Value)
-				return nil
-			}
-		}
-
-		// If password field not found and expected password is empty, that's OK
-		if expectedPassword == "" {
-			t.Log("Password field not found in 1Password (as expected)")
-			return nil
-		}
-
-		return fmt.Errorf("password field not found in item")
-	}
+	return verifyFieldValueIn1Password(t, vaultID, itemUUID, model.FieldPurposePassword, "password", expectedPassword)
 }
 
 // addUniqueIDToTitle appends a UUID to the title to avoid conflicts in parallel test execution
