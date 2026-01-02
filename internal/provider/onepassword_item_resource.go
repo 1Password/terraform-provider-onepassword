@@ -42,24 +42,26 @@ type OnePasswordItemResource struct {
 
 // OnePasswordItemResourceModel describes the resource data model.
 type OnePasswordItemResourceModel struct {
-	ID                types.String                          `tfsdk:"id"`
-	UUID              types.String                          `tfsdk:"uuid"`
-	Vault             types.String                          `tfsdk:"vault"`
-	Category          types.String                          `tfsdk:"category"`
-	Title             types.String                          `tfsdk:"title"`
-	URL               types.String                          `tfsdk:"url"`
-	Hostname          types.String                          `tfsdk:"hostname"`
-	Database          types.String                          `tfsdk:"database"`
-	Port              types.String                          `tfsdk:"port"`
-	Type              types.String                          `tfsdk:"type"`
-	Tags              types.List                            `tfsdk:"tags"`
-	Username          types.String                          `tfsdk:"username"`
-	Password          types.String                          `tfsdk:"password"`
-	PasswordWO        types.String                          `tfsdk:"password_wo"`
-	PasswordWOVersion types.Int64                           `tfsdk:"password_wo_version"`
-	NoteValue         types.String                          `tfsdk:"note_value"`
-	Section           []OnePasswordItemResourceSectionModel `tfsdk:"section"`
-	Recipe            []PasswordRecipeModel                 `tfsdk:"password_recipe"`
+	ID                 types.String                          `tfsdk:"id"`
+	UUID               types.String                          `tfsdk:"uuid"`
+	Vault              types.String                          `tfsdk:"vault"`
+	Category           types.String                          `tfsdk:"category"`
+	Title              types.String                          `tfsdk:"title"`
+	URL                types.String                          `tfsdk:"url"`
+	Hostname           types.String                          `tfsdk:"hostname"`
+	Database           types.String                          `tfsdk:"database"`
+	Port               types.String                          `tfsdk:"port"`
+	Type               types.String                          `tfsdk:"type"`
+	Tags               types.List                            `tfsdk:"tags"`
+	Username           types.String                          `tfsdk:"username"`
+	Password           types.String                          `tfsdk:"password"`
+	PasswordWO         types.String                          `tfsdk:"password_wo"`
+	PasswordWOVersion  types.Int64                           `tfsdk:"password_wo_version"`
+	NoteValue          types.String                          `tfsdk:"note_value"`
+	NoteValueWO        types.String                          `tfsdk:"note_value_wo"`
+	NoteValueWOVersion types.Int64                           `tfsdk:"note_value_wo_version"`
+	Section            []OnePasswordItemResourceSectionModel `tfsdk:"section"`
+	Recipe             []PasswordRecipeModel                 `tfsdk:"password_recipe"`
 }
 
 type PasswordRecipeModel struct {
@@ -238,6 +240,32 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				MarkdownDescription: noteValueDescription,
 				Optional:            true,
 				Sensitive:           true,
+			},
+			"note_value_wo": schema.StringAttribute{
+				MarkdownDescription: noteValueWriteOnceDescription,
+				Optional:            true,
+				Sensitive:           true,
+				WriteOnly:           true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(
+						path.Expressions{path.MatchRoot("note_value")}...,
+					),
+					stringvalidator.AlsoRequires(
+						path.Expressions{path.MatchRoot("note_value_wo_version")}...,
+					),
+				},
+			},
+			"note_value_wo_version": schema.Int64Attribute{
+				MarkdownDescription: noteValueWriteOnceVersionDescription,
+				Optional:            true,
+				Validators: []validator.Int64{
+					int64validator.ConflictsWith(
+						path.Expressions{path.MatchRoot("note_value")}...,
+					),
+					int64validator.AlsoRequires(
+						path.Expressions{path.MatchRoot("note_value_wo")}...,
+					),
+				},
 			},
 		},
 		Blocks: map[string]schema.Block{
