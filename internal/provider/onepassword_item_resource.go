@@ -77,12 +77,14 @@ type OnePasswordItemResourceSectionModel struct {
 }
 
 type OnePasswordItemResourceFieldModel struct {
-	ID      types.String          `tfsdk:"id"`
-	Label   types.String          `tfsdk:"label"`
-	Purpose types.String          `tfsdk:"purpose"`
-	Type    types.String          `tfsdk:"type"`
-	Value   types.String          `tfsdk:"value"`
-	Recipe  []PasswordRecipeModel `tfsdk:"password_recipe"`
+	ID             types.String          `tfsdk:"id"`
+	Label          types.String          `tfsdk:"label"`
+	Purpose        types.String          `tfsdk:"purpose"`
+	Type           types.String          `tfsdk:"type"`
+	Value          types.String          `tfsdk:"value"`
+	ValueWo        types.String          `tfsdk:"value_wo"`
+	ValueWoVersion types.Int64           `tfsdk:"value_wo_version"`
+	Recipe         []PasswordRecipeModel `tfsdk:"password_recipe"`
 }
 
 func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -328,6 +330,32 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 											ValueModifier(),
 										},
 									},
+									"value_wo": schema.StringAttribute{
+										MarkdownDescription: fieldValueWriteOnceDescription,
+										Optional:            true,
+										Sensitive:           true,
+										WriteOnly:           true,
+										Validators: []validator.String{
+											stringvalidator.ConflictsWith(
+												path.Expressions{path.MatchRelative().AtParent().AtName("value")}...,
+											),
+											stringvalidator.AlsoRequires(
+												path.Expressions{path.MatchRelative().AtParent().AtName("value_wo_version")}...,
+											),
+										},
+									},
+									"value_wo_version": schema.Int64Attribute{
+										MarkdownDescription: fieldValueWriteOnceVersionDescription,
+										Optional:            true,
+										Validators: []validator.Int64{
+											int64validator.ConflictsWith(
+												path.Expressions{path.MatchRelative().AtParent().AtName("value")}...,
+											),
+											int64validator.AlsoRequires(
+												path.Expressions{path.MatchRelative().AtParent().AtName("value_wo")}...,
+											),
+										},
+									},
 								},
 								Blocks: map[string]schema.Block{
 									"password_recipe": passwordRecipeBlockSchema,
@@ -378,9 +406,14 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// Use the password_wo as password for creation when wo version is used.
+	// Handle write-only fields
 	handleWriteOnlyField(config.PasswordWOVersion, config.PasswordWO, &plan.Password)
 	handleWriteOnlyField(config.NoteValueWOVersion, config.NoteValueWO, &plan.NoteValue)
+	for _, section := range plan.Section {
+		for _, field := range section.Field {
+			handleWriteOnlyField(field.ValueWoVersion, field.ValueWo, &field.Value)
+		}
+	}
 
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
@@ -402,6 +435,11 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	// Once created, clear password from state if write only password is used
 	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
 	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
+	for _, section := range plan.Section {
+		for _, field := range section.Field {
+			clearWriteOnlyFieldFromState(field.ValueWoVersion, &field.Value)
+		}
+	}
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -439,9 +477,14 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	// Once read, clear password from state if write only password is used
+	// Clear write-only fields from state
 	clearWriteOnlyFieldFromState(state.PasswordWOVersion, &state.Password)
 	clearWriteOnlyFieldFromState(state.NoteValueWOVersion, &state.NoteValue)
+	for _, section := range state.Section {
+		for _, field := range section.Field {
+			clearWriteOnlyFieldFromState(field.ValueWoVersion, &field.Value)
+		}
+	}
 
 	// Save updated state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -471,70 +514,64 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Handle password_wo: update if version increased, preserve if version unchanged or decreased
-	if !config.PasswordWOVersion.IsNull() {
-		configVersion := config.PasswordWOVersion.ValueInt64()
-		stateVersion := int64(0)
-		if !state.PasswordWOVersion.IsNull() {
-			stateVersion = state.PasswordWOVersion.ValueInt64()
-		}
-
-		if configVersion > stateVersion {
-			// Version increased (or first time using password_wo) - use new password_wo value
-			plan.Password = config.PasswordWO
-		} else {
-			// Version unchanged or decreased - preserve existing password by reading current item
-			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
-			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
-			if err != nil {
-				resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read item '%s' from vault '%s' to preserve password, got error: %s", itemUUID, vaultUUID, err))
-				return
-			}
-			// Extract password from current item, or set to null if password field doesn't exist
-			passwordFound := false
-			for _, f := range currentItem.Fields {
-				if f.Purpose == model.FieldPurposePassword {
-					plan.Password = types.StringValue(f.Value)
-					passwordFound = true
-					break
-				}
-			}
-			// password field not found (user removed it in 1Password), sync to that state
-			if !passwordFound {
-				plan.Password = types.StringNull()
-			}
-		}
+	if err := r.handleWriteOnlyFieldUpdate(
+		ctx,
+		config.PasswordWOVersion,
+		state.PasswordWOVersion,
+		config.PasswordWO,
+		&plan.Password,
+		plan.ID,
+		model.FieldPurposePassword,
+		"password",
+	); err != nil {
+		resp.Diagnostics.AddError("1Password Item read error", err.Error())
+		return
 	}
-	// Handle note_value_wo: update if version increased, preserve if version unchanged or decreased
-	if !config.NoteValueWOVersion.IsNull() {
-		configVersion := config.NoteValueWOVersion.ValueInt64()
-		stateVersion := int64(0)
-		if !state.NoteValueWOVersion.IsNull() {
-			stateVersion = state.NoteValueWOVersion.ValueInt64()
-		}
 
-		if configVersion > stateVersion {
-			// Version increased - use new note_value_wo value
-			plan.NoteValue = config.NoteValueWO
-		} else {
-			// Version unchanged or decreased - preserve existing note_value by reading current item
-			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
-			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
-			if err != nil {
-				resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read item '%s' from vault '%s' to preserve note_value, got error: %s", itemUUID, vaultUUID, err))
+	// Handle note_value_wo: update if version increased, preserve if version unchanged or decreased
+	if err := r.handleWriteOnlyFieldUpdate(
+		ctx,
+		config.NoteValueWOVersion,
+		state.NoteValueWOVersion,
+		config.NoteValueWO,
+		&plan.NoteValue,
+		plan.ID,
+		model.FieldPurposeNotes,
+		"note_value",
+	); err != nil {
+		resp.Diagnostics.AddError("1Password Item read error", err.Error())
+		return
+	}
+
+	// Handle write-only fields in sections
+	for _, section := range plan.Section {
+		for _, field := range section.Field {
+			// if err := r.handleWriteOnlyFieldUpdate(
+			// 	ctx,
+			// 	field.ValueWoVersion,
+			// 	state.ValueWoVersion,
+			// 	field.ValueWo,
+			// 	&field.Value,
+			// 	plan.ID,
+			// 	field.Purpose,
+			// 	"field_value",
+			// ); err != nil {
+			// 	resp.Diagnostics.AddError("1Password Item read error", err.Error())
+			// 	return
+			// }
+
+			if err := r.handleWriteOnlyFieldUpdate(
+				ctx,
+				field.ValueWoVersion,
+				state.Section[0].Field[0].ValueWoVersion,
+				field.ValueWo,
+				&field.Value,
+				plan.ID,
+				model.FieldPurpose(field.Purpose.ValueString()),
+				"field_value",
+			); err != nil {
+				resp.Diagnostics.AddError("1Password Item read error", err.Error())
 				return
-			}
-			// Extract note_value from current item
-			noteValueFound := false
-			for _, f := range currentItem.Fields {
-				if f.Purpose == model.FieldPurposeNotes {
-					plan.NoteValue = types.StringValue(f.Value)
-					noteValueFound = true
-					break
-				}
-			}
-			// note_value field not found (user removed it in 1Password), sync to that state
-			if !noteValueFound {
-				plan.NoteValue = types.StringNull()
 			}
 		}
 	}
@@ -559,9 +596,14 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	// Once updated, always clear password from state - as it should never be stored when write only password is used.
+	// Clear write-only fields from state
 	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
 	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
+	for _, section := range plan.Section {
+		for _, field := range section.Field {
+			clearWriteOnlyFieldFromState(field.ValueWoVersion, &field.Value)
+		}
+	}
 
 	// Save updated plan into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -770,4 +812,52 @@ func clearWriteOnlyFieldFromState(version types.Int64, stateValue *types.String)
 	if !version.IsNull() {
 		*stateValue = types.StringNull()
 	}
+}
+
+// handleWriteOnlyFieldUpdate handles version-based updates for write-only fields
+func (r *OnePasswordItemResource) handleWriteOnlyFieldUpdate(
+	ctx context.Context,
+	configVersion types.Int64,
+	stateVersion types.Int64,
+	woValue types.String,
+	planValue *types.String,
+	planID types.String,
+	fieldPurpose model.ItemFieldPurpose,
+	fieldName string,
+) error {
+	if configVersion.IsNull() {
+		return nil
+	}
+
+	configVer := configVersion.ValueInt64()
+	stateVer := int64(0)
+	if !stateVersion.IsNull() {
+		stateVer = stateVersion.ValueInt64()
+	}
+
+	if configVer > stateVer {
+		// Version increased - use new write-only value
+		*planValue = woValue
+	} else {
+		// Version unchanged or decreased - preserve existing value by reading current item
+		vaultUUID, itemUUID := vaultAndItemUUID(planID.ValueString())
+		currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
+		if err != nil {
+			return fmt.Errorf("Could not read item '%s' from vault '%s' to preserve %s, got error: %s", itemUUID, vaultUUID, fieldName, err)
+		}
+		// Extract field from current item
+		fieldFound := false
+		for _, f := range currentItem.Fields {
+			if f.Purpose == fieldPurpose {
+				*planValue = types.StringValue(f.Value)
+				fieldFound = true
+				break
+			}
+		}
+		// Field not found (user removed it in 1Password), sync to that state
+		if !fieldFound {
+			*planValue = types.StringNull()
+		}
+	}
+	return nil
 }
