@@ -471,72 +471,35 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	}
 
 	// Handle password_wo: update if version increased, preserve if version unchanged or decreased
-	if !config.PasswordWOVersion.IsNull() {
-		configVersion := config.PasswordWOVersion.ValueInt64()
-		stateVersion := int64(0)
-		if !state.PasswordWOVersion.IsNull() {
-			stateVersion = state.PasswordWOVersion.ValueInt64()
-		}
-
-		if configVersion > stateVersion {
-			// Version increased (or first time using password_wo) - use new password_wo value
-			plan.Password = config.PasswordWO
-		} else {
-			// Version unchanged or decreased - preserve existing password by reading current item
-			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
-			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
-			if err != nil {
-				resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read item '%s' from vault '%s' to preserve password, got error: %s", itemUUID, vaultUUID, err))
-				return
-			}
-			// Extract password from current item, or set to null if password field doesn't exist
-			passwordFound := false
-			for _, f := range currentItem.Fields {
-				if f.Purpose == model.FieldPurposePassword {
-					plan.Password = types.StringValue(f.Value)
-					passwordFound = true
-					break
-				}
-			}
-			// password field not found (user removed it in 1Password), sync to that state
-			if !passwordFound {
-				plan.Password = types.StringNull()
-			}
-		}
+	passwordErr := r.handleWriteOnlyFieldUpdate(
+		ctx,
+		config.PasswordWOVersion,
+		state.PasswordWOVersion,
+		config.PasswordWO,
+		&plan.Password,
+		plan.ID,
+		model.FieldPurposePassword,
+		"password",
+	)
+	if passwordErr != nil {
+		resp.Diagnostics.AddError("1Password Item read error", passwordErr.Error())
+		return
 	}
-	// Handle note_value_wo: update if version increased, preserve if version unchanged or decreased
-	if !config.NoteValueWOVersion.IsNull() {
-		configVersion := config.NoteValueWOVersion.ValueInt64()
-		stateVersion := int64(0)
-		if !state.NoteValueWOVersion.IsNull() {
-			stateVersion = state.NoteValueWOVersion.ValueInt64()
-		}
 
-		if configVersion > stateVersion {
-			// Version increased - use new note_value_wo value
-			plan.NoteValue = config.NoteValueWO
-		} else {
-			// Version unchanged or decreased - preserve existing note_value by reading current item
-			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
-			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
-			if err != nil {
-				resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read item '%s' from vault '%s' to preserve note_value, got error: %s", itemUUID, vaultUUID, err))
-				return
-			}
-			// Extract note_value from current item
-			noteValueFound := false
-			for _, f := range currentItem.Fields {
-				if f.Purpose == model.FieldPurposeNotes {
-					plan.NoteValue = types.StringValue(f.Value)
-					noteValueFound = true
-					break
-				}
-			}
-			// note_value field not found (user removed it in 1Password), sync to that state
-			if !noteValueFound {
-				plan.NoteValue = types.StringNull()
-			}
-		}
+	// Handle note_value_wo: update if version increased, preserve if version unchanged or decreased
+	noteValueErr := r.handleWriteOnlyFieldUpdate(
+		ctx,
+		config.NoteValueWOVersion,
+		state.NoteValueWOVersion,
+		config.NoteValueWO,
+		&plan.NoteValue,
+		plan.ID,
+		model.FieldPurposeNotes,
+		"note_value",
+	)
+	if noteValueErr != nil {
+		resp.Diagnostics.AddError("1Password Item read error", noteValueErr.Error())
+		return
 	}
 
 	item, diagnostics := stateToModel(ctx, plan)
@@ -770,4 +733,51 @@ func clearWriteOnlyFieldFromState(version types.Int64, stateValue *types.String)
 	if !version.IsNull() {
 		*stateValue = types.StringNull()
 	}
+}
+
+func (r *OnePasswordItemResource) handleWriteOnlyFieldUpdate(
+	ctx context.Context,
+	configVersion types.Int64,
+	stateVersion types.Int64,
+	woValue types.String,
+	planValue *types.String,
+	planID types.String,
+	fieldPurpose model.ItemFieldPurpose,
+	fieldName string,
+) error {
+	if configVersion.IsNull() {
+		return nil
+	}
+
+	configVer := configVersion.ValueInt64()
+	stateVer := int64(0)
+	if !stateVersion.IsNull() {
+		stateVer = stateVersion.ValueInt64()
+	}
+
+	if configVer > stateVer {
+		// Version increased - use new write-only value
+		*planValue = woValue
+	} else {
+		// Version unchanged or decreased - preserve existing value by reading current item
+		vaultUUID, itemUUID := vaultAndItemUUID(planID.ValueString())
+		currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
+		if err != nil {
+			return fmt.Errorf("Could not read item '%s' from vault '%s' to preserve %s, got error: %s", itemUUID, vaultUUID, fieldName, err)
+		}
+		// Extract field from current item
+		fieldFound := false
+		for _, f := range currentItem.Fields {
+			if f.Purpose == fieldPurpose {
+				*planValue = types.StringValue(f.Value)
+				fieldFound = true
+				break
+			}
+		}
+		// Field not found (user removed it in 1Password), sync to that state
+		if !fieldFound {
+			*planValue = types.StringNull()
+		}
+	}
+	return nil
 }
