@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -53,6 +55,7 @@ type OnePasswordItemDataSourceModel struct {
 	PrivateKey        types.String                  `tfsdk:"private_key"`
 	PrivateKeyOpenSSH types.String                  `tfsdk:"private_key_openssh"`
 	Section           []OnePasswordItemSectionModel `tfsdk:"section"`
+	SectionMap        types.Map                     `tfsdk:"section_map"`
 	File              []OnePasswordItemFileModel    `tfsdk:"file"`
 }
 
@@ -76,6 +79,19 @@ type OnePasswordItemFieldModel struct {
 	Purpose types.String `tfsdk:"purpose"`
 	Type    types.String `tfsdk:"type"`
 	Value   types.String `tfsdk:"value"`
+}
+
+type OnePasswordItemSectionMapModel struct {
+	ID       types.String                                   `tfsdk:"id"`
+	FieldMap map[string]OnePasswordItemSectionMapFieldModel `tfsdk:"field_map"`
+	File     []OnePasswordItemFileModel                     `tfsdk:"file"`
+}
+
+type OnePasswordItemSectionMapFieldModel struct {
+	ID    types.String `tfsdk:"id"`
+	Label types.String `tfsdk:"label"`
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
 }
 
 func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -198,7 +214,71 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 				Sensitive:           true,
 			},
+			"section_map": schema.MapNestedAttribute{
+				MarkdownDescription: "A map of sections in the item, keyed by section label. This allows easy lookup of sections and fields by name.",
+				Computed:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: sectionIDDescription,
+							Computed:            true,
+						},
+						"field_map": schema.MapNestedAttribute{
+							MarkdownDescription: "A map of fields in the section, keyed by field label.",
+							Computed:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fieldIDDescription,
+										Computed:            true,
+									},
+									"label": schema.StringAttribute{
+										MarkdownDescription: fieldLabelDescription,
+										Computed:            true,
+									},
+									"type": schema.StringAttribute{
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+										Computed:            true,
+									},
+									"value": schema.StringAttribute{
+										MarkdownDescription: fieldValueDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+						"file": schema.ListNestedAttribute{
+							MarkdownDescription: sectionFilesDescription,
+							Computed:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fileIDDescription,
+										Computed:            true,
+									},
+									"name": schema.StringAttribute{
+										MarkdownDescription: fileNameDescription,
+										Computed:            true,
+									},
+									"content": schema.StringAttribute{
+										MarkdownDescription: fileContentDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+									"content_base64": schema.StringAttribute{
+										MarkdownDescription: fileContentBase64Description,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
+
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
 				MarkdownDescription: sectionsDescription,
@@ -355,6 +435,13 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		data.Section = append(data.Section, section)
 	}
 
+	sectionMap, diag := buildSectionMap(ctx, item, d.client)
+	resp.Diagnostics.Append(diag...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.SectionMap = sectionMap
+
 	for _, f := range item.Fields {
 		switch f.Purpose {
 		case model.FieldPurposeUsername:
@@ -436,4 +523,89 @@ func getItemForDataSource(ctx context.Context, client onepassword.Client, data O
 		return client.GetItem(ctx, itemUUID, vaultUUID)
 	}
 	return nil, errors.New("uuid or title must be set")
+}
+
+func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.Client) (types.Map, diag.Diagnostics) {
+	var diagnostics diag.Diagnostics
+
+	sectionMap := make(map[string]OnePasswordItemSectionMapModel)
+
+	for _, s := range item.Sections {
+		sectionLabel := s.Label
+		if sectionLabel == "" {
+			// Use the section ID as the label if the section has no label
+			sectionLabel = s.ID
+		}
+
+		fieldMap := make(map[string]OnePasswordItemSectionMapFieldModel)
+
+		for _, f := range item.Fields {
+			if f.SectionID != "" && f.SectionID == s.ID {
+				fieldLabel := f.Label
+				if fieldLabel != "" {
+					fieldMap[fieldLabel] = OnePasswordItemSectionMapFieldModel{
+						ID:    types.StringValue(f.ID),
+						Label: types.StringValue(f.Label),
+						Type:  types.StringValue(string(f.Type)),
+						Value: types.StringValue(f.Value),
+					}
+				}
+			}
+		}
+
+		var sectionFiles []OnePasswordItemFileModel
+		for _, f := range item.Files {
+			if f.SectionID != "" && f.SectionID == s.ID {
+				content, err := f.Content()
+				if err != nil {
+					content, err = client.GetFileContent(ctx, &f, item.ID, item.VaultID)
+				}
+				if err != nil {
+					diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+					continue
+				}
+				sectionFiles = append(sectionFiles, OnePasswordItemFileModel{
+					ID:            types.StringValue(f.ID),
+					Name:          types.StringValue(f.Name),
+					Content:       types.StringValue(string(content)),
+					ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+				})
+			}
+		}
+
+		sectionMap[sectionLabel] = OnePasswordItemSectionMapModel{
+			ID:       types.StringValue(s.ID),
+			FieldMap: fieldMap,
+			File:     sectionFiles,
+		}
+	}
+
+	sectionMapValue, diag := types.MapValueFrom(ctx, types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"id": types.StringType,
+			"field_map": types.MapType{
+				ElemType: types.ObjectType{
+					AttrTypes: map[string]attr.Type{
+						"id":    types.StringType,
+						"label": types.StringType,
+						"type":  types.StringType,
+						"value": types.StringType,
+					},
+				},
+			},
+			"file": types.ListType{
+				ElemType: types.ObjectType{
+					AttrTypes: map[string]attr.Type{
+						"id":             types.StringType,
+						"name":           types.StringType,
+						"content":        types.StringType,
+						"content_base64": types.StringType,
+					},
+				},
+			},
+		},
+	}, sectionMap)
+	diagnostics.Append(diag...)
+
+	return sectionMapValue, diagnostics
 }
