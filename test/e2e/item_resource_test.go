@@ -1354,6 +1354,224 @@ func TestAccItemResourcePasswordWriteOnlyVersionDecrement(t *testing.T) {
 	})
 }
 
+// TestAccItemResourceNoteValueWriteOnly tests the note_value_wo (write-only) functionality
+func TestAccItemResourceNoteValueWriteOnly(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Note Value Write-Only", uniqueID)
+
+	var itemUUID string
+
+	// Step 1: Create item with note_value_wo
+	createAttrs := map[string]any{
+		"title":                 title,
+		"category":              "secure_note",
+		"note_value_wo":         "initial-note-value-123",
+		"note_value_wo_version": 1,
+	}
+
+	// Step 2: Update note_value by incrementing version
+	updateNoteValueAttrs := map[string]any{
+		"title":                 title,
+		"category":              "secure_note",
+		"note_value_wo":         "updated-note-value-456",
+		"note_value_wo_version": 2,
+	}
+
+	// Step 3: Update other fields without changing note_value (version unchanged)
+	updateOtherFieldsAttrs := map[string]any{
+		"title":                 title,
+		"category":              "secure_note",
+		"tags":                  []string{"tag1", "tag2"},
+		"note_value_wo":         "updated-note-value-456", // Same note_value, but won't be in plan
+		"note_value_wo_version": 2,                        // Same version - note_value should be preserved
+	}
+
+	// Step 4: Add section while preserving note_value
+	updateWithSectionAttrs := map[string]any{
+		"title":                 title,
+		"category":              "secure_note",
+		"tags":                  []string{"tag1", "tag2"},
+		"note_value_wo":         "updated-note-value-456",
+		"note_value_wo_version": 2, // Same version - note_value should be preserved
+		"section": sections.MapSections([]sections.TestSection{
+			{
+				Label: "Test Section",
+				Fields: []sections.TestField{
+					{Label: "Test Field", Value: "test-value", Type: "STRING"},
+				},
+			},
+		}),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create with note_value_wo
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_NOTE_VALUE_WO"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "category", "secure_note"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value_wo_version", "1"),
+					// Verify note_value_wo is not in state (write-only)
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "note_value_wo"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "note_value"),
+					// Verify note_value was set in 1Password by checking via client
+					verifyNoteValueIn1Password(t, testVaultID, &itemUUID, "initial-note-value-123"),
+				),
+			},
+			// Step 2: Update note_value by incrementing version
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, updateNoteValueAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_NOTE_VALUE_VERSION_INCREMENT"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value_wo_version", "2"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "note_value_wo"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "note_value"),
+					// Verify note_value was updated in 1Password
+					verifyNoteValueIn1Password(t, testVaultID, &itemUUID, "updated-note-value-456"),
+				),
+			},
+			// Step 3: Update other fields without changing note_value (version unchanged)
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, updateOtherFieldsAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_OTHER_FIELDS_PRESERVE_NOTE_VALUE"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "tags.#", "2"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value_wo_version", "2"),
+					// Verify note_value was preserved (not changed)
+					verifyNoteValueIn1Password(t, testVaultID, &itemUUID, "updated-note-value-456"),
+				),
+			},
+			// Step 4: Add section while preserving note_value
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, updateWithSectionAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "ADD_SECTION_PRESERVE_NOTE_VALUE"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.#", "1"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", "Test Section"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.#", "1"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.label", "Test Field"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value", "test-value"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value_wo_version", "2"),
+					// Verify note_value was preserved when adding section
+					verifyNoteValueIn1Password(t, testVaultID, &itemUUID, "updated-note-value-456"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourceNoteValueWriteOnlyVersionDecrement tests that note_value is not updated when version is decremented
+func TestAccItemResourceNoteValueWriteOnlyVersionDecrement(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Note Value WO Version Decrement", uniqueID)
+
+	var itemUUID string
+
+	createAttrs := map[string]any{
+		"title":                 title,
+		"category":              "secure_note",
+		"note_value_wo":         "initial-note-value-123",
+		"note_value_wo_version": 2,
+	}
+
+	// Try to decrement version (should not update note_value)
+	decrementVersionAttrs := map[string]any{
+		"title":                 title,
+		"category":              "secure_note",
+		"note_value_wo":         "should-not-be-used",
+		"note_value_wo_version": 1, // Decremented - note_value should not be updated
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create with version 2
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_VERSION_2"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value_wo_version", "2"),
+					verifyNoteValueIn1Password(t, testVaultID, &itemUUID, "initial-note-value-123"),
+				),
+			},
+			// Try to decrement version - note_value should not be updated
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, decrementVersionAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "DECREMENT_VERSION"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value_wo_version", "1"),
+					// Note value should still be the original one (not updated)
+					verifyNoteValueIn1Password(t, testVaultID, &itemUUID, "initial-note-value-123"),
+				),
+			},
+		},
+	})
+}
+
+// verifyNoteValueIn1Password verifies that the note_value in 1Password matches the expected value
+func verifyNoteValueIn1Password(t *testing.T, vaultID string, itemUUID *string, expectedNoteValue string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ctx := context.Background()
+		client, err := client.CreateTestClient(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create client: %w", err)
+		}
+
+		item, err := client.GetItem(ctx, *itemUUID, vaultID)
+		if err != nil {
+			return fmt.Errorf("failed to get item: %w", err)
+		}
+
+		// Find note_value field (FieldPurposeNotes)
+		for _, f := range item.Fields {
+			if f.Purpose == model.FieldPurposeNotes {
+				if f.Value != expectedNoteValue {
+					return fmt.Errorf("note_value mismatch: expected %q, got %q", expectedNoteValue, f.Value)
+				}
+				t.Logf("Note value verified in 1Password: %q", f.Value)
+				return nil
+			}
+		}
+
+		// If note_value field not found and expected note_value is empty, that's OK
+		if expectedNoteValue == "" {
+			t.Log("Note value field not found in 1Password (as expected)")
+			return nil
+		}
+
+		return fmt.Errorf("note_value field not found in item")
+	}
+}
+
 // verifyPasswordIn1Password verifies that the password in 1Password matches the expected value
 func verifyPasswordIn1Password(t *testing.T, vaultID string, itemUUID *string, expectedPassword string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {

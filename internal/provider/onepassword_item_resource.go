@@ -387,6 +387,14 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		}
 	}
 
+	writeOnlyNoteValue := !config.NoteValueWOVersion.IsNull()
+	if writeOnlyNoteValue {
+		// Set note_value from note_value_wo if provided
+		if !config.NoteValueWO.IsNull() && !config.NoteValueWO.IsUnknown() {
+			plan.NoteValue = config.NoteValueWO
+		}
+	}
+
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -407,6 +415,11 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	// Once created, clear password from state if write only password is used
 	if writeOnly {
 		plan.Password = types.StringNull()
+	}
+
+	// Once created, clear note_value from state if write only is used
+	if writeOnlyNoteValue {
+		plan.NoteValue = types.StringNull()
 	}
 
 	// Write logs using the tflog package
@@ -449,6 +462,12 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 	writeOnly := !state.PasswordWOVersion.IsNull()
 	if writeOnly {
 		state.Password = types.StringNull()
+	}
+
+	// Once read, clear note_value from state if write only is used
+	writeOnlyNoteValue := !state.NoteValueWOVersion.IsNull()
+	if writeOnlyNoteValue {
+		state.NoteValue = types.StringNull()
 	}
 
 	// Save updated state
@@ -512,6 +531,40 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 			}
 		}
 	}
+	// Handle note_value_wo: update if version increased, preserve if version unchanged or decreased
+	if !config.NoteValueWOVersion.IsNull() {
+		configVersion := config.NoteValueWOVersion.ValueInt64()
+		stateVersion := int64(0)
+		if !state.NoteValueWOVersion.IsNull() {
+			stateVersion = state.NoteValueWOVersion.ValueInt64()
+		}
+
+		if configVersion > stateVersion {
+			// Version increased - use new note_value_wo value
+			plan.NoteValue = config.NoteValueWO
+		} else {
+			// Version unchanged or decreased - preserve existing note_value by reading current item
+			vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
+			currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
+			if err != nil {
+				resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read item '%s' from vault '%s' to preserve note_value, got error: %s", itemUUID, vaultUUID, err))
+				return
+			}
+			// Extract note_value from current item
+			noteValueFound := false
+			for _, f := range currentItem.Fields {
+				if f.Purpose == model.FieldPurposeNotes {
+					plan.NoteValue = types.StringValue(f.Value)
+					noteValueFound = true
+					break
+				}
+			}
+			// note_value field not found (user removed it in 1Password), sync to that state
+			if !noteValueFound {
+				plan.NoteValue = types.StringNull()
+			}
+		}
+	}
 
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
@@ -536,6 +589,11 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	// Once updated, always clear password from state - as it should never be stored when write only password is used.
 	if !config.PasswordWOVersion.IsNull() {
 		plan.Password = types.StringNull()
+	}
+
+	// Once updated, always clear note_value from state if write only is used
+	if !config.NoteValueWOVersion.IsNull() {
+		plan.NoteValue = types.StringNull()
 	}
 
 	// Save updated plan into Terraform state
