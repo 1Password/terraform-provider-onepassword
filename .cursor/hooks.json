@@ -1,0 +1,14 @@
+
+{
+    "version": 1,
+    "hooks": {
+      "beforeShellExecution": [
+        {
+          "command": ".cursor/hooks/1password/validate-mounted-env-files.sh"
+        },
+        {
+          "command": ".cursor/hooks/1password/scan-secrets-on-commit.sh"
+        }
+      ]
+    }
+  }
