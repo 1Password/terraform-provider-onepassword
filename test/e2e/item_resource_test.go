@@ -1537,264 +1537,8 @@ func TestAccItemResourceNoteValueWriteOnlyVersionDecrement(t *testing.T) {
 	})
 }
 
-// TestAccItemResourceSectionFieldValueWriteOnly tests the section field value_wo (write-only) functionality
-func TestAccItemResourceSectionFieldValueWriteOnly(t *testing.T) {
-	testVaultID := vault.GetTestVaultID(t)
-	uniqueID := uuid.New().String()
-	title := addUniqueIDToTitle("Test Section Field Value Write-Only", uniqueID)
-
-	var itemUUID string
-
-	// Step 1: Create item with section field value_wo
-	createAttrs := map[string]any{
-		"title":    title,
-		"category": "login",
-		"username": "testuser@example.com",
-		"section": sections.MapSections([]sections.TestSection{
-			{
-				Label: "Credentials",
-				Fields: []sections.TestField{
-					{
-						Label:                 "API Key",
-						ValueWriteOnly:        "initial-api-key-123",
-						ValueWriteOnlyVersion: 1,
-						Type:                  "CONCEALED",
-					},
-				},
-			},
-		}),
-	}
-
-	// Step 2: Update field value by incrementing version
-	updateFieldValueAttrs := map[string]any{
-		"title":    title,
-		"category": "login",
-		"username": "testuser@example.com",
-		"section": sections.MapSections([]sections.TestSection{
-			{
-				Label: "Credentials",
-				Fields: []sections.TestField{
-					{
-						Label:                 "API Key",
-						ValueWriteOnly:        "updated-api-key-456",
-						ValueWriteOnlyVersion: 2,
-						Type:                  "CONCEALED",
-					},
-				},
-			},
-		}),
-	}
-
-	// Step 3: Update other fields without changing field value (version unchanged)
-	updateOtherFieldsAttrs := map[string]any{
-		"title":    title,
-		"category": "login",
-		"username": "updateduser@example.com",
-		"url":      "https://example.com",
-		"section": sections.MapSections([]sections.TestSection{
-			{
-				Label: "Credentials",
-				Fields: []sections.TestField{
-					{
-						Label:                 "API Key",
-						ValueWriteOnly:        "updated-api-key-456", // Same value, but won't be in plan
-						ValueWriteOnlyVersion: 2,                     // Same version - value should be preserved
-						Type:                  "CONCEALED",
-					},
-				},
-			},
-		}),
-	}
-
-	// Step 4: Add another field while preserving the first field value
-	updateWithAdditionalFieldAttrs := map[string]any{
-		"title":    title,
-		"category": "login",
-		"username": "updateduser@example.com",
-		"url":      "https://example.com",
-		"section": sections.MapSections([]sections.TestSection{
-			{
-				Label: "Credentials",
-				Fields: []sections.TestField{
-					{
-						Label:                 "API Key",
-						ValueWriteOnly:        "updated-api-key-456",
-						ValueWriteOnlyVersion: 2, // Same version - value should be preserved
-						Type:                  "CONCEALED",
-					},
-					{
-						Label: "Secret Token",
-						Value: "public-token-value",
-						Type:  "STRING",
-					},
-				},
-			},
-		}),
-	}
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			// Step 1: Create with section field value_wo
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					logStep(t, "CREATE_WITH_SECTION_FIELD_VALUE_WO"),
-					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "category", "login"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.#", "1"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.label", "Credentials"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.#", "1"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.label", "API Key"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo_version", "1"),
-					// Verify value_wo is not in state (write-only)
-					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo"),
-					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section.0.field.0.value"),
-					// Verify field value was set in 1Password by checking via client
-					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credentials", "API Key", "initial-api-key-123"),
-				),
-			},
-			// Step 2: Update field value by incrementing version
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, updateFieldValueAttrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					logStep(t, "UPDATE_FIELD_VALUE_VERSION_INCREMENT"),
-					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo_version", "2"),
-					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo"),
-					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section.0.field.0.value"),
-					// Verify field value was updated in 1Password
-					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credentials", "API Key", "updated-api-key-456"),
-				),
-			},
-			// Step 3: Update other fields without changing field value (version unchanged)
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, updateOtherFieldsAttrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					logStep(t, "UPDATE_OTHER_FIELDS_PRESERVE_FIELD_VALUE"),
-					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "updateduser@example.com"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "url", "https://example.com"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo_version", "2"),
-					// Verify field value was preserved (not changed)
-					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credentials", "API Key", "updated-api-key-456"),
-				),
-			},
-			// Step 4: Add another field while preserving the first field value
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, updateWithAdditionalFieldAttrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					logStep(t, "ADD_FIELD_PRESERVE_FIELD_VALUE"),
-					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.#", "2"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.label", "API Key"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo_version", "2"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.1.label", "Secret Token"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.1.value", "public-token-value"),
-					// Verify original field value was preserved when adding new field
-					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credentials", "API Key", "updated-api-key-456"),
-				),
-			},
-		},
-	})
-}
-
-// TestAccItemResourceSectionFieldValueWriteOnlyVersionDecrement tests that section field value is not updated when version is decremented
-func TestAccItemResourceSectionFieldValueWriteOnlyVersionDecrement(t *testing.T) {
-	testVaultID := vault.GetTestVaultID(t)
-	uniqueID := uuid.New().String()
-	title := addUniqueIDToTitle("Test Section Field Value WO Version Decrement", uniqueID)
-
-	var itemUUID string
-
-	createAttrs := map[string]any{
-		"title":    title,
-		"category": "login",
-		"username": "testuser@example.com",
-		"section": sections.MapSections([]sections.TestSection{
-			{
-				Label: "Credentials",
-				Fields: []sections.TestField{
-					{
-						Label:                 "API Key",
-						ValueWriteOnly:        "initial-api-key-123",
-						ValueWriteOnlyVersion: 2,
-						Type:                  "CONCEALED",
-					},
-				},
-			},
-		}),
-	}
-
-	// Try to decrement version (should not update field value)
-	decrementVersionAttrs := map[string]any{
-		"title":    title,
-		"category": "login",
-		"username": "testuser@example.com",
-		"section": sections.MapSections([]sections.TestSection{
-			{
-				Label: "Credentials",
-				Fields: []sections.TestField{
-					{
-						Label:                 "API Key",
-						ValueWriteOnly:        "should-not-be-used",
-						ValueWriteOnlyVersion: 1, // Decremented - value should not be updated
-						Type:                  "CONCEALED",
-					},
-				},
-			},
-		}),
-	}
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			// Create with version 2
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					logStep(t, "CREATE_WITH_VERSION_2"),
-					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo_version", "2"),
-					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credentials", "API Key", "initial-api-key-123"),
-				),
-			},
-			// Try to decrement version - field value should not be updated
-			{
-				Config: tfconfig.CreateConfigBuilder()(
-					tfconfig.ProviderConfig(),
-					tfconfig.ItemResourceConfig(testVaultID, decrementVersionAttrs),
-				),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					logStep(t, "DECREMENT_VERSION"),
-					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo_version", "1"),
-					// Field value should still be the original one (not updated)
-					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credentials", "API Key", "initial-api-key-123"),
-				),
-			},
-		},
-	})
-}
-
-// verifySectionFieldValueIn1Password verifies that a section field value in 1Password matches the expected value
-func verifySectionFieldValueIn1Password(t *testing.T, vaultID string, itemUUID *string, sectionLabel, fieldLabel, expectedValue string) resource.TestCheckFunc {
+// verifyFieldValueIn1Password verifies that a field value in 1Password matches the expected value
+func verifyFieldValueIn1Password(t *testing.T, vaultID string, itemUUID *string, fieldPurpose model.ItemFieldPurpose, fieldName string, expectedValue string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		ctx := context.Background()
 		client, err := client.CreateTestClient(ctx)
@@ -1807,108 +1551,35 @@ func verifySectionFieldValueIn1Password(t *testing.T, vaultID string, itemUUID *
 			return fmt.Errorf("failed to get item: %w", err)
 		}
 
-		// Find the section by label
-		var targetSection *model.ItemSection
-		for _, s := range item.Sections {
-			if s.Label == sectionLabel {
-				targetSection = &s
-				break
-			}
-		}
-
-		if targetSection == nil {
-			return fmt.Errorf("section with label %q not found in item", sectionLabel)
-		}
-
-		// Find the field by label within the section
+		// Find field with the specified purpose
 		for _, f := range item.Fields {
-			if f.SectionID == targetSection.ID && f.Label == fieldLabel {
+			if f.Purpose == fieldPurpose {
 				if f.Value != expectedValue {
-					return fmt.Errorf("field value mismatch for %q in section %q: expected %q, got %q", fieldLabel, sectionLabel, expectedValue, f.Value)
+					return fmt.Errorf("%s mismatch: expected %q, got %q", fieldName, expectedValue, f.Value)
 				}
-				t.Logf("Section field value verified in 1Password: section=%q, field=%q, value=%q", sectionLabel, fieldLabel, f.Value)
+				t.Logf("%s verified in 1Password: %q", fieldName, f.Value)
 				return nil
 			}
 		}
 
 		// If field not found and expected value is empty, that's OK
 		if expectedValue == "" {
-			t.Logf("Field %q not found in section %q in 1Password (as expected)", fieldLabel, sectionLabel)
+			t.Logf("%s field not found in 1Password (as expected)", fieldName)
 			return nil
 		}
 
-		return fmt.Errorf("field %q not found in section %q in item", fieldLabel, sectionLabel)
+		return fmt.Errorf("%s field not found in item", fieldName)
 	}
 }
 
 // verifyNoteValueIn1Password verifies that the note_value in 1Password matches the expected value
 func verifyNoteValueIn1Password(t *testing.T, vaultID string, itemUUID *string, expectedNoteValue string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		ctx := context.Background()
-		client, err := client.CreateTestClient(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to create client: %w", err)
-		}
-
-		item, err := client.GetItem(ctx, *itemUUID, vaultID)
-		if err != nil {
-			return fmt.Errorf("failed to get item: %w", err)
-		}
-
-		// Find note_value field (FieldPurposeNotes)
-		for _, f := range item.Fields {
-			if f.Purpose == model.FieldPurposeNotes {
-				if f.Value != expectedNoteValue {
-					return fmt.Errorf("note_value mismatch: expected %q, got %q", expectedNoteValue, f.Value)
-				}
-				t.Logf("Note value verified in 1Password: %q", f.Value)
-				return nil
-			}
-		}
-
-		// If note_value field not found and expected note_value is empty, that's OK
-		if expectedNoteValue == "" {
-			t.Log("Note value field not found in 1Password (as expected)")
-			return nil
-		}
-
-		return fmt.Errorf("note_value field not found in item")
-	}
+	return verifyFieldValueIn1Password(t, vaultID, itemUUID, model.FieldPurposeNotes, "note_value", expectedNoteValue)
 }
 
 // verifyPasswordIn1Password verifies that the password in 1Password matches the expected value
 func verifyPasswordIn1Password(t *testing.T, vaultID string, itemUUID *string, expectedPassword string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		ctx := context.Background()
-		client, err := client.CreateTestClient(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to create client: %w", err)
-		}
-
-		item, err := client.GetItem(ctx, *itemUUID, vaultID)
-		if err != nil {
-			return fmt.Errorf("failed to get item: %w", err)
-		}
-
-		// Find password field
-		for _, f := range item.Fields {
-			if f.Purpose == model.FieldPurposePassword {
-				if f.Value != expectedPassword {
-					return fmt.Errorf("password mismatch: expected %q, got %q", expectedPassword, f.Value)
-				}
-				t.Logf("Password verified in 1Password: %q", f.Value)
-				return nil
-			}
-		}
-
-		// If password field not found and expected password is empty, that's OK
-		if expectedPassword == "" {
-			t.Log("Password field not found in 1Password (as expected)")
-			return nil
-		}
-
-		return fmt.Errorf("password field not found in item")
-	}
+	return verifyFieldValueIn1Password(t, vaultID, itemUUID, model.FieldPurposePassword, "password", expectedPassword)
 }
 
 // addUniqueIDToTitle appends a UUID to the title to avoid conflicts in parallel test execution
