@@ -70,3 +70,45 @@ func (r *OnePasswordItemResource) handleWriteOnlyFieldUpdate(
 	}
 	return nil
 }
+
+func (r *OnePasswordItemResource) handleSectionFieldWriteOnlyUpdate(
+	ctx context.Context,
+	configVersion types.Int64,
+	stateVersion types.Int64,
+	woValue types.String,
+	planValue *types.String,
+	planID types.String,
+	sectionID, sectionLabel, fieldID, fieldLabel string,
+) error {
+	if configVersion.IsNull() {
+		return nil
+	}
+
+	configVer := configVersion.ValueInt64()
+	stateVer := int64(0)
+	if !stateVersion.IsNull() {
+		stateVer = stateVersion.ValueInt64()
+	}
+
+	if configVer > stateVer {
+		*planValue = woValue
+	} else {
+		vaultUUID, itemUUID := vaultAndItemUUID(planID.ValueString())
+		currentItem, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
+		if err != nil {
+			return fmt.Errorf("Could not read item '%s' from vault '%s' to preserve section field value, got error: %s", itemUUID, vaultUUID, err)
+		}
+
+		for _, f := range currentItem.Fields {
+			sectionMatch := (sectionID != "" && f.SectionID == sectionID) || (sectionLabel != "" && f.SectionLabel == sectionLabel)
+			fieldMatch := (fieldID != "" && f.ID == fieldID) || (fieldLabel != "" && f.Label == fieldLabel)
+
+			if sectionMatch && fieldMatch {
+				*planValue = types.StringValue(f.Value)
+				return nil
+			}
+		}
+		*planValue = types.StringNull()
+	}
+	return nil
+}

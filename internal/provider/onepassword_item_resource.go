@@ -77,12 +77,14 @@ type OnePasswordItemResourceSectionModel struct {
 }
 
 type OnePasswordItemResourceFieldModel struct {
-	ID      types.String          `tfsdk:"id"`
-	Label   types.String          `tfsdk:"label"`
-	Purpose types.String          `tfsdk:"purpose"`
-	Type    types.String          `tfsdk:"type"`
-	Value   types.String          `tfsdk:"value"`
-	Recipe  []PasswordRecipeModel `tfsdk:"password_recipe"`
+	ID             types.String          `tfsdk:"id"`
+	Label          types.String          `tfsdk:"label"`
+	Purpose        types.String          `tfsdk:"purpose"`
+	Type           types.String          `tfsdk:"type"`
+	Value          types.String          `tfsdk:"value"`
+	ValueWo        types.String          `tfsdk:"value_wo"`
+	ValueWoVersion types.Int64           `tfsdk:"value_wo_version"`
+	Recipe         []PasswordRecipeModel `tfsdk:"password_recipe"`
 }
 
 func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -328,6 +330,32 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 											ValueModifier(),
 										},
 									},
+									"value_wo": schema.StringAttribute{
+										MarkdownDescription: fieldValueWriteOnceDescription,
+										Optional:            true,
+										Sensitive:           true,
+										WriteOnly:           true,
+										Validators: []validator.String{
+											stringvalidator.ConflictsWith(
+												path.Expressions{path.MatchRelative().AtParent().AtName("value")}...,
+											),
+											stringvalidator.AlsoRequires(
+												path.Expressions{path.MatchRelative().AtParent().AtName("value_wo_version")}...,
+											),
+										},
+									},
+									"value_wo_version": schema.Int64Attribute{
+										MarkdownDescription: fieldValueWriteOnceVersionDescription,
+										Optional:            true,
+										Validators: []validator.Int64{
+											int64validator.ConflictsWith(
+												path.Expressions{path.MatchRelative().AtParent().AtName("value")}...,
+											),
+											int64validator.AlsoRequires(
+												path.Expressions{path.MatchRelative().AtParent().AtName("value_wo")}...,
+											),
+										},
+									},
 								},
 								Blocks: map[string]schema.Block{
 									"password_recipe": passwordRecipeBlockSchema,
@@ -378,9 +406,34 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// Use the password_wo as password for creation when wo version is used.
+	// Handle write-only fields
 	handleWriteOnlyField(config.PasswordWOVersion, config.PasswordWO, &plan.Password)
 	handleWriteOnlyField(config.NoteValueWOVersion, config.NoteValueWO, &plan.NoteValue)
+	for i := range plan.Section {
+		for j := range plan.Section[i].Field {
+			field := &plan.Section[i].Field[j]
+
+			// Find matching field in config to get write-only values
+			var configField *OnePasswordItemResourceFieldModel
+			for _, cs := range config.Section {
+				if (plan.Section[i].ID.ValueString() != "" && plan.Section[i].ID.ValueString() == cs.ID.ValueString()) ||
+					plan.Section[i].Label.ValueString() == cs.Label.ValueString() {
+					for _, cf := range cs.Field {
+						if (field.ID.ValueString() != "" && field.ID.ValueString() == cf.ID.ValueString()) ||
+							field.Label.ValueString() == cf.Label.ValueString() {
+							configField = &cf
+							break
+						}
+					}
+					break
+				}
+			}
+
+			if configField != nil {
+				handleWriteOnlyField(configField.ValueWoVersion, configField.ValueWo, &field.Value)
+			}
+		}
+	}
 
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
@@ -402,6 +455,11 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	// Once created, clear password from state if write only password is used
 	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
 	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
+	for _, section := range plan.Section {
+		for _, field := range section.Field {
+			clearWriteOnlyFieldFromState(field.ValueWoVersion, &field.Value)
+		}
+	}
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -439,9 +497,14 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	// Once read, clear password from state if write only password is used
+	// Clear write-only fields from state
 	clearWriteOnlyFieldFromState(state.PasswordWOVersion, &state.Password)
 	clearWriteOnlyFieldFromState(state.NoteValueWOVersion, &state.NoteValue)
+	for _, section := range state.Section {
+		for _, field := range section.Field {
+			clearWriteOnlyFieldFromState(field.ValueWoVersion, &field.Value)
+		}
+	}
 
 	// Save updated state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -502,6 +565,70 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	// Handle nested section field value_wo: update if version increased, preserve if version unchanged or decreased
+	for i := range plan.Section {
+		for j := range plan.Section[i].Field {
+			field := &plan.Section[i].Field[j]
+			if field.ValueWoVersion.IsNull() {
+				continue
+			}
+
+			// Get versions and value from config/state by finding matching section/field
+			configVersion := field.ValueWoVersion
+			stateVersion := types.Int64Null()
+			woValue := field.ValueWo
+
+			// Find in config
+			for _, cs := range config.Section {
+				if (plan.Section[i].ID.ValueString() != "" && plan.Section[i].ID.ValueString() == cs.ID.ValueString()) ||
+					plan.Section[i].Label.ValueString() == cs.Label.ValueString() {
+					for _, cf := range cs.Field {
+						if (field.ID.ValueString() != "" && field.ID.ValueString() == cf.ID.ValueString()) ||
+							field.Label.ValueString() == cf.Label.ValueString() {
+							configVersion = cf.ValueWoVersion
+							woValue = cf.ValueWo
+							break
+						}
+					}
+					break
+				}
+			}
+
+			// Find in state
+			for _, ss := range state.Section {
+				if (plan.Section[i].ID.ValueString() != "" && plan.Section[i].ID.ValueString() == ss.ID.ValueString()) ||
+					plan.Section[i].Label.ValueString() == ss.Label.ValueString() {
+					for _, sf := range ss.Field {
+						if (field.ID.ValueString() != "" && field.ID.ValueString() == sf.ID.ValueString()) ||
+							field.Label.ValueString() == sf.Label.ValueString() {
+							stateVersion = sf.ValueWoVersion
+							break
+						}
+					}
+					break
+				}
+			}
+
+			// Handle the update
+			fieldErr := r.handleSectionFieldWriteOnlyUpdate(
+				ctx,
+				configVersion,
+				stateVersion,
+				woValue,
+				&field.Value,
+				plan.ID,
+				plan.Section[i].ID.ValueString(),
+				plan.Section[i].Label.ValueString(),
+				field.ID.ValueString(),
+				field.Label.ValueString(),
+			)
+			if fieldErr != nil {
+				resp.Diagnostics.AddError("1Password Item read error", fieldErr.Error())
+				return
+			}
+		}
+	}
+
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
 	if resp.Diagnostics.HasError() {
@@ -522,9 +649,14 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	// Once updated, always clear password from state - as it should never be stored when write only password is used.
+	// Clear write-only fields from state
 	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
 	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
+	for _, section := range plan.Section {
+		for _, field := range section.Field {
+			clearWriteOnlyFieldFromState(field.ValueWoVersion, &field.Value)
+		}
+	}
 
 	// Save updated plan into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

@@ -1,10 +1,12 @@
 package sections
 
 type TestField struct {
-	Label          string
-	Value          string
-	Type           string
-	PasswordRecipe *map[string]any
+	Label                 string
+	Value                 string
+	Type                  string
+	PasswordRecipe        *map[string]any
+	ValueWriteOnly        string
+	ValueWriteOnlyVersion int64
 }
 
 type TestSection struct {
@@ -49,6 +51,14 @@ func mapFields(fields []TestField) []map[string]any {
 
 		if f.Value != "" {
 			fieldMap["value"] = f.Value
+		}
+
+		// Handle write-only value fields
+		if f.ValueWriteOnly != "" {
+			fieldMap["value_wo"] = f.ValueWriteOnly
+		}
+		if f.ValueWriteOnlyVersion > 0 {
+			fieldMap["value_wo_version"] = int(f.ValueWriteOnlyVersion)
 		}
 
 		mappedFields = append(mappedFields, fieldMap)
