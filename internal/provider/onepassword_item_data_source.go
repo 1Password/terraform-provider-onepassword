@@ -18,6 +18,7 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	opssh "github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/ssh"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -71,11 +72,11 @@ type OnePasswordItemSectionModel struct {
 }
 
 type OnePasswordItemFieldModel struct {
-	ID      types.String `tfsdk:"id"`
-	Label   types.String `tfsdk:"label"`
-	Purpose types.String `tfsdk:"purpose"`
-	Type    types.String `tfsdk:"type"`
-	Value   types.String `tfsdk:"value"`
+	ID    types.String `tfsdk:"id"`
+	Label types.String `tfsdk:"label"`
+
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
 }
 
 func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -225,10 +226,6 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 										MarkdownDescription: fieldLabelDescription,
 										Computed:            true,
 									},
-									"purpose": schema.StringAttribute{
-										MarkdownDescription: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
-										Computed:            true,
-									},
 									"type": schema.StringAttribute{
 										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
 										Computed:            true,
@@ -323,11 +320,10 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		for _, f := range item.Fields {
 			if f.SectionID != "" && f.SectionID == s.ID {
 				section.Field = append(section.Field, OnePasswordItemFieldModel{
-					ID:      types.StringValue(f.ID),
-					Label:   types.StringValue(f.Label),
-					Purpose: types.StringValue(string(f.Purpose)),
-					Type:    types.StringValue(string(f.Type)),
-					Value:   types.StringValue(f.Value),
+					ID:    types.StringValue(f.ID),
+					Label: types.StringValue(f.Label),
+					Type:  types.StringValue(string(f.Type)),
+					Value: types.StringValue(f.Value),
 				})
 			}
 		}
@@ -425,9 +421,29 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 }
 
 func getItemForDataSource(ctx context.Context, client onepassword.Client, data OnePasswordItemDataSourceModel) (*model.Item, error) {
-	vaultUUID := data.Vault.ValueString()
+	vaultValue := data.Vault.ValueString()
 	itemTitle := data.Title.ValueString()
 	itemUUID := data.UUID.ValueString()
+
+	// Resolve vault name to UUID if needed
+	var vaultUUID string
+	if util.IsValidUUID(vaultValue) {
+		// Vault value is a UUID, use it directly
+		vaultUUID = vaultValue
+	} else {
+		// Vault value is a name, resolve it to UUID
+		vaults, err := client.GetVaultsByTitle(ctx, vaultValue)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get vault by title: %w", err)
+		}
+		if len(vaults) == 0 {
+			return nil, fmt.Errorf("no vault found with name %q", vaultValue)
+		}
+		if len(vaults) > 1 {
+			return nil, fmt.Errorf("multiple vaults found with name %q", vaultValue)
+		}
+		vaultUUID = vaults[0].ID
+	}
 
 	if itemTitle != "" {
 		return client.GetItemByTitle(ctx, itemTitle, vaultUUID)

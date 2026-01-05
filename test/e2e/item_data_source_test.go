@@ -94,7 +94,7 @@ var testItems = map[model.ItemCategory]testItem{
 	},
 	model.APICredential: {
 		Title: "Test API Credential",
-		UUID:  "pkqk4ehxuqp4fy3wpjep5qozru",
+		UUID:  "fmx3tsd5v5bew74o3v2z2a7wf4",
 		Attrs: map[string]string{
 			"category":   "api_credential",
 			"credential": "testCredential",
