@@ -445,3 +445,62 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 		},
 	})
 }
+
+func TestAccItemDataSource_VaultName(t *testing.T) {
+	createTestCase := func(name string, item testItem, identifierParam string, identifierValue string) itemDataSourceTestCase {
+		return itemDataSourceTestCase{
+			name: name,
+			item: item,
+			itemDataSourceConfig: tfconfig.ItemDataSource{
+				Params: map[string]string{
+					identifierParam: identifierValue,
+					"vault":         "terraform-provider-acceptance-tests",
+				},
+			},
+		}
+	}
+
+	itemTypes := []struct {
+		category model.ItemCategory
+		name     string
+	}{
+		{model.Login, "Login"},
+	}
+
+	var testCases []itemDataSourceTestCase
+
+	// Create test cases for each item type with both title and UUID lookup methods
+	for _, itemType := range itemTypes {
+		item := testItems[itemType.category]
+		testCases = append(testCases,
+			createTestCase(itemType.name+"ByTitle", item, "title", item.Title),
+			createTestCase(itemType.name+"ByUUID", item, "uuid", item.UUID),
+		)
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataSourceBuilder := tfconfig.CreateConfigBuilder()
+
+			checks := []resource.TestCheckFunc{
+				resource.TestCheckResourceAttr("data.onepassword_item.test_item", "title", tc.item.Title),
+				resource.TestCheckResourceAttr("data.onepassword_item.test_item", "uuid", tc.item.UUID),
+			}
+
+			for attr, expectedValue := range tc.item.Attrs {
+				checks = append(checks, resource.TestCheckResourceAttr("data.onepassword_item.test_item", attr, expectedValue))
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{{
+					Config: dataSourceBuilder(
+						tfconfig.ProviderConfig(),
+						tfconfig.ItemDataSourceConfig(tc.itemDataSourceConfig.Params),
+					),
+					Check: resource.ComposeAggregateTestCheckFunc(checks...),
+				}},
+			})
+		})
+	}
+}
