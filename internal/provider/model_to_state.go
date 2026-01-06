@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -184,6 +183,8 @@ func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]On
 				ID:       types.StringValue(modelSection.ID),
 				FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
 			}
+		} else {
+			stateSection.ID = types.StringValue(modelSection.ID)
 		}
 
 		for _, modelField := range item.Fields {
@@ -197,20 +198,28 @@ func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]On
 				Type: setStringValue(string(modelField.Type)),
 			}
 
-			existingFieldValue := stateSection.FieldMap[modelField.Label].Value
-			stateField.Value = setStringValuePreservingEmpty(modelField.Value, existingFieldValue)
-
-			if modelField.Recipe == nil {
-				stateField.Recipe = nil
+			existingField, fieldExists := stateSection.FieldMap[modelField.Label]
+			if fieldExists {
+				stateField.Value = setStringValuePreservingEmpty(modelField.Value, existingField.Value)
 			} else {
-				hasDigits, _ := regexp.MatchString("[0-9]", modelField.Value)
-				hasSymbols, _ := regexp.MatchString("[^a-zA-Z0-9]", modelField.Value)
+				stateField.Value = setStringValuePreservingEmpty(modelField.Value, types.StringNull())
+			}
+
+			if fieldExists && existingField.Recipe != nil {
+				stateField.Recipe = existingField.Recipe
+			} else if modelField.Recipe != nil {
+				charSets := map[string]bool{}
+				for _, s := range modelField.Recipe.CharacterSets {
+					charSets[strings.ToLower(string(s))] = true
+				}
 
 				stateField.Recipe = &PasswordRecipeModel{
 					Length:  types.Int64Value(int64(modelField.Recipe.Length)),
-					Digits:  types.BoolValue(hasDigits),
-					Symbols: types.BoolValue(hasSymbols),
+					Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
+					Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
 				}
+			} else {
+				stateField.Recipe = nil
 			}
 
 			stateSection.FieldMap[modelField.Label] = stateField

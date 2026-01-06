@@ -1429,7 +1429,7 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 				},
 			},
 		},
-		"section ID preserved from state": {
+		"section ID updated from model": {
 			item: &model.Item{
 				Sections: []model.ItemSection{
 					{ID: "new-section-id", Label: "Section 1"},
@@ -1444,7 +1444,7 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 			},
 			want: map[string]OnePasswordItemResourceSectionMapModel{
 				"Section 1": {
-					ID:       types.StringValue("old-section-id"), // Preserved from state (not updated from model)
+					ID:       types.StringValue("new-section-id"), // Updated from model (API response) - required for create/update
 					FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
 				},
 			},
