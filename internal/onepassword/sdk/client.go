@@ -58,9 +58,15 @@ func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]model.Va
 // If itemUuid is not a valid UUID format, it treats the parameter as a title
 // and looks up the item by title instead.
 func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*model.Item, error) {
+	// Resolve vault name to UUID if needed
+	resolvedVaultUUID, err := c.resolveVaultUUID(ctx, vaultUuid)
+	if err != nil {
+		return nil, err
+	}
+
 	if util.IsValidUUID(itemUuid) {
 		// Valid UUID, use GetItem directly
-		sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, itemUuid)
+		sdkItem, err := c.sdkClient.Items().Get(ctx, resolvedVaultUUID, itemUuid)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get item using sdk: %w", err)
 		}
@@ -74,11 +80,17 @@ func (c *Client) GetItem(ctx context.Context, itemUuid, vaultUuid string) (*mode
 	}
 
 	// Not a UUID, use GetItemByTitle
-	return c.GetItemByTitle(ctx, itemUuid, vaultUuid)
+	return c.GetItemByTitle(ctx, itemUuid, resolvedVaultUUID)
 }
 
 func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid string) (*model.Item, error) {
-	items, err := c.sdkClient.Items().List(ctx, vaultUuid)
+	// Resolve vault name to UUID if needed
+	resolvedVaultUUID, err := c.resolveVaultUUID(ctx, vaultUuid)
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := c.sdkClient.Items().List(ctx, resolvedVaultUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get item using sdk: %w", err)
 	}
@@ -97,7 +109,7 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 		return nil, fmt.Errorf("found %d item(s) in vault %q with title %q", count, vaultUuid, title)
 	}
 
-	sdkItem, err := c.sdkClient.Items().Get(ctx, vaultUuid, matchedID)
+	sdkItem, err := c.sdkClient.Items().Get(ctx, resolvedVaultUUID, matchedID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get item using sdk: %w", err)
 	}
@@ -231,4 +243,24 @@ func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {
 		sdkClient: sdkClient,
 		config:    config,
 	}, nil
+}
+
+// resolveVaultUUID resolves a vault name to a UUID
+func (c *Client) resolveVaultUUID(ctx context.Context, vaultValue string) (string, error) {
+	if util.IsValidUUID(vaultValue) {
+		return vaultValue, nil
+	}
+
+	// Vault value is a name, resolve it to UUID
+	vaults, err := c.GetVaultsByTitle(ctx, vaultValue)
+	if err != nil {
+		return "", fmt.Errorf("failed to get vault by title: %w", err)
+	}
+	if len(vaults) == 0 {
+		return "", fmt.Errorf("no vault found with name %q", vaultValue)
+	}
+	if len(vaults) > 1 {
+		return "", fmt.Errorf("multiple vaults found with name %q", vaultValue)
+	}
+	return vaults[0].ID, nil
 }

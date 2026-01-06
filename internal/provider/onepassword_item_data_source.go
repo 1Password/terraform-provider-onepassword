@@ -18,7 +18,6 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 	opssh "github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/ssh"
-	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/util"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -426,29 +425,9 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 }
 
 func getItemForDataSource(ctx context.Context, client onepassword.Client, data OnePasswordItemDataSourceModel) (*model.Item, error) {
-	vaultValue := data.Vault.ValueString()
+	vaultUUID := data.Vault.ValueString()
 	itemTitle := data.Title.ValueString()
 	itemUUID := data.UUID.ValueString()
-
-	// Resolve vault name to UUID if needed
-	var vaultUUID string
-	if util.IsValidUUID(vaultValue) {
-		// Vault value is a UUID, use it directly
-		vaultUUID = vaultValue
-	} else {
-		// Vault value is a name, resolve it to UUID
-		vaults, err := client.GetVaultsByTitle(ctx, vaultValue)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get vault by title: %w", err)
-		}
-		if len(vaults) == 0 {
-			return nil, fmt.Errorf("no vault found with name %q", vaultValue)
-		}
-		if len(vaults) > 1 {
-			return nil, fmt.Errorf("multiple vaults found with name %q", vaultValue)
-		}
-		vaultUUID = vaults[0].ID
-	}
 
 	if itemTitle != "" {
 		return client.GetItemByTitle(ctx, itemTitle, vaultUUID)
