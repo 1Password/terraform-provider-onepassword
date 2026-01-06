@@ -246,21 +246,21 @@ func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {
 }
 
 // resolveVaultUUID resolves a vault name to a UUID
-func (c *Client) resolveVaultUUID(ctx context.Context, vaultValue string) (string, error) {
-	if util.IsValidUUID(vaultValue) {
-		return vaultValue, nil
+func (c *Client) resolveVaultUUID(ctx context.Context, vaultQuery string) (string, error) {
+	if util.IsValidUUID(vaultQuery) {
+		return vaultQuery, nil
 	}
 
 	// Vault value is a name, resolve it to UUID
-	vaults, err := c.GetVaultsByTitle(ctx, vaultValue)
+	vaults, err := c.GetVaultsByTitle(ctx, vaultQuery)
 	if err != nil {
 		return "", fmt.Errorf("failed to get vault by title: %w", err)
 	}
 	if len(vaults) == 0 {
-		return "", fmt.Errorf("no vault found with name %q", vaultValue)
+		return "", fmt.Errorf("no vault found with name %q", vaultQuery)
 	}
 	if len(vaults) > 1 {
-		return "", fmt.Errorf("multiple vaults found with name %q", vaultValue)
+		return "", fmt.Errorf("multiple vaults found with name %q", vaultQuery)
 	}
 	return vaults[0].ID, nil
 }
