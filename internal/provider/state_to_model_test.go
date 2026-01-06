@@ -328,12 +328,11 @@ func TestToModelSectionField(t *testing.T) {
 	}{
 		"with existing field ID": {
 			state: OnePasswordItemResourceFieldModel{
-				ID:      types.StringValue("existing-field-id"),
-				Label:   types.StringValue("Test Field"),
-				Type:    types.StringValue("STRING"),
-				Purpose: types.StringValue("USERNAME"),
-				Value:   types.StringValue("test value"),
-				Recipe:  []PasswordRecipeModel{},
+				ID:     types.StringValue("existing-field-id"),
+				Label:  types.StringValue("Test Field"),
+				Type:   types.StringValue("STRING"),
+				Value:  types.StringValue("test value"),
+				Recipe: []PasswordRecipeModel{},
 			},
 			sectionID:    "section-id",
 			sectionLabel: "Section Label",
@@ -357,19 +356,15 @@ func TestToModelSectionField(t *testing.T) {
 				if field.Type != model.ItemFieldType("STRING") {
 					t.Errorf("Field.Type: got %v, want STRING", field.Type)
 				}
-				if field.Purpose != model.ItemFieldPurpose("USERNAME") {
-					t.Errorf("Field.Purpose: got %v, want USERNAME", field.Purpose)
-				}
 			},
 		},
 		"without field ID generates UUID": {
 			state: OnePasswordItemResourceFieldModel{
-				ID:      types.StringValue(""),
-				Label:   types.StringValue("Test Field"),
-				Type:    types.StringValue("CONCEALED"),
-				Purpose: types.StringValue("PASSWORD"),
-				Value:   types.StringValue("secret"),
-				Recipe:  []PasswordRecipeModel{},
+				ID:     types.StringValue(""),
+				Label:  types.StringValue("Test Field"),
+				Type:   types.StringValue("CONCEALED"),
+				Value:  types.StringValue("secret"),
+				Recipe: []PasswordRecipeModel{},
 			},
 			sectionID:    "section-id",
 			sectionLabel: "Section Label",
@@ -388,11 +383,10 @@ func TestToModelSectionField(t *testing.T) {
 		},
 		"with recipe": {
 			state: OnePasswordItemResourceFieldModel{
-				ID:      types.StringValue("field-id"),
-				Label:   types.StringValue("Password Field"),
-				Type:    types.StringValue("CONCEALED"),
-				Purpose: types.StringValue("PASSWORD"),
-				Value:   types.StringValue(""),
+				ID:    types.StringValue("field-id"),
+				Label: types.StringValue("Password Field"),
+				Type:  types.StringValue("CONCEALED"),
+				Value: types.StringValue(""),
 				Recipe: []PasswordRecipeModel{
 					{
 						Length:  types.Int64Value(16),
@@ -451,20 +445,18 @@ func TestToModelSections(t *testing.T) {
 						Label: types.StringValue("Test Section"),
 						FieldList: []OnePasswordItemResourceFieldModel{
 							{
-								ID:      types.StringValue("field-1"),
-								Label:   types.StringValue("Field 1"),
-								Type:    types.StringValue("STRING"),
-								Purpose: types.StringValue(""),
-								Value:   types.StringValue("value 1"),
-								Recipe:  []PasswordRecipeModel{},
+								ID:     types.StringValue("field-1"),
+								Label:  types.StringValue("Field 1"),
+								Type:   types.StringValue("STRING"),
+								Value:  types.StringValue("value 1"),
+								Recipe: []PasswordRecipeModel{},
 							},
 							{
-								ID:      types.StringValue("field-2"),
-								Label:   types.StringValue("Field 2"),
-								Type:    types.StringValue("CONCEALED"),
-								Purpose: types.StringValue("PASSWORD"),
-								Value:   types.StringValue("secret"),
-								Recipe:  []PasswordRecipeModel{},
+								ID:     types.StringValue("field-2"),
+								Label:  types.StringValue("Field 2"),
+								Type:   types.StringValue("CONCEALED"),
+								Value:  types.StringValue("secret"),
+								Recipe: []PasswordRecipeModel{},
 							},
 						},
 					},
