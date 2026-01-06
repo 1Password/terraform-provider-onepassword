@@ -12,6 +12,16 @@
 
 ---
 
+[//]: # (START/v3.0.2)
+# v3.0.2
+
+## Fixes
+ * Docs are updated to not mention specific provider version. {#297}
+ * `purpose` property is removed from the section field. {#251}
+ * Item data source correctly fetches the item with provided vault name when using service account or account to authenticate. {#306}
+
+---
+
 [//]: # (START/v3.0.1)
 # v3.0.1
 
@@ -45,7 +55,7 @@
   * Provider re-creates item when it's missing in 1Password vault. {#97}
   * No 504 Gateway Timeout errors anymore for newly created items. {#5}
   * Fix field reference from `label` to `id` for item data source. {#213}
-  * `password_recipe` properly generates passwords now. {#129} 
+  * `password_recipe` properly generates passwords now. {#129}
   * Testing documentation now includes make commands and setup instructions about how to run e2e tests. {#269}
   * README and documentation now to references to 1Password developer portal for more info. {#266}
 
