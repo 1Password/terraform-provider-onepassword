@@ -140,9 +140,6 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 		},
 	}
 
-	// Reusable section nested object schema for map attributes
-	// Note: password_recipe is not supported in the map structure as it requires blocks
-	// Users should use the list-based section/field structure if they need password_recipe
 	sectionNestedObjectSchemaForMap := schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -336,7 +333,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Sensitive:           true,
 			},
 			"section_map": schema.MapNestedAttribute{
-				MarkdownDescription: "A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label.",
+				MarkdownDescription: "A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label. Cannot be used together with `section`. Use either `section` (list) or `section_map` (map), but not both.",
 				Optional:            true,
 				NestedObject:        sectionNestedObjectSchemaForMap,
 			},
@@ -451,7 +448,7 @@ func (r *OnePasswordItemResource) ValidateConfig(ctx context.Context, req resour
 	if hasSectionMap && hasSectionList {
 		resp.Diagnostics.AddError(
 			"Conflicting Section Definitions",
-			"Cannot use both 'section' (list) and 'section' (map) at the same time. Please use only one of them.",
+			"Cannot use both 'section' (list) and 'section_map' (map) at the same time. Please use only one of them.",
 		)
 	}
 }
@@ -695,7 +692,21 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 	state.Vault = setStringValue(modelItem.VaultID)
 	state.Title = setStringValuePreservingEmpty(modelItem.Title, state.Title)
 	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
-	state.SectionList = toStateSectionsAndFields(modelItem.Sections, modelItem.Fields, state.SectionList)
+
+	if len(state.SectionMap) > 0 {
+		diagnostics := validateSectionsAndFieldsMap(modelItem)
+		if diagnostics.HasError() {
+			return diagnostics
+		}
+
+		diagnostics = toStateSectionsAndFieldsMap(modelItem, state.SectionMap)
+		if diagnostics.HasError() {
+			return diagnostics
+		}
+	} else {
+		state.SectionList = toStateSectionsAndFieldsList(modelItem.Sections, modelItem.Fields, state.SectionList)
+	}
+
 	toStateTopLevelFields(modelItem.Fields, state)
 
 	for _, u := range modelItem.URLs {
@@ -761,7 +772,12 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	}
 	modelItem.Tags = tags
 
-	diagnostics = toModelSections(state, modelItem)
+	if len(state.SectionMap) > 0 {
+		diagnostics = toModelSectionsFromMap(state, modelItem)
+	} else {
+		diagnostics = toModelSections(state, modelItem)
+	}
+
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}
