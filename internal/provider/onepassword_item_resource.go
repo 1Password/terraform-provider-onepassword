@@ -378,7 +378,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// Use the password_wo as password for creation when wo version is used.
+	// Handle write-only fields
 	handleWriteOnlyField(config.PasswordWOVersion, config.PasswordWO, &plan.Password)
 	handleWriteOnlyField(config.NoteValueWOVersion, config.NoteValueWO, &plan.NoteValue)
 
@@ -399,7 +399,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 		return
 	}
 
-	// Once created, clear password from state if write only password is used
+	// Once created, clear write-only fields from state
 	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
 	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
 
@@ -439,7 +439,7 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		return
 	}
 
-	// Once read, clear password from state if write only password is used
+	// Once read, clear write-only fields from state
 	clearWriteOnlyFieldFromState(state.PasswordWOVersion, &state.Password)
 	clearWriteOnlyFieldFromState(state.NoteValueWOVersion, &state.NoteValue)
 
@@ -522,7 +522,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	// Once updated, always clear password from state - as it should never be stored when write only password is used.
+	// Once updated, always clear write-only fields from state
 	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
 	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
 

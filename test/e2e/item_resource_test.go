@@ -1416,6 +1416,7 @@ func TestAccItemResourceNoteValueWriteOnly(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					logStep(t, "CREATE_WITH_NOTE_VALUE_WO"),
 					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "category", "secure_note"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value_wo_version", "1"),
@@ -1515,6 +1516,7 @@ func TestAccItemResourceNoteValueWriteOnlyVersionDecrement(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					logStep(t, "CREATE_WITH_VERSION_2"),
 					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "note_value_wo_version", "2"),
 					verifyNoteValueIn1Password(t, testVaultID, &itemUUID, "initial-note-value-123"),
 				),
