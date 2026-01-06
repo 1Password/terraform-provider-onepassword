@@ -16,9 +16,9 @@
 # v3.0.2
 
 ## Fixes
- * Update docs to not mention specific provider version. {#297}
- * Deprecate nested purpose field in section.field as it is handled by provider. {#251}
- * Get vault UUID when vault name is provided for item data source with SDK client. {#306}
+ * Docs are updated to not mention specific provider version. {#297}
+ * `purpose` property is removed from the section field. {#251}
+ * Item data source correctly fetches the item with provided vault name when using service account or account to authenticate. {#306}
 
 ---
 
