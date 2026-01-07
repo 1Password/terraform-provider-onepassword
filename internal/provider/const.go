@@ -32,7 +32,8 @@ const (
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
 	dbPortDescription     = "(Only applies to the database category) The port the database is listening on."
-	dbTypeDescription     = "(Only applies to database and API credential categories) For the database category"
+	dbTypeDescription     = "(Only applies to the database category) The type of database."
+	typeDescription       = "(Only applies to database and API credential categories) The type of database or API Credential."
 
 	sectionsDescription      = "A list of custom sections in an item"
 	sectionDescription       = "A custom section in an item that contains custom fields"

@@ -158,7 +158,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
+				MarkdownDescription: typeDescription,
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
