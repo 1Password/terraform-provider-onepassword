@@ -50,7 +50,6 @@ type OnePasswordItemDataSourceModel struct {
 	Credential types.String                  `tfsdk:"credential"`
 	Filename   types.String                  `tfsdk:"filename"`
 	ValidFrom  types.String                  `tfsdk:"valid_from"`
-	Expires    types.String                  `tfsdk:"expires"`
 	PublicKey  types.String                  `tfsdk:"public_key"`
 	PrivateKey types.String                  `tfsdk:"private_key"`
 	Section    []OnePasswordItemSectionModel `tfsdk:"section"`
@@ -181,10 +180,6 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 			},
 			"valid_from": schema.StringAttribute{
 				MarkdownDescription: validFromDescription,
-				Computed:            true,
-			},
-			"expires": schema.StringAttribute{
-				MarkdownDescription: expiresDescription,
 				Computed:            true,
 			},
 			"filename": schema.StringAttribute{
@@ -394,8 +389,6 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.Credential = types.StringValue(f.Value)
 				case "valid_from":
 					data.ValidFrom = types.StringValue(f.Value)
-				case "expires":
-					data.Expires = types.StringValue(f.Value)
 				case "filename":
 					data.Filename = types.StringValue(f.Value)
 				}

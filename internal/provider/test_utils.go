@@ -95,9 +95,9 @@ func generateSecureNoteItem() *onepassword.Item {
 			ID:      "notesPlain",
 			Label:   "notesPlain",
 			Purpose: onepassword.FieldPurposeNotes,
-			Value: `Lorem 
-ipsum 
-from 
+			Value: `Lorem
+ipsum
+from
 notes
 `,
 		},
@@ -202,10 +202,6 @@ func generateApiCredentialFields() []*onepassword.ItemField {
 		{
 			Label: "valid_from",
 			Value: "test_valid_from",
-		},
-		{
-			Label: "expires",
-			Value: "expires_expires",
 		},
 		{
 			Label: "hostname",
