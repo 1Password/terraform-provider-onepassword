@@ -12,11 +12,8 @@ A 1Password Item.
 
 ## Example Usage
 
-### Using section_map (Map-based sections)
-
-The `section_map` attribute allows you to define sections as a map, where keys are section labels. This enables direct access to fields by their labels (e.g., `onepassword_item.example.section_map["credentials"].field_map["api_key"].value`).
-
 ```terraform
+# Example using section_map (map-based sections for direct field access)
 resource "onepassword_item" "example_with_map" {
   vault = "your-vault-id"
 
@@ -42,27 +39,20 @@ resource "onepassword_item" "example_with_map" {
           type  = "STRING"
           value = "production"
         }
+        "created_by" = {
+          type  = "STRING"
+          value = "terraform"
+        }
       }
     }
   }
 }
 
-# Access field values directly by label
-output "api_key" {
-  value     = onepassword_item.example_with_map.section_map["credentials"].field_map["api_key"].value
-  sensitive = true
-}
-```
-
-### Using section (List-based sections)
-
-The `section` block allows you to define sections as a list. Fields are accessed by index (e.g., `onepassword_item.example.section[0].field[0].value`).
-
-```terraform
+# Example using section (list-based sections)
 resource "onepassword_item" "example_with_list" {
   vault = "your-vault-id"
 
-  title    = "Example Item Title"
+  title    = "Example Item with Section List"
   category = "login"
 
   password_recipe {
@@ -100,8 +90,8 @@ resource "onepassword_item" "example_with_list" {
 - `password_wo` (String, Sensitive) A write-only password for this item. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later.
 - `password_wo_version` (Number) An integer that must be incremented to trigger an update to the 'password_wo' field.
 - `port` (String) (Only applies to the database category) The port the database is listening on.
-- `section` A list of custom sections in an item. Cannot be used together with `section_map`. (see [below for nested schema](#nestedblock--section))
-- `section_map` A map of custom sections keyed by section label. Allows direct access to fields by label. Cannot be used together with `section`. (see [below for nested schema](#nestedatt--section_map))
+- `section` (Block List) A list of custom sections in an item. Cannot be used together with `section_map`. Use either `section` (list) or `section_map` (map), but not both. (see [below for nested schema](#nestedblock--section))
+- `section_map` (Attributes Map) A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label. Cannot be used together with `section`. Use either `section` (list) or `section_map` (map), but not both. (see [below for nested schema](#nestedatt--section_map))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
 - `title` (String) The title of the item.
 - `type` (String) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
@@ -159,36 +149,34 @@ Optional:
 - `symbols` (Boolean) Use symbols [!@.-_*] when generating the password.
 
 
+
+
 <a id="nestedatt--section_map"></a>
 ### Nested Schema for `section_map`
 
-The map key is used as the section label.
-
 Optional:
 
+- `field_map` (Attributes Map) A map of custom fields in the section, keyed by field label. (see [below for nested schema](#nestedatt--section_map--field_map))
 - `id` (String) A unique identifier for the section.
-- `field_map` (Map of Object) A map of custom fields keyed by field label. (see [below for nested schema](#nestedatt--section_map--field_map))
 
 <a id="nestedatt--section_map--field_map"></a>
 ### Nested Schema for `section_map.field_map`
 
-The map key is used as the field label.
-
 Optional:
 
 - `id` (String) A unique identifier for the field.
-- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]. Defaults to "STRING".
-- `value` (String, Sensitive) The value of the field. Leave empty to generate a password using `password_recipe`.
-- `password_recipe` (Object) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedatt--section_map--field_map--password_recipe))
+- `password_recipe` (Attributes) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedatt--section_map--field_map--password_recipe))
+- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
+- `value` (String, Sensitive) The value of the field.
 
 <a id="nestedatt--section_map--field_map--password_recipe"></a>
 ### Nested Schema for `section_map.field_map.password_recipe`
 
 Optional:
 
-- `digits` (Boolean) Use digits [0-9] when generating the password. Defaults to true.
-- `length` (Number) The length of the password to be generated. Defaults to 32.
-- `symbols` (Boolean) Use symbols [!@.-_*] when generating the password. Defaults to true.
+- `digits` (Boolean) Use digits [0-9] when generating the password.
+- `length` (Number) The length of the password to be generated.
+- `symbols` (Boolean) Use symbols [!@.-_*] when generating the password.
 
 ## Import
 
