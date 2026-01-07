@@ -149,7 +149,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 			"field_map": schema.MapNestedAttribute{
-				MarkdownDescription: sectionFieldsDescription,
+				MarkdownDescription: sectionFieldsMapDescription,
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -331,14 +331,14 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Sensitive:           true,
 			},
 			"section_map": schema.MapNestedAttribute{
-				MarkdownDescription: "A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label. Cannot be used together with `section`. Use either `section` (list) or `section_map` (map), but not both.",
+				MarkdownDescription: sectionMapDescriptionResource,
 				Optional:            true,
 				NestedObject:        sectionNestedObjectSchemaForMap,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
-				MarkdownDescription: sectionsDescription,
+				MarkdownDescription: sectionListDescriptionResource,
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -356,7 +356,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					},
 					Blocks: map[string]schema.Block{
 						"field": schema.ListNestedBlock{
-							MarkdownDescription: sectionFieldsDescription,
+							MarkdownDescription: sectionFieldsListDescription,
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
