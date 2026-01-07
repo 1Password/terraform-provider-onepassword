@@ -1995,7 +1995,7 @@ func TestToConnectFields(t *testing.T) {
 				{ID: "f2", Type: connect.FieldTypeDate, Value: "1609502460"}, // 2021-01-01 12:01:00 UTC
 				{ID: "f3", Type: connect.FieldTypeEmail, Value: "test@example.com"},
 				{ID: "f4", Type: connect.FieldTypeMenu, Value: "option1"},
-				{ID: "f5", Type: connect.FieldTypeMonthYear, Value: "2021-01"}, // Converted to YYYY-MM for Connect
+				{ID: "f5", Type: connect.FieldTypeMonthYear, Value: "202101"}, // Converted to YYYYMM for Connect
 				{ID: "f6", Type: connect.FieldTypeOTP, Value: "123456"},
 				{ID: "f7", Type: connect.FieldTypeString, Value: "text"},
 				{ID: "f8", Type: connect.FieldTypeURL, Value: "https://example.com"},
