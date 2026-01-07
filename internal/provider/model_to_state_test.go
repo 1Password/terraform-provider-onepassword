@@ -1230,7 +1230,7 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 				},
 			},
 		},
-		"field without recipe - clears existing recipe": {
+		"field without recipe in model - preserves existing recipe from plan": {
 			item: &model.Item{
 				Sections: []model.ItemSection{
 					{ID: "section1", Label: "Section 1"},
@@ -1261,10 +1261,14 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 					ID: types.StringValue("section1"),
 					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
 						"Field 1": {
-							ID:     types.StringValue("field1"),
-							Type:   types.StringValue("STRING"),
-							Value:  types.StringValue("value1"),
-							Recipe: nil, // Recipe cleared
+							ID:   types.StringValue("field1"),
+							Type: types.StringValue("STRING"),
+							Value: types.StringValue("value1"),
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
 						},
 					},
 				},
