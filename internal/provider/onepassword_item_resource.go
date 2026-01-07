@@ -602,9 +602,6 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	payload, _ := json.Marshal(item)
-	tflog.Info(ctx, "update op payload: "+string(payload))
-
 	updatedItem, err := r.client.UpdateItem(ctx, item, plan.Vault.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", plan.UUID.ValueString(), plan.Vault.ValueString(), err))
