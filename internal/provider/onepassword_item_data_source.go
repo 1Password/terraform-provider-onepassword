@@ -15,8 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
+	opssh "github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/ssh"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -33,27 +34,28 @@ type OnePasswordItemDataSource struct {
 
 // OnePasswordItemDataSourceModel describes the data source data model.
 type OnePasswordItemDataSourceModel struct {
-	ID         types.String                  `tfsdk:"id"`
-	Vault      types.String                  `tfsdk:"vault"`
-	UUID       types.String                  `tfsdk:"uuid"`
-	Title      types.String                  `tfsdk:"title"`
-	Category   types.String                  `tfsdk:"category"`
-	URL        types.String                  `tfsdk:"url"`
-	Hostname   types.String                  `tfsdk:"hostname"`
-	Database   types.String                  `tfsdk:"database"`
-	Port       types.String                  `tfsdk:"port"`
-	Type       types.String                  `tfsdk:"type"`
-	Tags       types.List                    `tfsdk:"tags"`
-	Username   types.String                  `tfsdk:"username"`
-	Password   types.String                  `tfsdk:"password"`
-	NoteValue  types.String                  `tfsdk:"note_value"`
-	Credential types.String                  `tfsdk:"credential"`
-	Filename   types.String                  `tfsdk:"filename"`
-	ValidFrom  types.String                  `tfsdk:"valid_from"`
-	PublicKey  types.String                  `tfsdk:"public_key"`
-	PrivateKey types.String                  `tfsdk:"private_key"`
-	Section    []OnePasswordItemSectionModel `tfsdk:"section"`
-	File       []OnePasswordItemFileModel    `tfsdk:"file"`
+	ID                types.String                  `tfsdk:"id"`
+	Vault             types.String                  `tfsdk:"vault"`
+	UUID              types.String                  `tfsdk:"uuid"`
+	Title             types.String                  `tfsdk:"title"`
+	Category          types.String                  `tfsdk:"category"`
+	URL               types.String                  `tfsdk:"url"`
+	Hostname          types.String                  `tfsdk:"hostname"`
+	Database          types.String                  `tfsdk:"database"`
+	Port              types.String                  `tfsdk:"port"`
+	Type              types.String                  `tfsdk:"type"`
+	Tags              types.List                    `tfsdk:"tags"`
+	Username          types.String                  `tfsdk:"username"`
+	Password          types.String                  `tfsdk:"password"`
+	NoteValue         types.String                  `tfsdk:"note_value"`
+	Credential        types.String                  `tfsdk:"credential"`
+	ValidFrom         types.String                  `tfsdk:"valid_from"`
+	Filename          types.String                  `tfsdk:"filename"`
+	PublicKey         types.String                  `tfsdk:"public_key"`
+	PrivateKey        types.String                  `tfsdk:"private_key"`
+	PrivateKeyOpenSSH types.String                  `tfsdk:"private_key_openssh"`
+	Section           []OnePasswordItemSectionModel `tfsdk:"section"`
+	File              []OnePasswordItemFileModel    `tfsdk:"file"`
 }
 
 type OnePasswordItemFileModel struct {
@@ -71,11 +73,11 @@ type OnePasswordItemSectionModel struct {
 }
 
 type OnePasswordItemFieldModel struct {
-	ID      types.String `tfsdk:"id"`
-	Label   types.String `tfsdk:"label"`
-	Purpose types.String `tfsdk:"purpose"`
-	Type    types.String `tfsdk:"type"`
-	Value   types.String `tfsdk:"value"`
+	ID    types.String `tfsdk:"id"`
+	Label types.String `tfsdk:"label"`
+
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
 }
 
 func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -201,6 +203,11 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 				Sensitive:           true,
 			},
+			"private_key_openssh": schema.StringAttribute{
+				MarkdownDescription: privateKeyOpenSSHDescription,
+				Computed:            true,
+				Sensitive:           true,
+			},
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
@@ -226,10 +233,6 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 									},
 									"label": schema.StringAttribute{
 										MarkdownDescription: fieldLabelDescription,
-										Computed:            true,
-									},
-									"purpose": schema.StringAttribute{
-										MarkdownDescription: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
 										Computed:            true,
 									},
 									"type": schema.StringAttribute{
@@ -299,7 +302,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 
 	data.ID = types.StringValue(itemTerraformID(item))
 	data.UUID = types.StringValue(item.ID)
-	data.Vault = types.StringValue(item.Vault.ID)
+	data.Vault = types.StringValue(item.VaultID)
 	data.Title = types.StringValue(item.Title)
 
 	for _, u := range item.URLs {
@@ -324,23 +327,22 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 
 		for _, f := range item.Fields {
-			if f.Section != nil && f.Section.ID == s.ID {
+			if f.SectionID != "" && f.SectionID == s.ID {
 				section.Field = append(section.Field, OnePasswordItemFieldModel{
-					ID:      types.StringValue(f.ID),
-					Label:   types.StringValue(f.Label),
-					Purpose: types.StringValue(string(f.Purpose)),
-					Type:    types.StringValue(string(f.Type)),
-					Value:   types.StringValue(f.Value),
+					ID:    types.StringValue(f.ID),
+					Label: types.StringValue(f.Label),
+					Type:  types.StringValue(string(f.Type)),
+					Value: types.StringValue(f.Value),
 				})
 			}
 		}
 
 		for _, f := range item.Files {
-			if f.Section != nil && f.Section.ID == s.ID {
+			if f.SectionID != "" && f.SectionID == s.ID {
 				content, err := f.Content()
 				if err != nil {
 					// content has not yet been loaded, fetch it
-					content, err = d.client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
+					content, err = d.client.GetFileContent(ctx, &f, item.ID, item.VaultID)
 				}
 				if err != nil {
 					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
@@ -360,15 +362,15 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 
 	for _, f := range item.Fields {
 		switch f.Purpose {
-		case op.FieldPurposeUsername:
+		case model.FieldPurposeUsername:
 			data.Username = types.StringValue(f.Value)
-		case op.FieldPurposePassword:
+		case model.FieldPurposePassword:
 			data.Password = types.StringValue(f.Value)
-		case op.FieldPurposeNotes:
+		case model.FieldPurposeNotes:
 			data.NoteValue = types.StringValue(f.Value)
 		default:
-			if f.Section == nil {
-				switch f.Label {
+			if f.SectionID == "" {
+				switch f.ID {
 				case "username":
 					data.Username = types.StringValue(f.Value)
 				case "password":
@@ -379,29 +381,35 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.Database = types.StringValue(f.Value)
 				case "port":
 					data.Port = types.StringValue(f.Value)
-				case "type":
+				case "type", "database_type":
 					data.Type = types.StringValue(f.Value)
-				case "public key":
+				case "public_key":
 					data.PublicKey = types.StringValue(f.Value)
-				case "private key":
+				case "private_key":
 					data.PrivateKey = types.StringValue(f.Value)
+					openSSHPrivateKey, err := opssh.PrivateKeyToOpenSSH([]byte(f.Value), item.ID)
+					if err != nil {
+						resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to convert private key to OpenSSH format, got error: %s", err))
+					}
+					data.PrivateKeyOpenSSH = types.StringValue(openSSHPrivateKey)
 				case "credential":
 					data.Credential = types.StringValue(f.Value)
 				case "valid_from":
 					data.ValidFrom = types.StringValue(f.Value)
 				case "filename":
 					data.Filename = types.StringValue(f.Value)
+
 				}
 			}
 		}
 	}
 
 	for _, f := range item.Files {
-		if f.Section == nil {
+		if f.SectionID == "" {
 			content, err := f.Content()
 			if err != nil {
 				// content has not yet been loaded, fetch it
-				content, err = d.client.GetFileContent(ctx, f, item.ID, item.Vault.ID)
+				content, err = d.client.GetFileContent(ctx, &f, item.ID, item.VaultID)
 			}
 			if err != nil {
 				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
@@ -426,7 +434,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 }
 
-func getItemForDataSource(ctx context.Context, client onepassword.Client, data OnePasswordItemDataSourceModel) (*op.Item, error) {
+func getItemForDataSource(ctx context.Context, client onepassword.Client, data OnePasswordItemDataSourceModel) (*model.Item, error) {
 	vaultUUID := data.Vault.ValueString()
 	itemTitle := data.Title.ValueString()
 	itemUUID := data.UUID.ValueString()

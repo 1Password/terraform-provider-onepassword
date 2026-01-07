@@ -51,6 +51,8 @@ resource "onepassword_item" "example" {
 - `note_value` (String, Sensitive) Secure Note value.
 - `password` (String, Sensitive) Password for this item.
 - `password_recipe` (Block List) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedblock--password_recipe))
+- `password_wo` (String, Sensitive) A write-only password for this item. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later.
+- `password_wo_version` (Number) An integer that must be incremented to trigger an update to the 'password_wo' field.
 - `port` (String) (Only applies to the database category) The port the database is listening on.
 - `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
@@ -71,7 +73,6 @@ Optional:
 
 - `digits` (Boolean) Use digits [0-9] when generating the password.
 - `length` (Number) The length of the password to be generated.
-- `letters` (Boolean) Use letters [a-zA-Z] when generating the password.
 - `symbols` (Boolean) Use symbols [!@.-_*] when generating the password.
 
 
@@ -85,9 +86,6 @@ Required:
 Optional:
 
 - `field` (Block List) A list of custom fields in the section. (see [below for nested schema](#nestedblock--section--field))
-
-Read-Only:
-
 - `id` (String) A unique identifier for the section.
 
 <a id="nestedblock--section--field"></a>
@@ -101,7 +99,6 @@ Optional:
 
 - `id` (String) A unique identifier for the field.
 - `password_recipe` (Block List) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedblock--section--field--password_recipe))
-- `purpose` (String) Purpose indicates this is a special field: a username, password, or notes field. One of ["USERNAME" "PASSWORD" "NOTES"]
 - `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
 - `value` (String, Sensitive) The value of the field.
 
@@ -112,7 +109,6 @@ Optional:
 
 - `digits` (Boolean) Use digits [0-9] when generating the password.
 - `length` (Number) The length of the password to be generated.
-- `letters` (Boolean) Use letters [a-zA-Z] when generating the password.
 - `symbols` (Boolean) Use symbols [!@.-_*] when generating the password.
 
 ## Import

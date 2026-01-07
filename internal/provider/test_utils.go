@@ -8,48 +8,51 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	"github.com/1Password/connect-sdk-go/onepassword"
 	"golang.org/x/crypto/ssh"
+
+	"github.com/1!password/connect-sdk-go/onepassword"
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
-func generateBaseItem() onepassword.Item {
-	item := onepassword.Item{}
+func generateBaseItem() model.Item {
+	item := model.Item{}
 	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
-	item.Vault.ID = "gs2jpwmahszwq25a7jiw45e4je"
+	item.VaultID = "gs2jpwmahszwq25a7jiw45e4je"
 	item.Title = "test item"
 
 	return item
 }
 
-func generateItemWithSections() *onepassword.Item {
+func generateItemWithSections() *model.Item {
 	item := generateBaseItem()
-	section := &onepassword.ItemSection{
+	section := model.ItemSection{
 		ID:    "1234",
 		Label: "Test Section",
 	}
 	item.Sections = append(item.Sections, section)
-	item.Fields = append(item.Fields, &onepassword.ItemField{
-		ID:      "23456",
-		Type:    "STRING",
-		Label:   "Secret Information",
-		Value:   "Password123",
-		Section: section,
+	item.Fields = append(item.Fields, model.ItemField{
+		ID:           "23456",
+		Type:         "STRING",
+		Label:        "Secret Information",
+		Value:        "Password123",
+		SectionID:    section.ID,
+		SectionLabel: section.Label,
 	})
 
-	item.Category = onepassword.Login
+	item.Category = model.Login
 
 	return &item
 }
 
-func generateDatabaseItem() *onepassword.Item {
+func generateDatabaseItem() *model.Item {
 	item := generateBaseItem()
-	item.Category = onepassword.Database
+	item.Category = model.Database
 	item.Fields = generateDatabaseFields()
 
 	return &item
 }
 
-func generateApiCredentialItem() *onepassword.Item {
+func generateApiCredentialItem() *model.Item {
 	item := generateBaseItem()
 	item.Category = onepassword.Database
 	item.Fields = generateApiCredentialFields()
@@ -57,19 +60,19 @@ func generateApiCredentialItem() *onepassword.Item {
 	return &item
 }
 
-func generatePasswordItem() *onepassword.Item {
+func generatePasswordItem() *model.Item {
 	item := generateBaseItem()
-	item.Category = onepassword.Password
+	item.Category = model.Password
 	item.Fields = generatePasswordFields()
 
 	return &item
 }
 
-func generateLoginItem() *onepassword.Item {
+func generateLoginItem() *model.Item {
 	item := generateBaseItem()
-	item.Category = onepassword.Login
+	item.Category = model.Login
 	item.Fields = generateLoginFields()
-	item.URLs = []onepassword.ItemURL{
+	item.URLs = []model.ItemURL{
 		{
 			Primary: true,
 			URL:     "some_url.com",
@@ -79,22 +82,22 @@ func generateLoginItem() *onepassword.Item {
 	return &item
 }
 
-func generateSSHKeyItem() *onepassword.Item {
+func generateSSHKeyItem() *model.Item {
 	item := generateBaseItem()
-	item.Category = onepassword.SSHKey
+	item.Category = model.SSHKey
 	item.Fields = generateSSHKeyFields()
 
 	return &item
 }
 
-func generateSecureNoteItem() *onepassword.Item {
+func generateSecureNoteItem() *model.Item {
 	item := generateBaseItem()
-	item.Category = onepassword.SecureNote
-	item.Fields = []*onepassword.ItemField{
+	item.Category = model.SecureNote
+	item.Fields = []model.ItemField{
 		{
 			ID:      "notesPlain",
 			Label:   "notesPlain",
-			Purpose: onepassword.FieldPurposeNotes,
+			Purpose: model.FieldPurposeNotes,
 			Value: `Lorem
 ipsum
 from
@@ -106,19 +109,19 @@ notes
 	return &item
 }
 
-func generateDocumentItem() *onepassword.Item {
+func generateDocumentItem() *model.Item {
 	item := generateBaseItem()
-	item.Category = onepassword.Document
-	item.Files = []*onepassword.File{
+	item.Category = model.Document
+	item.Files = []model.ItemFile{
 		{
 			ID:          "ascii",
 			Name:        "ascii",
-			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "ascii"),
+			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.VaultID, item.ID, "ascii"),
 		},
 		{
 			ID:          "binary",
 			Name:        "binary",
-			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "binary"),
+			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.VaultID, item.ID, "binary"),
 		},
 	}
 	item.Files[0].SetContent([]byte("ascii"))
@@ -127,22 +130,24 @@ func generateDocumentItem() *onepassword.Item {
 	return &item
 }
 
-func generateLoginItemWithFiles() *onepassword.Item {
+func generateLoginItemWithFiles() *model.Item {
 	item := generateItemWithSections()
-	item.Category = onepassword.Login
+	item.Category = model.Login
 	section := item.Sections[0]
-	item.Files = []*onepassword.File{
+	item.Files = []model.ItemFile{
 		{
-			ID:          "ascii",
-			Name:        "ascii",
-			Section:     section,
-			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "ascii"),
+			ID:           "ascii",
+			Name:         "ascii",
+			SectionID:    section.ID,
+			SectionLabel: section.Label,
+			ContentPath:  fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.VaultID, item.ID, "ascii"),
 		},
 		{
-			ID:          "binary",
-			Name:        "binary",
-			Section:     section,
-			ContentPath: fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.Vault.ID, item.ID, "binary"),
+			ID:           "binary",
+			Name:         "binary",
+			SectionID:    section.ID,
+			SectionLabel: section.Label,
+			ContentPath:  fmt.Sprintf("/v1/vaults/%s/items/%s/files/%s/content", item.VaultID, item.ID, "binary"),
 		},
 	}
 	item.Files[0].SetContent([]byte("ascii"))
@@ -151,29 +156,35 @@ func generateLoginItemWithFiles() *onepassword.Item {
 	return item
 }
 
-func generateDatabaseFields() []*onepassword.ItemField {
-	fields := []*onepassword.ItemField{
+func generateDatabaseFields() []model.ItemField {
+	fields := []model.ItemField{
 		{
+			ID:    "username",
 			Label: "username",
 			Value: "test_user",
 		},
 		{
+			ID:    "password",
 			Label: "password",
 			Value: "test_password",
 		},
 		{
+			ID:    "hostname",
 			Label: "hostname",
 			Value: "test_host",
 		},
 		{
+			ID:    "database",
 			Label: "database",
 			Value: "test_database",
 		},
 		{
+			ID:    "port",
 			Label: "port",
 			Value: "test_port",
 		},
 		{
+			ID:    "type",
 			Label: "type",
 			Value: "mysql",
 		},
@@ -211,13 +222,45 @@ func generateApiCredentialFields() []*onepassword.ItemField {
 	return fields
 }
 
-func generatePasswordFields() []*onepassword.ItemField {
-	fields := []*onepassword.ItemField{
+func generateApiCredentialFields() []*model.ItemField {
+	fields := []*model.ItemField{
 		{
+			Label: "username",
+			Value: "test test_user",
+		},
+		{
+			Label: "credential",
+			Value: "test_credential",
+		},
+		{
+			Label: "type",
+			Value: "test_type",
+		},
+		{
+			Label: "filename",
+			Value: "test_filename",
+		},
+		{
+			Label: "valid_from",
+			Value: "test_valid_from",
+		},
+		{
+			Label: "hostname",
+			Value: "test_hostname",
+		},
+	}
+	return fields
+}
+
+func generatePasswordFields() []model.ItemField {
+	fields := []model.ItemField{
+		{
+			ID:    "username",
 			Label: "username",
 			Value: "test_user",
 		},
 		{
+			ID:    "password",
 			Label: "password",
 			Value: "test_password",
 		},
@@ -225,13 +268,15 @@ func generatePasswordFields() []*onepassword.ItemField {
 	return fields
 }
 
-func generateLoginFields() []*onepassword.ItemField {
-	fields := []*onepassword.ItemField{
+func generateLoginFields() []model.ItemField {
+	fields := []model.ItemField{
 		{
+			ID:    "username",
 			Label: "username",
 			Value: "test_user",
 		},
 		{
+			ID:    "password",
 			Label: "password",
 			Value: "test_password",
 		},
@@ -239,7 +284,7 @@ func generateLoginFields() []*onepassword.ItemField {
 	return fields
 }
 
-func generateSSHKeyFields() []*onepassword.ItemField {
+func generateSSHKeyFields() []model.ItemField {
 	bitSize := 2048
 	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
 	if err != nil {
@@ -252,12 +297,14 @@ func generateSSHKeyFields() []*onepassword.ItemField {
 	}
 	publicKey := "ssh-rsa " + base64.StdEncoding.EncodeToString(publicRSAKey.Marshal())
 
-	fields := []*onepassword.ItemField{
+	fields := []model.ItemField{
 		{
+			ID:    "private_key",
 			Label: "private key",
 			Value: string(pem.EncodeToMemory(privateKeyPem)),
 		},
 		{
+			ID:    "public_key",
 			Label: "public key",
 			Value: publicKey,
 		},

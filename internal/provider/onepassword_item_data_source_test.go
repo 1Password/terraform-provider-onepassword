@@ -6,14 +6,15 @@ import (
 	"strings"
 	"testing"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+
+	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
 func TestAccItemDataSourceSections(t *testing.T) {
 	expectedItem := generateItemWithSections()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -25,7 +26,7 @@ func TestAccItemDataSourceSections(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
@@ -37,7 +38,6 @@ func TestAccItemDataSourceSections(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.label", expectedItem.Fields[0].Label),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.value", expectedItem.Fields[0].Value),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.type", string(expectedItem.Fields[0].Type)),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.purpose", string(expectedItem.Fields[0].Purpose)),
 				),
 			},
 		},
@@ -46,8 +46,8 @@ func TestAccItemDataSourceSections(t *testing.T) {
 
 func TestAccItemDataSourceDatabase(t *testing.T) {
 	expectedItem := generateDatabaseItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -59,7 +59,7 @@ func TestAccItemDataSourceDatabase(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
@@ -80,8 +80,8 @@ func TestAccItemDataSourceDatabase(t *testing.T) {
 
 func TestAccItemLoginDatabase(t *testing.T) {
 	expectedItem := generateLoginItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -93,7 +93,7 @@ func TestAccItemLoginDatabase(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
@@ -111,8 +111,8 @@ func TestAccItemLoginDatabase(t *testing.T) {
 
 func TestAccItemPasswordDatabase(t *testing.T) {
 	expectedItem := generateLoginItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -124,7 +124,7 @@ func TestAccItemPasswordDatabase(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
@@ -141,8 +141,8 @@ func TestAccItemPasswordDatabase(t *testing.T) {
 
 func TestAccItemDocument(t *testing.T) {
 	expectedItem := generateDocumentItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -164,7 +164,7 @@ func TestAccItemDocument(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
@@ -185,8 +185,8 @@ func TestAccItemDocument(t *testing.T) {
 
 func TestAccItemLoginWithFiles(t *testing.T) {
 	expectedItem := generateLoginItemWithFiles()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -208,7 +208,7 @@ func TestAccItemLoginWithFiles(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
@@ -229,8 +229,8 @@ func TestAccItemLoginWithFiles(t *testing.T) {
 
 func TestAccItemSSHKey(t *testing.T) {
 	expectedItem := generateSSHKeyItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -242,7 +242,7 @@ func TestAccItemSSHKey(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),

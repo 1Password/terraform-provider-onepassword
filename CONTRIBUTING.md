@@ -35,8 +35,7 @@ You must specify the `onepassword` provider in your Terraform configuration:
 terraform {
   required_providers {
     onepassword = {
-      source  = "1Password/onepassword"
-      version = "~> 2.0.0"
+      source = "1Password/onepassword"
     }
   }
 }
@@ -55,7 +54,6 @@ To start debugging:
 1. Start a debugging session.
 2. Export `TF_REATTACH_PROVIDERS`.
 3. Run Terraform normally.
-
 
 ### Start a debugging session
 
@@ -119,7 +117,6 @@ To get your PR merged, we require you to sign your commits.
 You can also sign commits using 1Password, which lets you sign commits with biometrics without the signing key leaving the local 1Password process.
 
 Learn how to use [1Password to sign your commits](https://developer.1password.com/docs/ssh/git-commit-signing/).
-
 
 ### Sign commits with `ssh-agent`
 

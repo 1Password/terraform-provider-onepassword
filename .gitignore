@@ -33,3 +33,6 @@ override.tf.json
 
 **/terraform-provider-onepassword
 /dist
+.idea
+.DS_Store
+local-testing/
