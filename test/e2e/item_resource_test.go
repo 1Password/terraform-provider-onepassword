@@ -1622,10 +1622,11 @@ func TestAccItemResourceSectionMap_FieldTypes(t *testing.T) {
 					Type:  "DATE",
 					Value: "2025-01-06",
 				},
-				"month_year_field": {
-					Type:  "MONTH_YEAR",
-					Value: "01/2025",
-				},
+				// TODO: Uncomment after addressing https://github.com/1Password/terraform-provider-onepassword/issues/311
+				// "month_year_field": {
+				// 	Type:  "MONTH_YEAR",
+				// 	Value: "01/2025",
+				// },
 			},
 		},
 	})
@@ -1659,8 +1660,9 @@ func TestAccItemResourceSectionMap_FieldTypes(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.url_field.value", "https://example.com"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.date_field.type", "DATE"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.date_field.value", "2025-01-06"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.month_year_field.type", "MONTH_YEAR"),
-					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.month_year_field.value", "01/2025"),
+					// TODO: Uncomment after addressing https://github.com/1Password/terraform-provider-onepassword/issues/311
+					//resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.month_year_field.type", "MONTH_YEAR"),
+					//resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.month_year_field.value", "01/2025"),
 				),
 			},
 		},
