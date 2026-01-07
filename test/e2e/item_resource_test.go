@@ -2121,3 +2121,158 @@ func TestAccItemResourceSectionMap_AllCategories(t *testing.T) {
 		})
 	}
 }
+
+// TestAccItemResourceSectionMap_DuplicateKeys tests behavior when duplicate map keys are used
+func TestAccItemResourceSectionMap_DuplicateKeys(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+
+	t.Run("DuplicateSectionKeys_LastWins", func(t *testing.T) {
+		uniqueID := uuid.New().String()
+		var itemUUID string
+
+		config := fmt.Sprintf(`
+provider "onepassword" {}
+
+resource "onepassword_item" "test_item" {
+  vault    = "%s"
+  title    = "Test Duplicate Section Keys-%s"
+  category = "login"
+
+  section_map = {
+    "duplicate_section" = {
+      field_map = {
+        "field1" = {
+          type  = "STRING"
+          value = "first_value_should_be_overwritten"
+        }
+      }
+    }
+    "duplicate_section" = {
+      field_map = {
+        "field2" = {
+          type  = "STRING"
+          value = "second_value_wins"
+        }
+      }
+    }
+  }
+}
+`, testVaultID, uniqueID)
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Steps: []resource.TestStep{
+				{
+					Config: config,
+					Check: resource.ComposeAggregateTestCheckFunc(
+						logStep(t, "CREATE_DUPLICATE_SECTION_KEYS"),
+						uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						cleanup.RegisterItem(t, &itemUUID, testVaultID),
+						// Only one section should exist (the second definition)
+						checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "duplicate_section"),
+						// field2 from second definition should exist
+						checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "duplicate_section", "field2", "second_value_wins"),
+						// field1 from first definition should NOT exist (was overwritten)
+						resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section_map.duplicate_section.field_map.field1"),
+					),
+				},
+			},
+		})
+	})
+
+	t.Run("DuplicateFieldKeys_LastWins", func(t *testing.T) {
+		uniqueID := uuid.New().String()
+		var itemUUID string
+
+		config := fmt.Sprintf(`
+provider "onepassword" {}
+
+resource "onepassword_item" "test_item" {
+  vault    = "%s"
+  title    = "Test Duplicate Field Keys-%s"
+  category = "login"
+
+  section_map = {
+    "my_section" = {
+      field_map = {
+        "duplicate_field" = {
+          type  = "STRING"
+          value = "first_value_should_be_overwritten"
+        }
+        "duplicate_field" = {
+          type  = "STRING"
+          value = "second_value_wins"
+        }
+      }
+    }
+  }
+}
+`, testVaultID, uniqueID)
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Steps: []resource.TestStep{
+				{
+					Config: config,
+					Check: resource.ComposeAggregateTestCheckFunc(
+						logStep(t, "CREATE_DUPLICATE_FIELD_KEYS"),
+						uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						cleanup.RegisterItem(t, &itemUUID, testVaultID),
+						// Section should exist
+						checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "my_section"),
+						// Only one field should exist with the second (last) value
+						checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "my_section", "duplicate_field", "second_value_wins"),
+					),
+				},
+			},
+		})
+	})
+
+	t.Run("SameFieldLabelInDifferentSections_Success", func(t *testing.T) {
+		// Same field label in different sections is valid - each section has its own field_map
+		uniqueID := uuid.New().String()
+		title := addUniqueIDToTitle("Test Same Field Different Sections", uniqueID)
+		var itemUUID string
+
+		sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+			"section_a": {
+				FieldMap: map[string]sections.TestSectionMapField{
+					"common_field": {Type: "STRING", Value: "value in A"},
+				},
+			},
+			"section_b": {
+				FieldMap: map[string]sections.TestSectionMapField{
+					"common_field": {Type: "STRING", Value: "value in B"},
+				},
+			},
+		})
+
+		attrs := map[string]any{
+			"title":       title,
+			"category":    "login",
+			"section_map": sectionMap,
+		}
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Steps: []resource.TestStep{
+				{
+					Config: tfconfig.CreateConfigBuilder()(
+						tfconfig.ProviderConfig(),
+						tfconfig.ItemResourceConfig(testVaultID, attrs),
+					),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						logStep(t, "CREATE_SAME_FIELD_DIFFERENT_SECTIONS"),
+						uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						cleanup.RegisterItem(t, &itemUUID, testVaultID),
+						resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
+						checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "section_a"),
+						checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "section_b"),
+						checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section_a", "common_field", "value in A"),
+						checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section_b", "common_field", "value in B"),
+					),
+				},
+			},
+		})
+	})
+}
