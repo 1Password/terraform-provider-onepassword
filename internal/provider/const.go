@@ -21,7 +21,6 @@ const (
 	passwordWriteOnceVersionDescription  = "An integer that must be incremented to trigger an update to the 'password_wo' field."
 	noteValueWriteOnceDescription        = "A write-only secure note value for this item. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later."
 	noteValueWriteOnceVersionDescription = "An integer that must be incremented to trigger an update to the 'note_value_wo' field."
-	credentialDescription                = "API credential for this item."
 	noteValueDescription                 = "Secure Note value."
 	publicKeyDescription                 = "SSH Public Key for this item."
 	privateKeyDescription                = "SSH Private Key in PKCS#8 for this item."

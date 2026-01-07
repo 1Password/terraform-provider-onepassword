@@ -259,8 +259,8 @@ func TestAccItemSSHKey(t *testing.T) {
 
 func TestAccItemDataSourceApiCredential(t *testing.T) {
 	expectedItem := generateApiCredentialItem()
-	expectedVault := op.Vault{
-		ID:          expectedItem.Vault.ID,
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
 		Name:        "Name of the vault",
 		Description: "This vault will be retrieved",
 	}
@@ -272,7 +272,7 @@ func TestAccItemDataSourceApiCredential(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.Vault.ID, expectedItem.ID),
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),

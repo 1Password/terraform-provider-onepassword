@@ -394,7 +394,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.PrivateKeyOpenSSH = types.StringValue(openSSHPrivateKey)
 				case "credential":
 					data.Credential = types.StringValue(f.Value)
-				case "valid_from":
+				case "validFrom":
 					data.ValidFrom = types.StringValue(f.Value)
 				case "filename":
 					data.Filename = types.StringValue(f.Value)

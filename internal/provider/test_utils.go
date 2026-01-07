@@ -10,7 +10,6 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/1!password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v2/internal/onepassword/model"
 )
 
@@ -54,7 +53,7 @@ func generateDatabaseItem() *model.Item {
 
 func generateApiCredentialItem() *model.Item {
 	item := generateBaseItem()
-	item.Category = onepassword.Database
+	item.Category = model.APICredential
 	item.Fields = generateApiCredentialFields()
 
 	return &item
@@ -192,59 +191,35 @@ func generateDatabaseFields() []model.ItemField {
 	return fields
 }
 
-func generateApiCredentialFields() []*onepassword.ItemField {
-	fields := []*onepassword.ItemField{
+func generateApiCredentialFields() []model.ItemField {
+	fields := []model.ItemField{
 		{
+			ID:    "username",
 			Label: "username",
 			Value: "test test_user",
 		},
 		{
+			ID:    "credential",
 			Label: "credential",
 			Value: "test_credential",
 		},
 		{
+			ID:    "type",
 			Label: "type",
 			Value: "test_type",
 		},
 		{
+			ID:    "filename",
 			Label: "filename",
 			Value: "test_filename",
 		},
 		{
+			ID:    "valid_from",
 			Label: "valid_from",
 			Value: "test_valid_from",
 		},
 		{
-			Label: "hostname",
-			Value: "test_hostname",
-		},
-	}
-	return fields
-}
-
-func generateApiCredentialFields() []*model.ItemField {
-	fields := []*model.ItemField{
-		{
-			Label: "username",
-			Value: "test test_user",
-		},
-		{
-			Label: "credential",
-			Value: "test_credential",
-		},
-		{
-			Label: "type",
-			Value: "test_type",
-		},
-		{
-			Label: "filename",
-			Value: "test_filename",
-		},
-		{
-			Label: "valid_from",
-			Value: "test_valid_from",
-		},
-		{
+			ID:    "hostname",
 			Label: "hostname",
 			Value: "test_hostname",
 		},
