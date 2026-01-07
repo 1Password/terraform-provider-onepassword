@@ -214,7 +214,7 @@ func generateApiCredentialFields() []model.ItemField {
 			Value: "test_filename",
 		},
 		{
-			ID:    "valid_from",
+			ID:    "validFrom",
 			Label: "valid_from",
 			Value: "test_valid_from",
 		},
