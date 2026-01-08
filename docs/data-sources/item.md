@@ -29,6 +29,7 @@ data "onepassword_item" "example" {
 ### Optional
 
 - `note_value` (String, Sensitive) Secure Note value.
+- `section_map` (Attributes Map) A map of custom sections in the item, keyed by section label. This allows easy lookup of sections and fields by name. (see [below for nested schema](#nestedatt--section_map))
 - `title` (String) The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.
 - `uuid` (String) The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.
 
@@ -46,11 +47,43 @@ data "onepassword_item" "example" {
 - `private_key_openssh` (String, Sensitive) SSH Private key in OpenSSH format.
 - `public_key` (String) SSH Public Key for this item.
 - `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
-- `section_map` (Attributes Map) A map of custom sections in the item, keyed by section label. This allows easy lookup of sections and fields by name. (see [below for nested schema](#nestedatt--section_map))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
 - `type` (String) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - `url` (String) The primary URL for the item.
 - `username` (String) Username for this item.
+
+<a id="nestedatt--section_map"></a>
+### Nested Schema for `section_map`
+
+Optional:
+
+- `field_map` (Attributes Map) A map of customfields in the section, keyed by field label. (see [below for nested schema](#nestedatt--section_map--field_map))
+- `file_map` (Attributes Map) A map of files attached to the section, keyed by file ID. (see [below for nested schema](#nestedatt--section_map--file_map))
+
+Read-Only:
+
+- `id` (String) A unique identifier for the section.
+
+<a id="nestedatt--section_map--field_map"></a>
+### Nested Schema for `section_map.field_map`
+
+Read-Only:
+
+- `id` (String) A unique identifier for the field.
+- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
+- `value` (String, Sensitive) The value of the field.
+
+
+<a id="nestedatt--section_map--file_map"></a>
+### Nested Schema for `section_map.file_map`
+
+Read-Only:
+
+- `content` (String, Sensitive) The content of the file.
+- `content_base64` (String, Sensitive) The content of the file in base64 encoding. (Use this for binary files.)
+- `id` (String) The UUID of the file.
+
+
 
 <a id="nestedblock--file"></a>
 ### Nested Schema for `file`
@@ -86,38 +119,6 @@ Read-Only:
 
 <a id="nestedblock--section--file"></a>
 ### Nested Schema for `section.file`
-
-Read-Only:
-
-- `content` (String, Sensitive) The content of the file.
-- `content_base64` (String, Sensitive) The content of the file in base64 encoding. (Use this for binary files.)
-- `id` (String) The UUID of the file.
-- `name` (String) The name of the file.
-
-
-
-<a id="nestedatt--section_map"></a>
-### Nested Schema for `section_map`
-
-Read-Only:
-
-- `field_map` (Attributes Map) A map of fields in the section, keyed by field label. (see [below for nested schema](#nestedatt--section_map--field_map))
-- `file` (Attributes List) A list of files attached to the section. (see [below for nested schema](#nestedatt--section_map--file))
-- `id` (String) A unique identifier for the section.
-
-<a id="nestedatt--section_map--field_map"></a>
-### Nested Schema for `section_map.field_map`
-
-Read-Only:
-
-- `id` (String) A unique identifier for the field.
-- `label` (String) The label for the field.
-- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
-- `value` (String, Sensitive) The value of the field.
-
-
-<a id="nestedatt--section_map--file"></a>
-### Nested Schema for `section_map.file`
 
 Read-Only:
 
