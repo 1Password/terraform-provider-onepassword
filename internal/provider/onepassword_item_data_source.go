@@ -73,11 +73,11 @@ type OnePasswordItemSectionListModel struct {
 }
 
 type OnePasswordItemFieldModel struct {
-	ID      types.String `tfsdk:"id"`
-	Label   types.String `tfsdk:"label"`
-	Purpose types.String `tfsdk:"purpose"`
-	Type    types.String `tfsdk:"type"`
-	Value   types.String `tfsdk:"value"`
+	ID    types.String `tfsdk:"id"`
+	Label types.String `tfsdk:"label"`
+
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
 }
 
 type OnePasswordItemSectionMapModel struct {
@@ -304,10 +304,6 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 										MarkdownDescription: fieldLabelDescription,
 										Computed:            true,
 									},
-									"purpose": schema.StringAttribute{
-										MarkdownDescription: fmt.Sprintf(enumDescription, fieldPurposeDescription, fieldPurposes),
-										Computed:            true,
-									},
 									"type": schema.StringAttribute{
 										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
 										Computed:            true,
@@ -402,11 +398,10 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 		for _, f := range item.Fields {
 			if f.SectionID != "" && f.SectionID == s.ID {
 				section.Field = append(section.Field, OnePasswordItemFieldModel{
-					ID:      types.StringValue(f.ID),
-					Label:   types.StringValue(f.Label),
-					Purpose: types.StringValue(string(f.Purpose)),
-					Type:    types.StringValue(string(f.Type)),
-					Value:   types.StringValue(f.Value),
+					ID:    types.StringValue(f.ID),
+					Label: types.StringValue(f.Label),
+					Type:  types.StringValue(string(f.Type)),
+					Value: types.StringValue(f.Value),
 				})
 			}
 		}
