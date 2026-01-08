@@ -83,13 +83,19 @@ type OnePasswordItemFieldModel struct {
 type OnePasswordItemSectionMapModel struct {
 	ID       types.String                                   `tfsdk:"id"`
 	FieldMap map[string]OnePasswordItemSectionMapFieldModel `tfsdk:"field_map"`
-	File     []OnePasswordItemFileModel                     `tfsdk:"file"`
+	FileMap  map[string]OnePasswordItemFileMapModel         `tfsdk:"file_map"`
 }
 
 type OnePasswordItemSectionMapFieldModel struct {
 	ID    types.String `tfsdk:"id"`
 	Type  types.String `tfsdk:"type"`
 	Value types.String `tfsdk:"value"`
+}
+
+type OnePasswordItemFileMapModel struct {
+	ID            types.String `tfsdk:"id"`
+	Content       types.String `tfsdk:"content"`
+	ContentBase64 types.String `tfsdk:"content_base64"`
 }
 
 func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -213,7 +219,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Sensitive:           true,
 			},
 			"section_map": schema.MapNestedAttribute{
-				MarkdownDescription: "A map of sections in the item, keyed by section label. This allows easy lookup of sections and fields by name.",
+				MarkdownDescription: sectionMapDescription,
 				Computed:            true,
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
@@ -223,17 +229,13 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 							Computed:            true,
 						},
 						"field_map": schema.MapNestedAttribute{
-							MarkdownDescription: "A map of fields in the section, keyed by field label.",
+							MarkdownDescription: fieldMapDescription,
 							Computed:            true,
 							Optional:            true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
 										MarkdownDescription: fieldIDDescription,
-										Computed:            true,
-									},
-									"label": schema.StringAttribute{
-										MarkdownDescription: fieldLabelDescription,
 										Computed:            true,
 									},
 									"type": schema.StringAttribute{
@@ -248,17 +250,14 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 								},
 							},
 						},
-						"file": schema.ListNestedAttribute{
-							MarkdownDescription: sectionFilesDescription,
+						"file_map": schema.MapNestedAttribute{
+							MarkdownDescription: fileMapDescription,
 							Computed:            true,
+							Optional:            true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
 										MarkdownDescription: fileIDDescription,
-										Computed:            true,
-									},
-									"name": schema.StringAttribute{
-										MarkdownDescription: fileNameDescription,
 										Computed:            true,
 									},
 									"content": schema.StringAttribute{
@@ -547,7 +546,7 @@ func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.C
 			}
 		}
 
-		var sectionFiles []OnePasswordItemFileModel
+		sectionFileMap := make(map[string]OnePasswordItemFileMapModel)
 		for _, f := range item.Files {
 			if f.SectionID != "" && f.SectionID == s.ID {
 				content, err := f.Content()
@@ -558,19 +557,18 @@ func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.C
 					diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
 					continue
 				}
-				sectionFiles = append(sectionFiles, OnePasswordItemFileModel{
+				sectionFileMap[f.ID] = OnePasswordItemFileMapModel{
 					ID:            types.StringValue(f.ID),
-					Name:          types.StringValue(f.Name),
 					Content:       types.StringValue(string(content)),
 					ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
-				})
+				}
 			}
 		}
 
 		sectionMap[sectionLabel] = OnePasswordItemSectionMapModel{
 			ID:       types.StringValue(s.ID),
 			FieldMap: fieldMap,
-			File:     sectionFiles,
+			FileMap:  sectionFileMap,
 		}
 	}
 
