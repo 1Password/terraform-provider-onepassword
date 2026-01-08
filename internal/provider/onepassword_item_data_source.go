@@ -55,10 +55,10 @@ type OnePasswordItemDataSourceModel struct {
 	PrivateKeyOpenSSH types.String                              `tfsdk:"private_key_openssh"`
 	SectionList       []OnePasswordItemSectionListModel         `tfsdk:"section"`
 	SectionMap        map[string]OnePasswordItemSectionMapModel `tfsdk:"section_map"`
-	File              []OnePasswordItemFileModel                `tfsdk:"file"`
+	File              []OnePasswordItemFileListModel            `tfsdk:"file"`
 }
 
-type OnePasswordItemFileModel struct {
+type OnePasswordItemFileListModel struct {
 	ID            types.String `tfsdk:"id"`
 	Name          types.String `tfsdk:"name"`
 	Content       types.String `tfsdk:"content"`
@@ -66,16 +66,15 @@ type OnePasswordItemFileModel struct {
 }
 
 type OnePasswordItemSectionListModel struct {
-	ID    types.String                `tfsdk:"id"`
-	Label types.String                `tfsdk:"label"`
-	Field []OnePasswordItemFieldModel `tfsdk:"field"`
-	File  []OnePasswordItemFileModel  `tfsdk:"file"`
+	ID    types.String                    `tfsdk:"id"`
+	Label types.String                    `tfsdk:"label"`
+	Field []OnePasswordItemFieldListModel `tfsdk:"field"`
+	File  []OnePasswordItemFileListModel  `tfsdk:"file"`
 }
 
-type OnePasswordItemFieldModel struct {
+type OnePasswordItemFieldListModel struct {
 	ID    types.String `tfsdk:"id"`
 	Label types.String `tfsdk:"label"`
-
 	Type  types.String `tfsdk:"type"`
 	Value types.String `tfsdk:"value"`
 }
@@ -397,7 +396,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 
 		for _, f := range item.Fields {
 			if f.SectionID != "" && f.SectionID == s.ID {
-				section.Field = append(section.Field, OnePasswordItemFieldModel{
+				section.Field = append(section.Field, OnePasswordItemFieldListModel{
 					ID:    types.StringValue(f.ID),
 					Label: types.StringValue(f.Label),
 					Type:  types.StringValue(string(f.Type)),
@@ -416,7 +415,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 				if err != nil {
 					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
 				}
-				file := OnePasswordItemFileModel{
+				file := OnePasswordItemFileListModel{
 					ID:            types.StringValue(f.ID),
 					Name:          types.StringValue(f.Name),
 					Content:       types.StringValue(string(content)),
@@ -485,7 +484,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			if err != nil {
 				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
 			}
-			file := OnePasswordItemFileModel{
+			file := OnePasswordItemFileListModel{
 				ID:            types.StringValue(f.ID),
 				Name:          types.StringValue(f.Name),
 				Content:       types.StringValue(string(content)),
