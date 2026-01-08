@@ -1037,8 +1037,8 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 					ID: types.StringValue("section1"),
 					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
 						"Field 1": {
-							ID:   types.StringValue("field1"),
-							Type: types.StringValue("STRING"),
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("STRING"),
 							Value: types.StringValue("value1"),
 							Recipe: &PasswordRecipeModel{
 								Length:  types.Int64Value(20),
@@ -1337,6 +1337,57 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 							ID:     types.StringValue("field1"),
 							Type:   types.StringValue("STRING"),
 							Value:  types.StringNull(), // Empty value becomes null
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+		"section with empty label - last wins when multiple sections have empty labels": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: ""},
+					{ID: "section2", Label: ""},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+					{ID: "field2", Label: "Field 2", Type: model.FieldTypeString, Value: "value2", SectionID: "section2"},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"": {
+					ID: types.StringValue("section2"), // Last section ID wins
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 2": {
+							ID:     types.StringValue("field2"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value2"),
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+		"field with empty label - last wins when multiple fields have empty labels": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+					{ID: "field2", Label: "", Type: model.FieldTypeString, Value: "value2", SectionID: "section1"},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"": {
+							ID:     types.StringValue("field2"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value2"),
 							Recipe: nil,
 						},
 					},
