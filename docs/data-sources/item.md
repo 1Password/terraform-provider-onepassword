@@ -57,7 +57,7 @@ data "onepassword_item" "example" {
 
 Optional:
 
-- `field_map` (Attributes Map) A map of customfields in the section, keyed by field label. (see [below for nested schema](#nestedatt--section_map--field_map))
+- `field_map` (Attributes Map) A map of custom fields in the section, keyed by field label. (see [below for nested schema](#nestedatt--section_map--field_map))
 - `file_map` (Attributes Map) A map of files attached to the section, keyed by file ID. (see [below for nested schema](#nestedatt--section_map--file_map))
 
 Read-Only:

@@ -52,7 +52,7 @@ const (
 	fieldPurposeDescription = "Purpose indicates this is a special field: a username, password, or notes field."
 	fieldTypeDescription    = "The type of value stored in the field."
 	fieldValueDescription   = "The value of the field."
-	fieldMapDescription     = "A map of customfields in the section, keyed by field label."
+	fieldMapDescription     = "A map of custom fields in the section, keyed by field label."
 
 	passwordRecipeDescription  = "The recipe used to generate a new value for a password."
 	passwordElementDescription = "The kinds of characters to include in the password."
