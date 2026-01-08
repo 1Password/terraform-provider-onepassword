@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -34,48 +35,66 @@ type OnePasswordItemDataSource struct {
 
 // OnePasswordItemDataSourceModel describes the data source data model.
 type OnePasswordItemDataSourceModel struct {
-	ID                types.String                  `tfsdk:"id"`
-	Vault             types.String                  `tfsdk:"vault"`
-	UUID              types.String                  `tfsdk:"uuid"`
-	Title             types.String                  `tfsdk:"title"`
-	Category          types.String                  `tfsdk:"category"`
-	URL               types.String                  `tfsdk:"url"`
-	Hostname          types.String                  `tfsdk:"hostname"`
-	Database          types.String                  `tfsdk:"database"`
-	Port              types.String                  `tfsdk:"port"`
-	Type              types.String                  `tfsdk:"type"`
-	Tags              types.List                    `tfsdk:"tags"`
-	Username          types.String                  `tfsdk:"username"`
-	Password          types.String                  `tfsdk:"password"`
-	NoteValue         types.String                  `tfsdk:"note_value"`
-	Credential        types.String                  `tfsdk:"credential"`
-	PublicKey         types.String                  `tfsdk:"public_key"`
-	PrivateKey        types.String                  `tfsdk:"private_key"`
-	PrivateKeyOpenSSH types.String                  `tfsdk:"private_key_openssh"`
-	Section           []OnePasswordItemSectionModel `tfsdk:"section"`
-	File              []OnePasswordItemFileModel    `tfsdk:"file"`
+	ID                types.String                              `tfsdk:"id"`
+	Vault             types.String                              `tfsdk:"vault"`
+	UUID              types.String                              `tfsdk:"uuid"`
+	Title             types.String                              `tfsdk:"title"`
+	Category          types.String                              `tfsdk:"category"`
+	URL               types.String                              `tfsdk:"url"`
+	Hostname          types.String                              `tfsdk:"hostname"`
+	Database          types.String                              `tfsdk:"database"`
+	Port              types.String                              `tfsdk:"port"`
+	Type              types.String                              `tfsdk:"type"`
+	Tags              types.List                                `tfsdk:"tags"`
+	Username          types.String                              `tfsdk:"username"`
+	Password          types.String                              `tfsdk:"password"`
+	NoteValue         types.String                              `tfsdk:"note_value"`
+	Credential        types.String                              `tfsdk:"credential"`
+	PublicKey         types.String                              `tfsdk:"public_key"`
+	PrivateKey        types.String                              `tfsdk:"private_key"`
+	PrivateKeyOpenSSH types.String                              `tfsdk:"private_key_openssh"`
+	SectionList       []OnePasswordItemSectionListModel         `tfsdk:"section"`
+	SectionMap        map[string]OnePasswordItemSectionMapModel `tfsdk:"section_map"`
+	File              []OnePasswordItemFileListModel            `tfsdk:"file"`
 }
 
-type OnePasswordItemFileModel struct {
+type OnePasswordItemFileListModel struct {
 	ID            types.String `tfsdk:"id"`
 	Name          types.String `tfsdk:"name"`
 	Content       types.String `tfsdk:"content"`
 	ContentBase64 types.String `tfsdk:"content_base64"`
 }
 
-type OnePasswordItemSectionModel struct {
-	ID    types.String                `tfsdk:"id"`
-	Label types.String                `tfsdk:"label"`
-	Field []OnePasswordItemFieldModel `tfsdk:"field"`
-	File  []OnePasswordItemFileModel  `tfsdk:"file"`
+type OnePasswordItemSectionListModel struct {
+	ID    types.String                    `tfsdk:"id"`
+	Label types.String                    `tfsdk:"label"`
+	Field []OnePasswordItemFieldListModel `tfsdk:"field"`
+	File  []OnePasswordItemFileListModel  `tfsdk:"file"`
 }
 
-type OnePasswordItemFieldModel struct {
+type OnePasswordItemFieldListModel struct {
 	ID    types.String `tfsdk:"id"`
 	Label types.String `tfsdk:"label"`
-
 	Type  types.String `tfsdk:"type"`
 	Value types.String `tfsdk:"value"`
+}
+
+type OnePasswordItemSectionMapModel struct {
+	ID       types.String                            `tfsdk:"id"`
+	FieldMap map[string]OnePasswordItemFieldMapModel `tfsdk:"field_map"`
+	FileMap  map[string]OnePasswordItemFileMapModel  `tfsdk:"file_map"`
+}
+
+type OnePasswordItemFieldMapModel struct {
+	ID    types.String `tfsdk:"id"`
+	Type  types.String `tfsdk:"type"`
+	Value types.String `tfsdk:"value"`
+}
+
+type OnePasswordItemFileMapModel struct {
+	ID            types.String `tfsdk:"id"`
+	Content       types.String `tfsdk:"content"`
+	ContentBase64 types.String `tfsdk:"content_base64"`
 }
 
 func (d *OnePasswordItemDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -198,7 +217,66 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 				Sensitive:           true,
 			},
+			"section_map": schema.MapNestedAttribute{
+				MarkdownDescription: sectionMapDescription,
+				Computed:            true,
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: sectionIDDescription,
+							Computed:            true,
+						},
+						"field_map": schema.MapNestedAttribute{
+							MarkdownDescription: fieldMapDescription,
+							Computed:            true,
+							Optional:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fieldIDDescription,
+										Computed:            true,
+									},
+									"type": schema.StringAttribute{
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+										Computed:            true,
+									},
+									"value": schema.StringAttribute{
+										MarkdownDescription: fieldValueDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+						"file_map": schema.MapNestedAttribute{
+							MarkdownDescription: fileMapDescription,
+							Computed:            true,
+							Optional:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fileIDDescription,
+										Computed:            true,
+									},
+									"content": schema.StringAttribute{
+										MarkdownDescription: fileContentDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+									"content_base64": schema.StringAttribute{
+										MarkdownDescription: fileContentBase64Description,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
+
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
 				MarkdownDescription: sectionsDescription,
@@ -311,14 +389,14 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	data.Category = types.StringValue(strings.ToLower(string(item.Category)))
 
 	for _, s := range item.Sections {
-		section := OnePasswordItemSectionModel{
+		section := OnePasswordItemSectionListModel{
 			ID:    types.StringValue(s.ID),
 			Label: types.StringValue(s.Label),
 		}
 
 		for _, f := range item.Fields {
 			if f.SectionID != "" && f.SectionID == s.ID {
-				section.Field = append(section.Field, OnePasswordItemFieldModel{
+				section.Field = append(section.Field, OnePasswordItemFieldListModel{
 					ID:    types.StringValue(f.ID),
 					Label: types.StringValue(f.Label),
 					Type:  types.StringValue(string(f.Type)),
@@ -337,7 +415,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 				if err != nil {
 					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
 				}
-				file := OnePasswordItemFileModel{
+				file := OnePasswordItemFileListModel{
 					ID:            types.StringValue(f.ID),
 					Name:          types.StringValue(f.Name),
 					Content:       types.StringValue(string(content)),
@@ -347,8 +425,15 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			}
 		}
 
-		data.Section = append(data.Section, section)
+		data.SectionList = append(data.SectionList, section)
 	}
+
+	sectionMap, diag := buildSectionMap(ctx, item, d.client)
+	resp.Diagnostics.Append(diag...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.SectionMap = sectionMap
 
 	for _, f := range item.Fields {
 		switch f.Purpose {
@@ -399,7 +484,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			if err != nil {
 				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
 			}
-			file := OnePasswordItemFileModel{
+			file := OnePasswordItemFileListModel{
 				ID:            types.StringValue(f.ID),
 				Name:          types.StringValue(f.Name),
 				Content:       types.StringValue(string(content)),
@@ -431,4 +516,52 @@ func getItemForDataSource(ctx context.Context, client onepassword.Client, data O
 		return client.GetItem(ctx, itemUUID, vaultUUID)
 	}
 	return nil, errors.New("uuid or title must be set")
+}
+
+func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.Client) (map[string]OnePasswordItemSectionMapModel, diag.Diagnostics) {
+	var diagnostics diag.Diagnostics
+
+	sectionMap := make(map[string]OnePasswordItemSectionMapModel)
+
+	for _, s := range item.Sections {
+		fieldMap := make(map[string]OnePasswordItemFieldMapModel)
+
+		for _, f := range item.Fields {
+			if f.SectionID != "" && f.SectionID == s.ID {
+
+				fieldMap[f.Label] = OnePasswordItemFieldMapModel{
+					ID:    types.StringValue(f.ID),
+					Type:  types.StringValue(string(f.Type)),
+					Value: types.StringValue(f.Value),
+				}
+			}
+		}
+
+		sectionFileMap := make(map[string]OnePasswordItemFileMapModel)
+		for _, f := range item.Files {
+			if f.SectionID != "" && f.SectionID == s.ID {
+				content, err := f.Content()
+				if err != nil {
+					content, err = client.GetFileContent(ctx, &f, item.ID, item.VaultID)
+				}
+				if err != nil {
+					diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+					continue
+				}
+				sectionFileMap[f.Name] = OnePasswordItemFileMapModel{
+					ID:            types.StringValue(f.ID),
+					Content:       types.StringValue(string(content)),
+					ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+				}
+			}
+		}
+
+		sectionMap[s.Label] = OnePasswordItemSectionMapModel{
+			ID:       types.StringValue(s.ID),
+			FieldMap: fieldMap,
+			FileMap:  sectionFileMap,
+		}
+	}
+
+	return sectionMap, diagnostics
 }

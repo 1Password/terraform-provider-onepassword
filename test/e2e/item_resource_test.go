@@ -1229,6 +1229,7 @@ func TestAccItemResourcePasswordWriteOnly(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					logStep(t, "CREATE_WITH_PASSWORD_WO"),
 					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "category", "login"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "testuser@example.com"),
