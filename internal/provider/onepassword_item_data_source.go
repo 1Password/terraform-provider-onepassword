@@ -81,12 +81,12 @@ type OnePasswordItemFieldModel struct {
 }
 
 type OnePasswordItemSectionMapModel struct {
-	ID       types.String                                   `tfsdk:"id"`
-	FieldMap map[string]OnePasswordItemSectionMapFieldModel `tfsdk:"field_map"`
-	FileMap  map[string]OnePasswordItemFileMapModel         `tfsdk:"file_map"`
+	ID       types.String                            `tfsdk:"id"`
+	FieldMap map[string]OnePasswordItemFieldMapModel `tfsdk:"field_map"`
+	FileMap  map[string]OnePasswordItemFileMapModel  `tfsdk:"file_map"`
 }
 
-type OnePasswordItemSectionMapFieldModel struct {
+type OnePasswordItemFieldMapModel struct {
 	ID    types.String `tfsdk:"id"`
 	Type  types.String `tfsdk:"type"`
 	Value types.String `tfsdk:"value"`
@@ -525,12 +525,12 @@ func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.C
 	sectionMap := make(map[string]OnePasswordItemSectionMapModel)
 
 	for _, s := range item.Sections {
-		fieldMap := make(map[string]OnePasswordItemSectionMapFieldModel)
+		fieldMap := make(map[string]OnePasswordItemFieldMapModel)
 
 		for _, f := range item.Fields {
 			if f.SectionID != "" && f.SectionID == s.ID {
 
-				fieldMap[f.Label] = OnePasswordItemSectionMapFieldModel{
+				fieldMap[f.Label] = OnePasswordItemFieldMapModel{
 					ID:    types.StringValue(f.ID),
 					Type:  types.StringValue(string(f.Type)),
 					Value: types.StringValue(f.Value),
