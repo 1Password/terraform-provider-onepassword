@@ -525,15 +525,12 @@ func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.C
 	sectionMap := make(map[string]OnePasswordItemSectionMapModel)
 
 	for _, s := range item.Sections {
-		sectionLabel := s.Label
-
 		fieldMap := make(map[string]OnePasswordItemSectionMapFieldModel)
 
 		for _, f := range item.Fields {
 			if f.SectionID != "" && f.SectionID == s.ID {
-				fieldLabel := f.Label
 
-				fieldMap[fieldLabel] = OnePasswordItemSectionMapFieldModel{
+				fieldMap[f.Label] = OnePasswordItemSectionMapFieldModel{
 					ID:    types.StringValue(f.ID),
 					Type:  types.StringValue(string(f.Type)),
 					Value: types.StringValue(f.Value),
@@ -552,7 +549,7 @@ func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.C
 					diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
 					continue
 				}
-				sectionFileMap[f.ID] = OnePasswordItemFileMapModel{
+				sectionFileMap[f.Name] = OnePasswordItemFileMapModel{
 					ID:            types.StringValue(f.ID),
 					Content:       types.StringValue(string(content)),
 					ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
@@ -560,7 +557,7 @@ func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.C
 			}
 		}
 
-		sectionMap[sectionLabel] = OnePasswordItemSectionMapModel{
+		sectionMap[s.Label] = OnePasswordItemSectionMapModel{
 			ID:       types.StringValue(s.ID),
 			FieldMap: fieldMap,
 			FileMap:  sectionFileMap,

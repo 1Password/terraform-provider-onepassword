@@ -280,7 +280,6 @@ func TestAccItemDataSourceSectionMap(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.id", expectedItem.Sections[0].Label), expectedItem.Sections[0].ID),
-					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.label", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), expectedItem.Fields[0].Label),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.value", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), expectedItem.Fields[0].Value),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.type", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), string(expectedItem.Fields[0].Type)),
 				),
