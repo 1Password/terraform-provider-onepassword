@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -116,62 +115,6 @@ func toStateSectionsAndFieldsList(modelSections []model.ItemSection, modelFields
 	}
 
 	return stateSections
-}
-
-func validateSectionsAndFieldsMap(item *model.Item) diag.Diagnostics {
-	var diagnostics diag.Diagnostics
-
-	// Check for duplicate section labels
-	sectionLabels := make(map[string]bool)
-	for _, s := range item.Sections {
-		if s.Label == "" {
-			diagnostics.AddError(
-				"Section Label Missing",
-				"Item section is missing a label. Section labels are required when using section_map.",
-			)
-			continue
-		}
-
-		// section with the label exists
-		if sectionLabels[s.Label] {
-			diagnostics.AddError(
-				"Duplicate Section Label",
-				fmt.Sprintf("Multiple sections have the same label '%s'. Section labels must be unique when using section_map.", s.Label),
-			)
-			continue
-		}
-
-		sectionLabels[s.Label] = true
-	}
-
-	// Check for duplicate field labels within each section
-	for _, s := range item.Sections {
-		fieldLabels := make(map[string]bool)
-		for _, f := range item.Fields {
-			if f.SectionID == s.ID {
-				if f.Label == "" {
-					diagnostics.AddError(
-						"Field Label Missing",
-						fmt.Sprintf("Field in section '%s' is missing a label. Field labels are required when using field_map.", s.Label),
-					)
-					continue
-				}
-
-				// field with the label exists
-				if fieldLabels[f.Label] {
-					diagnostics.AddError(
-						"Duplicate Field Label",
-						fmt.Sprintf("Multiple fields in section '%s' have the same label '%s'. Field labels must be unique within a section when using field_map.", s.Label, f.Label),
-					)
-					continue
-				}
-
-				fieldLabels[f.Label] = true
-			}
-		}
-	}
-
-	return diagnostics
 }
 
 func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]OnePasswordItemResourceSectionMapModel) diag.Diagnostics {

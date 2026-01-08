@@ -682,12 +682,7 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
 
 	if len(state.SectionMap) > 0 {
-		diagnostics := validateSectionsAndFieldsMap(modelItem)
-		if diagnostics.HasError() {
-			return diagnostics
-		}
-
-		diagnostics = toStateSectionsAndFieldsMap(modelItem, state.SectionMap)
+		diagnostics := toStateSectionsAndFieldsMap(modelItem, state.SectionMap)
 		if diagnostics.HasError() {
 			return diagnostics
 		}
