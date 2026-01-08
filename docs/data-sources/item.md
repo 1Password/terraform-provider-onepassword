@@ -46,7 +46,7 @@ data "onepassword_item" "example" {
 - `private_key_openssh` (String, Sensitive) SSH Private key in OpenSSH format.
 - `public_key` (String) SSH Public Key for this item.
 - `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
-- `section_map` (Attributes Map) A map of sections in the item, keyed by section label. This allows easy lookup of sections and fields by name. (see [below for nested schema](#nestedatt--section_map))
+- `section_map` (Attributes Map) A map of custom sections in the item, keyed by section label. This allows easy lookup of sections and fields by name. (see [below for nested schema](#nestedatt--section_map))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
 - `type` (String) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - `url` (String) The primary URL for the item.

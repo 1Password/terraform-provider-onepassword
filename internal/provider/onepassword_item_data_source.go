@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -36,27 +35,27 @@ type OnePasswordItemDataSource struct {
 
 // OnePasswordItemDataSourceModel describes the data source data model.
 type OnePasswordItemDataSourceModel struct {
-	ID                types.String                  `tfsdk:"id"`
-	Vault             types.String                  `tfsdk:"vault"`
-	UUID              types.String                  `tfsdk:"uuid"`
-	Title             types.String                  `tfsdk:"title"`
-	Category          types.String                  `tfsdk:"category"`
-	URL               types.String                  `tfsdk:"url"`
-	Hostname          types.String                  `tfsdk:"hostname"`
-	Database          types.String                  `tfsdk:"database"`
-	Port              types.String                  `tfsdk:"port"`
-	Type              types.String                  `tfsdk:"type"`
-	Tags              types.List                    `tfsdk:"tags"`
-	Username          types.String                  `tfsdk:"username"`
-	Password          types.String                  `tfsdk:"password"`
-	NoteValue         types.String                  `tfsdk:"note_value"`
-	Credential        types.String                  `tfsdk:"credential"`
-	PublicKey         types.String                  `tfsdk:"public_key"`
-	PrivateKey        types.String                  `tfsdk:"private_key"`
-	PrivateKeyOpenSSH types.String                  `tfsdk:"private_key_openssh"`
-	Section           []OnePasswordItemSectionModel `tfsdk:"section"`
-	SectionMap        types.Map                     `tfsdk:"section_map"`
-	File              []OnePasswordItemFileModel    `tfsdk:"file"`
+	ID                types.String                              `tfsdk:"id"`
+	Vault             types.String                              `tfsdk:"vault"`
+	UUID              types.String                              `tfsdk:"uuid"`
+	Title             types.String                              `tfsdk:"title"`
+	Category          types.String                              `tfsdk:"category"`
+	URL               types.String                              `tfsdk:"url"`
+	Hostname          types.String                              `tfsdk:"hostname"`
+	Database          types.String                              `tfsdk:"database"`
+	Port              types.String                              `tfsdk:"port"`
+	Type              types.String                              `tfsdk:"type"`
+	Tags              types.List                                `tfsdk:"tags"`
+	Username          types.String                              `tfsdk:"username"`
+	Password          types.String                              `tfsdk:"password"`
+	NoteValue         types.String                              `tfsdk:"note_value"`
+	Credential        types.String                              `tfsdk:"credential"`
+	PublicKey         types.String                              `tfsdk:"public_key"`
+	PrivateKey        types.String                              `tfsdk:"private_key"`
+	PrivateKeyOpenSSH types.String                              `tfsdk:"private_key_openssh"`
+	SectionList       []OnePasswordItemSectionListModel         `tfsdk:"section"`
+	SectionMap        map[string]OnePasswordItemSectionMapModel `tfsdk:"section_map"`
+	File              []OnePasswordItemFileModel                `tfsdk:"file"`
 }
 
 type OnePasswordItemFileModel struct {
@@ -66,7 +65,7 @@ type OnePasswordItemFileModel struct {
 	ContentBase64 types.String `tfsdk:"content_base64"`
 }
 
-type OnePasswordItemSectionModel struct {
+type OnePasswordItemSectionListModel struct {
 	ID    types.String                `tfsdk:"id"`
 	Label types.String                `tfsdk:"label"`
 	Field []OnePasswordItemFieldModel `tfsdk:"field"`
@@ -89,7 +88,6 @@ type OnePasswordItemSectionMapModel struct {
 
 type OnePasswordItemSectionMapFieldModel struct {
 	ID    types.String `tfsdk:"id"`
-	Label types.String `tfsdk:"label"`
 	Type  types.String `tfsdk:"type"`
 	Value types.String `tfsdk:"value"`
 }
@@ -217,6 +215,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 			"section_map": schema.MapNestedAttribute{
 				MarkdownDescription: "A map of sections in the item, keyed by section label. This allows easy lookup of sections and fields by name.",
 				Computed:            true,
+				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -226,6 +225,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 						"field_map": schema.MapNestedAttribute{
 							MarkdownDescription: "A map of fields in the section, keyed by field label.",
 							Computed:            true,
+							Optional:            true,
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
@@ -395,7 +395,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	data.Category = types.StringValue(strings.ToLower(string(item.Category)))
 
 	for _, s := range item.Sections {
-		section := OnePasswordItemSectionModel{
+		section := OnePasswordItemSectionListModel{
 			ID:    types.StringValue(s.ID),
 			Label: types.StringValue(s.Label),
 		}
@@ -432,7 +432,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			}
 		}
 
-		data.Section = append(data.Section, section)
+		data.SectionList = append(data.SectionList, section)
 	}
 
 	sectionMap, diag := buildSectionMap(ctx, item, d.client)
@@ -525,30 +525,24 @@ func getItemForDataSource(ctx context.Context, client onepassword.Client, data O
 	return nil, errors.New("uuid or title must be set")
 }
 
-func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.Client) (types.Map, diag.Diagnostics) {
+func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.Client) (map[string]OnePasswordItemSectionMapModel, diag.Diagnostics) {
 	var diagnostics diag.Diagnostics
 
 	sectionMap := make(map[string]OnePasswordItemSectionMapModel)
 
 	for _, s := range item.Sections {
 		sectionLabel := s.Label
-		if sectionLabel == "" {
-			// Use the section ID as the label if the section has no label
-			sectionLabel = s.ID
-		}
 
 		fieldMap := make(map[string]OnePasswordItemSectionMapFieldModel)
 
 		for _, f := range item.Fields {
 			if f.SectionID != "" && f.SectionID == s.ID {
 				fieldLabel := f.Label
-				if fieldLabel != "" {
-					fieldMap[fieldLabel] = OnePasswordItemSectionMapFieldModel{
-						ID:    types.StringValue(f.ID),
-						Label: types.StringValue(f.Label),
-						Type:  types.StringValue(string(f.Type)),
-						Value: types.StringValue(f.Value),
-					}
+
+				fieldMap[fieldLabel] = OnePasswordItemSectionMapFieldModel{
+					ID:    types.StringValue(f.ID),
+					Type:  types.StringValue(string(f.Type)),
+					Value: types.StringValue(f.Value),
 				}
 			}
 		}
@@ -580,32 +574,5 @@ func buildSectionMap(ctx context.Context, item *model.Item, client onepassword.C
 		}
 	}
 
-	sectionMapValue, diag := types.MapValueFrom(ctx, types.ObjectType{
-		AttrTypes: map[string]attr.Type{
-			"id": types.StringType,
-			"field_map": types.MapType{
-				ElemType: types.ObjectType{
-					AttrTypes: map[string]attr.Type{
-						"id":    types.StringType,
-						"label": types.StringType,
-						"type":  types.StringType,
-						"value": types.StringType,
-					},
-				},
-			},
-			"file": types.ListType{
-				ElemType: types.ObjectType{
-					AttrTypes: map[string]attr.Type{
-						"id":             types.StringType,
-						"name":           types.StringType,
-						"content":        types.StringType,
-						"content_base64": types.StringType,
-					},
-				},
-			},
-		},
-	}, sectionMap)
-	diagnostics.Append(diag...)
-
-	return sectionMapValue, diagnostics
+	return sectionMap, diagnostics
 }
