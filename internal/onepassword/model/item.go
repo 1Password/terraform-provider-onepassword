@@ -307,7 +307,6 @@ func toSDKField(f ItemField) sdk.ItemField {
 
 	// Convert month-year from YYYYMM or YYYY/MM to MM/YYYY format for SDK
 	if f.Type == FieldTypeMonthYear && f.Value != "" {
-
 		if strings.Contains(f.Value, "/") {
 			parts := strings.Split(f.Value, "/")
 			if len(parts) != 2 {
