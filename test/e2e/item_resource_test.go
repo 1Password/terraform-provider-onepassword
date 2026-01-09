@@ -385,6 +385,51 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 	}
 }
 
+// TestAccItemResourceSectionList_ValueAndPasswordRecipeConflict tests that value and password_recipe
+// cannot be specified together in section list fields:
+func TestAccItemResourceSectionList_ValueAndPasswordRecipeConflict(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+
+	recipeMap := map[string]any{
+		"length":  20,
+		"digits":  true,
+		"symbols": true,
+	}
+
+	// Create section with a field that has both value and password_recipe set - this should fail validation
+	testSection := sections.TestSection{
+		Label: "Credentials",
+		Fields: []sections.TestField{
+			{
+				Label:          "Conflicting Field",
+				Type:           "CONCEALED",
+				Value:          "my-explicit-value",
+				PasswordRecipe: &recipeMap,
+			},
+		},
+	}
+
+	attrs := map[string]any{
+		"title":    addUniqueIDToTitle("Test Section List Value Recipe Conflict", uniqueID),
+		"category": "login",
+		"section":  sections.MapSections([]sections.TestSection{testSection}),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
+			},
+		},
+	})
+}
+
 func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -1740,6 +1785,52 @@ func TestAccItemResourceSectionMap_PasswordRecipe(t *testing.T) {
 			})
 		})
 	}
+}
+
+// TestAccItemResourceSectionMap_ValueAndPasswordRecipeConflict tests that value and password_recipe
+// cannot be specified together in section_map fields:
+func TestAccItemResourceSectionMap_ValueAndPasswordRecipeConflict(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap Value Recipe Conflict", uniqueID)
+
+	recipe := map[string]any{
+		"length":  20,
+		"digits":  true,
+		"symbols": true,
+	}
+
+	// Create section_map with both value and password_recipe set - this should fail validation
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"credentials": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"conflicting_field": {
+					Type:           "CONCEALED",
+					Value:          "my-explicit-value",
+					PasswordRecipe: &recipe,
+				},
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": sectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
+			},
+		},
+	})
 }
 
 func TestAccItemResourceSectionMap_MultipleSections(t *testing.T) {
