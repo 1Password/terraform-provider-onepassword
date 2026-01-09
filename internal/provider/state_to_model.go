@@ -145,7 +145,7 @@ func toModelSectionField(field OnePasswordItemResourceFieldModel, sectionID, sec
 		Value:        field.Value.ValueString(),
 	}
 
-	recipe, err := parseGeneratorRecipe(field.Recipe)
+	recipe, err := parseGeneratorRecipeList(field.Recipe)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
 			"Item conversion error",

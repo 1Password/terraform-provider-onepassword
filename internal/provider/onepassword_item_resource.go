@@ -723,7 +723,7 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	}
 
 	password := state.Password.ValueString()
-	recipe, err := parseGeneratorRecipe(state.Recipe)
+	recipe, err := parseGeneratorRecipeList(state.Recipe)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
 			"Error parsing generator recipe",
@@ -765,35 +765,12 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	return modelItem, nil
 }
 
-func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {
+func parseGeneratorRecipeList(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {
 	if len(recipeObject) == 0 {
 		return nil, nil
 	}
 
-	recipe := recipeObject[0]
-
-	parsed := &model.GeneratorRecipe{
-		Length:        32,
-		CharacterSets: []model.CharacterSet{},
-	}
-
-	length := recipe.Length.ValueInt64()
-	if length > 64 {
-		return nil, fmt.Errorf("password_recipe.length must be an integer between 1 and 64")
-	}
-
-	if length > 0 {
-		parsed.Length = int(length)
-	}
-
-	if recipe.Digits.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetDigits)
-	}
-	if recipe.Symbols.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetSymbols)
-	}
-
-	return parsed, nil
+	return parseGeneratorRecipeFromModel(&recipeObject[0])
 }
 
 func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {
