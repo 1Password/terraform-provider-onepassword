@@ -50,6 +50,8 @@ type OnePasswordItemDataSourceModel struct {
 	Password          types.String                              `tfsdk:"password"`
 	NoteValue         types.String                              `tfsdk:"note_value"`
 	Credential        types.String                              `tfsdk:"credential"`
+	ValidFrom         types.String                              `tfsdk:"valid_from"`
+	Filename          types.String                              `tfsdk:"filename"`
 	PublicKey         types.String                              `tfsdk:"public_key"`
 	PrivateKey        types.String                              `tfsdk:"private_key"`
 	PrivateKeyOpenSSH types.String                              `tfsdk:"private_key_openssh"`
@@ -175,7 +177,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Computed:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
+				MarkdownDescription: typeDescription,
 				Computed:            true,
 			},
 			"tags": schema.ListAttribute{
@@ -196,6 +198,14 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				MarkdownDescription: credentialDescription,
 				Computed:            true,
 				Sensitive:           true,
+			},
+			"valid_from": schema.StringAttribute{
+				MarkdownDescription: validFromDescription,
+				Computed:            true,
+			},
+			"filename": schema.StringAttribute{
+				MarkdownDescription: filenameDescription,
+				Computed:            true,
 			},
 			"note_value": schema.StringAttribute{
 				MarkdownDescription: noteValueDescription,
@@ -470,6 +480,11 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.PrivateKeyOpenSSH = types.StringValue(openSSHPrivateKey)
 				case "credential":
 					data.Credential = types.StringValue(f.Value)
+				case "validFrom":
+					data.ValidFrom = types.StringValue(f.Value)
+				case "filename":
+					data.Filename = types.StringValue(f.Value)
+
 				}
 			}
 		}

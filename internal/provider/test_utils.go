@@ -51,6 +51,14 @@ func generateDatabaseItem() *model.Item {
 	return &item
 }
 
+func generateApiCredentialItem() *model.Item {
+	item := generateBaseItem()
+	item.Category = model.APICredential
+	item.Fields = generateApiCredentialFields()
+
+	return &item
+}
+
 func generatePasswordItem() *model.Item {
 	item := generateBaseItem()
 	item.Category = model.Password
@@ -178,6 +186,42 @@ func generateDatabaseFields() []model.ItemField {
 			ID:    "type",
 			Label: "type",
 			Value: "mysql",
+		},
+	}
+	return fields
+}
+
+func generateApiCredentialFields() []model.ItemField {
+	fields := []model.ItemField{
+		{
+			ID:    "username",
+			Label: "username",
+			Value: "test test_user",
+		},
+		{
+			ID:    "credential",
+			Label: "credential",
+			Value: "test_credential",
+		},
+		{
+			ID:    "type",
+			Label: "type",
+			Value: "test_type",
+		},
+		{
+			ID:    "filename",
+			Label: "filename",
+			Value: "test_filename",
+		},
+		{
+			ID:    "validFrom",
+			Label: "valid_from",
+			Value: "test_valid_from",
+		},
+		{
+			ID:    "hostname",
+			Label: "hostname",
+			Value: "test_hostname",
 		},
 	}
 	return fields

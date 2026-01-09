@@ -101,6 +101,8 @@ var testItems = map[model.ItemCategory]testItem{
 			"username":   "testAPICredential",
 			"hostname":   "testHostname",
 			"type":       "bearer",
+			"valid_from": "2026-01-01",
+			"filename":   "testFilename",
 		},
 	},
 }
