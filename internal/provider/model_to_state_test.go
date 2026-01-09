@@ -128,8 +128,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 		name          string
 		modelSections []model.ItemSection
 		modelFields   []model.ItemField
-		stateSections []OnePasswordItemResourceSectionModel
-		want          []OnePasswordItemResourceSectionModel
+		stateSections []OnePasswordItemResourceSectionListModel
+		want          []OnePasswordItemResourceSectionListModel
 	}{
 		{
 			name: "new section with field",
@@ -139,12 +139,12 @@ func TestToStateSectionsAndFields(t *testing.T) {
 			modelFields: []model.ItemField{
 				{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field1"),
 							Label: types.StringValue("Field 1"),
@@ -160,18 +160,18 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "section1", Label: "Updated Label"},
 			},
 			modelFields: []model.ItemField{},
-			stateSections: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{
 				{
-					ID:    types.StringValue("section1"),
-					Label: types.StringValue("Old Label"),
-					Field: []OnePasswordItemResourceFieldModel{},
+					ID:        types.StringValue("section1"),
+					Label:     types.StringValue("Old Label"),
+					FieldList: []OnePasswordItemResourceFieldModel{},
 				},
 			},
-			want: []OnePasswordItemResourceSectionModel{
+			want: []OnePasswordItemResourceSectionListModel{
 				{
-					ID:    types.StringValue("section1"),
-					Label: types.StringValue("Updated Label"),
-					Field: []OnePasswordItemResourceFieldModel{},
+					ID:        types.StringValue("section1"),
+					Label:     types.StringValue("Updated Label"),
+					FieldList: []OnePasswordItemResourceFieldModel{},
 				},
 			},
 		},
@@ -192,12 +192,12 @@ func TestToStateSectionsAndFields(t *testing.T) {
 					},
 				},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field1"),
 							Label: types.StringValue("Password"),
@@ -220,18 +220,18 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "", Label: "Section 1"},
 			},
 			modelFields: []model.ItemField{},
-			stateSections: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{
 				{
-					ID:    types.StringNull(),
-					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{},
+					ID:        types.StringNull(),
+					Label:     types.StringValue("Section 1"),
+					FieldList: []OnePasswordItemResourceFieldModel{},
 				},
 			},
-			want: []OnePasswordItemResourceSectionModel{
+			want: []OnePasswordItemResourceSectionListModel{
 				{
-					ID:    types.StringNull(),
-					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{},
+					ID:        types.StringNull(),
+					Label:     types.StringValue("Section 1"),
+					FieldList: []OnePasswordItemResourceFieldModel{},
 				},
 			},
 		},
@@ -243,11 +243,11 @@ func TestToStateSectionsAndFields(t *testing.T) {
 			modelFields: []model.ItemField{
 				{ID: "", Label: "Field 1", Type: model.FieldTypeString, Value: "updated value", SectionID: "section1"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringNull(),
 							Label: types.StringValue("Field 1"),
@@ -257,11 +257,11 @@ func TestToStateSectionsAndFields(t *testing.T) {
 					},
 				},
 			},
-			want: []OnePasswordItemResourceSectionModel{
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringNull(),
 							Label: types.StringValue("Field 1"),
@@ -280,11 +280,11 @@ func TestToStateSectionsAndFields(t *testing.T) {
 			modelFields: []model.ItemField{
 				{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "updated value", SectionID: "section1"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field1"),
 							Label: types.StringValue("Field 1"),
@@ -294,11 +294,11 @@ func TestToStateSectionsAndFields(t *testing.T) {
 					},
 				},
 			},
-			want: []OnePasswordItemResourceSectionModel{
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field1"),
 							Label: types.StringValue("Field 1"),
@@ -321,12 +321,12 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "field3", Label: "Field 3", Type: model.FieldTypeString, Value: "value3", SectionID: "section2"},
 				{ID: "field4", Label: "Field 4", Type: model.FieldTypeString, Value: "value4", SectionID: "section2"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field1"),
 							Label: types.StringValue("Field 1"),
@@ -344,7 +344,7 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{
 					ID:    types.StringValue("section2"),
 					Label: types.StringValue("Section 2"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field3"),
 							Label: types.StringValue("Field 3"),
@@ -370,12 +370,12 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
 				{ID: "field2", Label: "Field 2", Type: model.FieldTypeString, Value: "value2", SectionID: "nonexistent-section"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field1"),
 							Label: types.StringValue("Field 1"),
@@ -393,12 +393,12 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				{ID: "section1", Label: ""},
 			},
 			modelFields:   []model.ItemField{},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
-					ID:    types.StringValue("section1"),
-					Label: types.StringNull(),
-					Field: []OnePasswordItemResourceFieldModel{},
+					ID:        types.StringValue("section1"),
+					Label:     types.StringNull(),
+					FieldList: []OnePasswordItemResourceFieldModel{},
 				},
 			},
 		},
@@ -410,12 +410,12 @@ func TestToStateSectionsAndFields(t *testing.T) {
 			modelFields: []model.ItemField{
 				{ID: "field1", Label: "", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field1"),
 							Label: types.StringNull(),
@@ -443,12 +443,12 @@ func TestToStateSectionsAndFields(t *testing.T) {
 					},
 				},
 			},
-			stateSections: []OnePasswordItemResourceSectionModel{},
-			want: []OnePasswordItemResourceSectionModel{
+			stateSections: []OnePasswordItemResourceSectionListModel{},
+			want: []OnePasswordItemResourceSectionListModel{
 				{
 					ID:    types.StringValue("section1"),
 					Label: types.StringValue("Section 1"),
-					Field: []OnePasswordItemResourceFieldModel{
+					FieldList: []OnePasswordItemResourceFieldModel{
 						{
 							ID:    types.StringValue("field1"),
 							Label: types.StringValue("Password"),
@@ -469,7 +469,7 @@ func TestToStateSectionsAndFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := toStateSectionsAndFields(tt.modelSections, tt.modelFields, tt.stateSections)
+			got := toStateSectionsAndFieldsList(tt.modelSections, tt.modelFields, tt.stateSections)
 			if len(got) != len(tt.want) {
 				t.Errorf("processSectionsAndFields() len = %d, want %d", len(got), len(tt.want))
 				return
@@ -481,8 +481,8 @@ func TestToStateSectionsAndFields(t *testing.T) {
 				if got[i].Label.ValueString() != tt.want[i].Label.ValueString() {
 					t.Errorf("Section[%d].Label = %v, want %v", i, got[i].Label.ValueString(), tt.want[i].Label.ValueString())
 				}
-				if len(got[i].Field) != len(tt.want[i].Field) {
-					t.Errorf("Section[%d].Field len = %d, want %d", i, len(got[i].Field), len(tt.want[i].Field))
+				if len(got[i].FieldList) != len(tt.want[i].FieldList) {
+					t.Errorf("Section[%d].FieldList len = %d, want %d", i, len(got[i].FieldList), len(tt.want[i].FieldList))
 				}
 			}
 		})
@@ -722,6 +722,559 @@ func TestToStateTopLevelFields(t *testing.T) {
 			}
 			if tt.state.Type.ValueString() != tt.want.Type.ValueString() {
 				t.Errorf("Type = %v, want %v", tt.state.Type.ValueString(), tt.want.Type.ValueString())
+			}
+		})
+	}
+}
+
+func TestToStateSectionsAndFieldsMap(t *testing.T) {
+	tests := map[string]struct {
+		item            *model.Item
+		stateSectionMap map[string]OnePasswordItemResourceSectionMapModel
+		want            map[string]OnePasswordItemResourceSectionMapModel
+		wantErr         bool
+	}{
+		"new section with new field": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:     types.StringValue("field1"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value1"),
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+		"item from server only contains new field": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field2", Label: "Field 2", Type: model.FieldTypeString, Value: "value2", SectionID: "section1"},
+				},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("STRING"),
+							Value: types.StringValue("value1"),
+						},
+					},
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						// Field 1 is removed - not in item from server
+						"Field 2": {
+							ID:     types.StringValue("field2"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value2"),
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+		"existing section with existing field - update value": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "new-value", SectionID: "section1"},
+				},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("STRING"),
+							Value: types.StringValue("old-value"),
+						},
+					},
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:     types.StringValue("field1"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("new-value"), // Updated from model
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+		"field with recipe - digits and symbols": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{
+						ID:        "field1",
+						Label:     "Password",
+						Type:      model.FieldTypeConcealed,
+						Value:     "Pass123!@#",
+						SectionID: "section1",
+						Recipe: &model.GeneratorRecipe{
+							Length:        20,
+							CharacterSets: []model.CharacterSet{model.CharacterSetDigits, model.CharacterSetSymbols},
+						},
+					},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringValue("Pass123!@#"),
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true), // Has digits
+								Symbols: types.BoolValue(true), // Has symbols
+							},
+						},
+					},
+				},
+			},
+		},
+		"field with recipe - no digits or symbols": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{
+						ID:        "field1",
+						Label:     "Password",
+						Type:      model.FieldTypeConcealed,
+						Value:     "PasswordOnly",
+						SectionID: "section1",
+						Recipe: &model.GeneratorRecipe{
+							Length:        15,
+							CharacterSets: []model.CharacterSet{},
+						},
+					},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringValue("PasswordOnly"),
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(15),
+								Digits:  types.BoolValue(false), // No digits
+								Symbols: types.BoolValue(false), // No symbols
+							},
+						},
+					},
+				},
+			},
+		},
+		"field without recipe in model - preserves existing recipe from plan": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1", Recipe: nil},
+				},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("STRING"),
+							Value: types.StringValue("value1"),
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("STRING"),
+							Value: types.StringValue("value1"),
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+		},
+		"field with recipe in state and empty server value - server value used, recipe preserved": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Password", Type: model.FieldTypeConcealed, Value: "", SectionID: "section1", Recipe: nil}, // Server returns empty
+				},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringValue("state-password-123"), // Password from state - NOT preserved
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringNull(), // Server value (empty -> null), NOT state value
+							Recipe: &PasswordRecipeModel{ // Recipe IS preserved from state
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+		},
+		"field with recipe in state and different server value - server value used, recipe preserved": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					// Server returns different password (e.g., user changed it in 1Password directly)
+					{ID: "field1", Label: "Password", Type: model.FieldTypeConcealed, Value: "server-password-456", SectionID: "section1", Recipe: nil},
+				},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringValue("old-password-123"), // Password from state - NOT preserved
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringValue("server-password-456"), // Server is source of truth for VALUE
+							Recipe: &PasswordRecipeModel{ // Recipe IS preserved from state
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+		},
+		"multiple sections with multiple fields": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+					{ID: "section2", Label: "Section 2"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+					{ID: "field2", Label: "Field 2", Type: model.FieldTypeString, Value: "value2", SectionID: "section1"},
+					{ID: "field3", Label: "Field 3", Type: model.FieldTypeString, Value: "value3", SectionID: "section2"},
+					{ID: "field4", Label: "Field 4", Type: model.FieldTypeString, Value: "value4", SectionID: "section2"},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:     types.StringValue("field1"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value1"),
+							Recipe: nil,
+						},
+						"Field 2": {
+							ID:     types.StringValue("field2"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value2"),
+							Recipe: nil,
+						},
+					},
+				},
+				"Section 2": {
+					ID: types.StringValue("section2"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 3": {
+							ID:     types.StringValue("field3"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value3"),
+							Recipe: nil,
+						},
+						"Field 4": {
+							ID:     types.StringValue("field4"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value4"),
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+		"field that doesn't belong to section - ignored": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+					{ID: "field2", Label: "Field 2", Type: model.FieldTypeString, Value: "value2", SectionID: "nonexistent-section"},
+					{ID: "field3", Label: "Field 3", Type: model.FieldTypeString, Value: "value3", SectionID: ""},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:     types.StringValue("field1"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value1"),
+							Recipe: nil,
+						},
+						// Field 2 and Field 3 should be ignored
+					},
+				},
+			},
+		},
+		"empty state map": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+				},
+			},
+			stateSectionMap: nil,
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:     types.StringValue("field1"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value1"),
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+		"item from server represents complete state - fields not in item are removed": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+				},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("STRING"),
+							Value: types.StringValue("old-value"),
+						},
+						"Field 2": { // This field is not in item from server, should be removed
+							ID:    types.StringValue("field2"),
+							Type:  types.StringValue("STRING"),
+							Value: types.StringValue("preserved-value"),
+						},
+					},
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 1": {
+							ID:     types.StringValue("field1"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value1"), // Updated from item
+							Recipe: nil,
+						},
+						// Field 2 is removed - not in item from server
+					},
+				},
+			},
+		},
+		"section ID updated from model": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "new-section-id", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID:       types.StringValue("old-section-id"),
+					FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID:       types.StringValue("new-section-id"), // Updated from model (API response) - required for create/update
+					FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
+				},
+			},
+		},
+		"empty section with no fields": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID:       types.StringValue("section1"),
+					FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
+				},
+			},
+		},
+		"section with empty label - last wins when multiple sections have empty labels": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: ""},
+					{ID: "section2", Label: ""},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+					{ID: "field2", Label: "Field 2", Type: model.FieldTypeString, Value: "value2", SectionID: "section2"},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"": {
+					ID: types.StringValue("section2"), // Last section ID wins
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Field 2": {
+							ID:     types.StringValue("field2"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value2"),
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+		"field with empty label - last wins when multiple fields have empty labels": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "", Type: model.FieldTypeString, Value: "value1", SectionID: "section1"},
+					{ID: "field2", Label: "", Type: model.FieldTypeString, Value: "value2", SectionID: "section1"},
+				},
+			},
+			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"": {
+							ID:     types.StringValue("field2"),
+							Type:   types.StringValue("STRING"),
+							Value:  types.StringValue("value2"),
+							Recipe: nil,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			updatedStateSectionMap := toStateSectionsAndFieldsMap(tt.item, tt.stateSectionMap)
+
+			if !reflect.DeepEqual(updatedStateSectionMap, tt.want) {
+				t.Errorf("toStateSectionsAndFieldsMap() = %+v, want %+v", updatedStateSectionMap, tt.want)
 			}
 		})
 	}

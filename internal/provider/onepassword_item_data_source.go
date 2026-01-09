@@ -279,7 +279,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
-				MarkdownDescription: sectionsDescription,
+				MarkdownDescription: sectionListDescription,
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -293,6 +293,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 					},
 					Blocks: map[string]schema.Block{
 						"field": schema.ListNestedBlock{
+							MarkdownDescription: fieldListDescription,
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
@@ -316,14 +317,14 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 							},
 						},
 						"file": schema.ListNestedBlock{
-							MarkdownDescription: sectionFilesDescription,
+							MarkdownDescription: fileListDescription,
 							NestedObject:        fileNestedObjectSchema,
 						},
 					},
 				},
 			},
 			"file": schema.ListNestedBlock{
-				MarkdownDescription: filesDescription,
+				MarkdownDescription: documentFileListDescription,
 				NestedObject:        fileNestedObjectSchema,
 			},
 		},
