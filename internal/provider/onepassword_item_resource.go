@@ -291,6 +291,9 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										PlanModifiers: []planmodifier.String{
 											ValueModifier(),
 										},
+										Validators: []validator.String{
+											validateMonthYear(),
+										},
 									},
 								},
 								Blocks: map[string]schema.Block{
