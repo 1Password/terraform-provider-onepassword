@@ -356,7 +356,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					},
 					Blocks: map[string]schema.Block{
 						"field": schema.ListNestedBlock{
-							MarkdownDescription: sectionFieldsListDescription,
+							MarkdownDescription: fieldListDescription,
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
