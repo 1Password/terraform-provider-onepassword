@@ -149,7 +149,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				},
 			},
 			"field_map": schema.MapNestedAttribute{
-				MarkdownDescription: sectionFieldsMapDescription,
+				MarkdownDescription: fieldMapDescription,
 				Optional:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -331,14 +331,14 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Sensitive:           true,
 			},
 			"section_map": schema.MapNestedAttribute{
-				MarkdownDescription: sectionMapDescriptionResource,
+				MarkdownDescription: sectionMapDescription,
 				Optional:            true,
 				NestedObject:        sectionNestedObjectSchemaForMap,
 			},
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
-				MarkdownDescription: sectionListDescriptionResource,
+				MarkdownDescription: sectionListDescription,
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
