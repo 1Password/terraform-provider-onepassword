@@ -55,6 +55,13 @@ func RetryOnConflict(ctx context.Context, operation func() error) error {
 	return retry(ctx, operation, []string{"409", "Conflict", "conflict"}, maxRetryAttempts)
 }
 
+// Retry500ForConnectDelete retries a delete operation when it returns 500 Something went wrong only for Connect.
+// This is because Connect returns 500 for conflicts.
+// This is temporary until Connect is fixed and starts to return 409 for conflicts.
+func Retry500ForConnectDelete(ctx context.Context, operation func() error) error {
+	return retry(ctx, operation, []string{"500", "Something went wrong"}, maxRetryAttempts)
+}
+
 // Retry404UntilCondition retries an operation when it returns 404 Not Found errors
 func Retry404UntilCondition(ctx context.Context, operation func() (bool, error)) error {
 	return retry(ctx, func() error {

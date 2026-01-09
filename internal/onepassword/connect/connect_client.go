@@ -212,7 +212,7 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 		return err
 	}
 
-	err = util.RetryOnConflict(ctx, func() error {
+	err = util.Retry500ForConnectDelete(ctx, func() error {
 		return c.connectClient.DeleteItem(connectItem, vaultUuid)
 	})
 	if err != nil {
