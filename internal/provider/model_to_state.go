@@ -117,16 +117,13 @@ func toStateSectionsAndFieldsList(modelSections []model.ItemSection, modelFields
 	return stateSections
 }
 
-func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]OnePasswordItemResourceSectionMapModel) diag.Diagnostics {
+func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]OnePasswordItemResourceSectionMapModel) map[string]OnePasswordItemResourceSectionMapModel {
+	sectionMap := make(map[string]OnePasswordItemResourceSectionMapModel)
+
 	for _, modelSection := range item.Sections {
-		stateSection, exists := stateSectionMap[modelSection.Label]
-		if !exists {
-			stateSection = OnePasswordItemResourceSectionMapModel{
-				ID:       types.StringValue(modelSection.ID),
-				FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
-			}
-		} else {
-			stateSection.ID = types.StringValue(modelSection.ID)
+		section := OnePasswordItemResourceSectionMapModel{
+			ID:       types.StringValue(modelSection.ID),
+			FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
 		}
 
 		for _, modelField := range item.Fields {
@@ -135,42 +132,47 @@ func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]On
 				continue
 			}
 
-			stateField := OnePasswordItemResourceFieldMapModel{
+			field := OnePasswordItemResourceFieldMapModel{
 				ID:   setStringValue(modelField.ID),
 				Type: setStringValue(string(modelField.Type)),
 			}
 
-			existingField, fieldExists := stateSection.FieldMap[modelField.Label]
-			if fieldExists {
-				stateField.Value = setStringValuePreservingEmpty(modelField.Value, existingField.Value)
+			existingSection, sectionExists := stateSectionMap[modelSection.Label]
+			if sectionExists {
+				if existingField, fieldExists := existingSection.FieldMap[modelField.Label]; fieldExists {
+					field.Value = setStringValuePreservingEmpty(modelField.Value, existingField.Value)
+				} else {
+					field.Value = setStringValuePreservingEmpty(modelField.Value, types.StringNull())
+				}
 			} else {
-				stateField.Value = setStringValuePreservingEmpty(modelField.Value, types.StringNull())
+				field.Value = setStringValuePreservingEmpty(modelField.Value, types.StringNull())
 			}
 
-			if fieldExists && existingField.Recipe != nil {
-				stateField.Recipe = existingField.Recipe
-			} else if modelField.Recipe != nil {
+			if modelField.Recipe != nil {
 				charSets := map[string]bool{}
 				for _, s := range modelField.Recipe.CharacterSets {
 					charSets[strings.ToLower(string(s))] = true
 				}
 
-				stateField.Recipe = &PasswordRecipeModel{
+				field.Recipe = &PasswordRecipeModel{
 					Length:  types.Int64Value(int64(modelField.Recipe.Length)),
 					Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
 					Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
 				}
-			} else {
-				stateField.Recipe = nil
+			} else if sectionExists {
+				// If server didn't return a recipe - preserve from existing plan/state if available
+				if existingField, fieldExists := existingSection.FieldMap[modelField.Label]; fieldExists {
+					field.Recipe = existingField.Recipe
+				}
 			}
 
-			stateSection.FieldMap[modelField.Label] = stateField
+			section.FieldMap[modelField.Label] = field
 		}
 
-		stateSectionMap[modelSection.Label] = stateSection
+		sectionMap[modelSection.Label] = section
 	}
 
-	return nil
+	return sectionMap
 }
 
 func toStateTopLevelFields(modelFields []model.ItemField, state *OnePasswordItemResourceModel) {
