@@ -458,22 +458,6 @@ func fromConnectFields(fields []*connect.ItemField, sectionMap map[string]ItemSe
 			field.Value = dateStr
 		}
 
-		// // Provider handles month-year in `MM/YYYY` format.
-		// // Connect returns month-year as `YYYYMM` (e.g., "202501").
-		// // Converting to `MM/YYYY` format (e.g., "01/2025").
-		// if f.Type == connect.FieldTypeMonthYear && field.Value != "" {
-		// 	// Connect sends YYYYMM format (6 digits)
-		// 	if len(field.Value) != 6 {
-		// 		return modelFields, fmt.Errorf("fromConnectFields: invalid month-year format '%s' from Connect, expected YYYYMM", field.Value)
-		// 	}
-
-		// 	year := field.Value[0:4]
-		// 	month := field.Value[4:6]
-
-		// 	// Convert YYYYMM -> MM/YYYY
-		// 	field.Value = month + "/" + year
-		// }
-
 		// Associate field with section if applicable
 		if f.Section != nil && f.Section.ID != "" {
 			if section, exists := sectionMap[f.Section.ID]; exists {
@@ -558,21 +542,6 @@ func toConnectFields(fields []ItemField) ([]*connect.ItemField, error) {
 			}
 			field.Value = timestamp
 		}
-
-		// // Convert month-year from MM/YYYY to YYYYMM format for Connect
-		// if field.Type == connect.FieldTypeMonthYear && field.Value != "" {
-		// 	// Only accept MM/YYYY format
-		// 	parts := strings.Split(field.Value, "/")
-		// 	if len(parts) != 2 {
-		// 		return connectFields, fmt.Errorf("toConnectFields: invalid month-year format '%s', expected MM/YYYY", field.Value)
-		// 	}
-
-		// 	month := parts[0]
-		// 	year := parts[1]
-
-		// 	// Convert MM/YYYY -> YYYYMM for Connect
-		// 	field.Value = year + month
-		// }
 
 		// Associate with section
 		if f.SectionID != "" {
