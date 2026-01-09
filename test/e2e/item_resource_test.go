@@ -2278,3 +2278,192 @@ resource "onepassword_item" "test_item" {
 		})
 	})
 }
+
+// TestAccItemResourceSectionMap_ConfigRestoresDriftedValue tests that when a field value
+// is changed directly in 1Password (outside Terraform), running terraform apply
+// restores the value from the config.
+func TestAccItemResourceSectionMap_ConfigRestoresDriftedValue(t *testing.T) {
+	t.Parallel()
+
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Config Restores Drift", uniqueID)
+	var itemUUID string
+	var sectionID string
+
+	configValue := "config-controlled-value"
+	driftedValue := "manually-changed-value"
+
+	// Create section map with the config value
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"my_section": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"my_field": {
+					Type:  "STRING",
+					Value: configValue,
+				},
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": sectionMap,
+	}
+
+	captureSectionID := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			rs, ok := s.RootModule().Resources["onepassword_item.test_item"]
+			if !ok {
+				return fmt.Errorf("resource not found in state")
+			}
+
+			sectionID = rs.Primary.Attributes["section_map.my_section.id"]
+			if sectionID == "" {
+				return fmt.Errorf("section_map.my_section.id not found in state")
+			}
+
+			return nil
+		}
+	}
+
+	modifyFieldIn1Password := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Log("MANUALLY_MODIFY_FIELD_VALUE_IN_1PASSWORD")
+			ctx := context.Background()
+
+			opClient, err := client.CreateTestClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			item, err := opClient.GetItem(ctx, itemUUID, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to get item: %w", err)
+			}
+
+			found := false
+			for i, field := range item.Fields {
+				if field.Label == "my_field" && field.SectionID == sectionID {
+					item.Fields[i].Value = driftedValue
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("field 'my_field' not found in section %s", sectionID)
+			}
+
+			_, err = opClient.UpdateItem(ctx, item, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to update item: %w", err)
+			}
+
+			// Verify the change was persisted
+			updatedItem, err := opClient.GetItem(ctx, itemUUID, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to verify updated item: %w", err)
+			}
+
+			for _, field := range updatedItem.Fields {
+				if field.Label == "my_field" && field.SectionID == sectionID {
+					if field.Value != driftedValue {
+						return fmt.Errorf("field value was not updated: expected %q, got %q", driftedValue, field.Value)
+					}
+					t.Logf("Verified field value in 1Password is now: %q", field.Value)
+					return nil
+				}
+			}
+
+			return fmt.Errorf("field not found after update")
+		}
+	}
+
+	// Helper to verify field value in 1Password matches expected value
+	verifyFieldValueIn1Password := func(expectedValue string) resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Logf("VERIFY_FIELD_VALUE_IN_1PASSWORD: expecting %q", expectedValue)
+			ctx := context.Background()
+
+			opClient, err := client.CreateTestClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			item, err := opClient.GetItem(ctx, itemUUID, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to get item: %w", err)
+			}
+
+			for _, field := range item.Fields {
+				if field.Label == "my_field" && field.SectionID == sectionID {
+					if field.Value != expectedValue {
+						return fmt.Errorf("field value mismatch in 1Password: expected %q, got %q", expectedValue, field.Value)
+					}
+					t.Logf("Field value in 1Password matches expected: %q", field.Value)
+					return nil
+				}
+			}
+			return fmt.Errorf("field 'my_field' not found in 1Password")
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create item with config value
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_CONFIG_VALUE"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					captureSectionID(),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "my_section", "my_field", configValue),
+					verifyFieldValueIn1Password(configValue),
+				),
+			},
+			// Step 2: Directly modify the field in 1Password (simulate drift)
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					modifyFieldIn1Password(),
+				),
+				// Expect non-empty plan because the value changed
+				ExpectNonEmptyPlan: true,
+			},
+			// Step 3: Apply again with same config - should restore config value
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "APPLY_RESTORES_CONFIG_VALUE"),
+					// Verify Terraform state has the config value
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "my_section", "my_field", configValue),
+					// Verify 1Password has the config value restored
+					verifyFieldValueIn1Password(configValue),
+				),
+			},
+			// Step 4: Verify no more changes needed
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "VERIFY_NO_CHANGES"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+				),
+			},
+		},
+	})
+}
