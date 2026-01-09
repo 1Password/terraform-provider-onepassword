@@ -106,6 +106,8 @@ var testItems = map[model.ItemCategory]testItem{
 }
 
 func TestAccItemDataSource(t *testing.T) {
+	t.Parallel()
+
 	createTestCase := func(name string, item testItem, identifierParam string, identifierValue string) itemDataSourceTestCase {
 		return itemDataSourceTestCase{
 			name: name,
@@ -145,6 +147,8 @@ func TestAccItemDataSource(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			checks := []resource.TestCheckFunc{
@@ -186,6 +190,8 @@ func TestAccItemDataSource(t *testing.T) {
 }
 
 func TestAccItemDataSource_NotFound(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name                 string
 		item                 testItem
@@ -213,6 +219,8 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			resource.Test(t, resource.TestCase{
@@ -230,6 +238,8 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 }
 
 func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
+	t.Parallel()
+
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 	var itemUUID string
@@ -447,6 +457,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 }
 
 func TestAccItemDataSourceSectionMap(t *testing.T) {
+	t.Parallel()
 
 	itemTitle := "Test Item with Sections"
 
@@ -508,6 +519,8 @@ func TestAccItemDataSourceSectionMap(t *testing.T) {
 }
 
 func TestAccItemDataSource_VaultName(t *testing.T) {
+	t.Parallel()
+
 	createTestCase := func(name string, item testItem, identifierParam string, identifierValue string) itemDataSourceTestCase {
 		return itemDataSourceTestCase{
 			name: name,
@@ -541,6 +554,8 @@ func TestAccItemDataSource_VaultName(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			checks := []resource.TestCheckFunc{
