@@ -257,6 +257,108 @@ func TestAccItemSSHKey(t *testing.T) {
 	})
 }
 
+func TestAccItemDataSourceSectionMap(t *testing.T) {
+	expectedItem := generateItemWithSections()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.id", expectedItem.Sections[0].Label), expectedItem.Sections[0].ID),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemDataSourceSectionMapFieldMap(t *testing.T) {
+	expectedItem := generateItemWithSections()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.id", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), expectedItem.Fields[0].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.value", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), expectedItem.Fields[0].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.field_map.%s.type", expectedItem.Sections[0].Label, expectedItem.Fields[0].Label), string(expectedItem.Fields[0].Type)),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemDataSourceSectionMapFileMap(t *testing.T) {
+	expectedItem := generateLoginItemWithFiles()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	first_content, err := expectedItem.Files[0].Content()
+	if err != nil {
+		t.Fatalf("Error getting content of first file: %v", err)
+	}
+
+	second_content, err := expectedItem.Files[1].Content()
+	if err != nil {
+		t.Fatalf("Error getting content of second file: %v", err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "vault", expectedVault.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.file_map.%s.id", expectedItem.Sections[0].Label, expectedItem.Files[0].Name), expectedItem.Files[0].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.file_map.%s.content", expectedItem.Sections[0].Label, expectedItem.Files[0].Name), string(first_content)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.file_map.%s.id", expectedItem.Sections[0].Label, expectedItem.Files[1].Name), expectedItem.Files[1].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("section_map.%s.file_map.%s.content_base64", expectedItem.Sections[0].Label, expectedItem.Files[1].Name), base64.StdEncoding.EncodeToString(second_content)),
+				),
+			},
+		},
+	})
+}
+
 func testAccItemDataSourceConfig(vault, uuid string) string {
 	return fmt.Sprintf(`
 data "onepassword_item" "test" {
