@@ -758,7 +758,7 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 				},
 			},
 		},
-		"existing section with new field": {
+		"item from server only contains new field": {
 			item: &model.Item{
 				Sections: []model.ItemSection{
 					{ID: "section1", Label: "Section 1"},
@@ -783,50 +783,11 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 				"Section 1": {
 					ID: types.StringValue("section1"),
 					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Field 1": {
-							ID:    types.StringValue("field1"),
-							Type:  types.StringValue("STRING"),
-							Value: types.StringValue("value1"),
-						},
+						// Field 1 is removed - not in item from server
 						"Field 2": {
 							ID:     types.StringValue("field2"),
 							Type:   types.StringValue("STRING"),
 							Value:  types.StringValue("value2"),
-							Recipe: nil,
-						},
-					},
-				},
-			},
-		},
-		"existing section with existing field - empty value becomes null": {
-			item: &model.Item{
-				Sections: []model.ItemSection{
-					{ID: "section1", Label: "Section 1"},
-				},
-				Fields: []model.ItemField{
-					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "", SectionID: "section1"},
-				},
-			},
-			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
-				"Section 1": {
-					ID: types.StringValue("section1"),
-					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Field 1": {
-							ID:    types.StringValue("field1"),
-							Type:  types.StringValue("STRING"),
-							Value: types.StringValue("preserved-value"),
-						},
-					},
-				},
-			},
-			want: map[string]OnePasswordItemResourceSectionMapModel{
-				"Section 1": {
-					ID: types.StringValue("section1"),
-					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Field 1": {
-							ID:     types.StringValue("field1"),
-							Type:   types.StringValue("STRING"),
-							Value:  types.StringNull(), // Empty value becomes null (setStringValuePreservingEmpty only preserves if both are empty)
 							Recipe: nil,
 						},
 					},
@@ -944,68 +905,6 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 				},
 			},
 		},
-		"field with recipe - only digits": {
-			item: &model.Item{
-				Sections: []model.ItemSection{
-					{ID: "section1", Label: "Section 1"},
-				},
-				Fields: []model.ItemField{
-					{
-						ID:        "field1",
-						Label:     "Password",
-						Type:      model.FieldTypeConcealed,
-						Value:     "Pass123",
-						SectionID: "section1",
-						Recipe: &model.GeneratorRecipe{
-							Length:        10,
-							CharacterSets: []model.CharacterSet{model.CharacterSetDigits},
-						},
-					},
-				},
-			},
-			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
-			want: map[string]OnePasswordItemResourceSectionMapModel{
-				"Section 1": {
-					ID: types.StringValue("section1"),
-					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Password": {
-							ID:    types.StringValue("field1"),
-							Type:  types.StringValue("CONCEALED"),
-							Value: types.StringValue("Pass123"),
-							Recipe: &PasswordRecipeModel{
-								Length:  types.Int64Value(10),
-								Digits:  types.BoolValue(true),  // Has digits
-								Symbols: types.BoolValue(false), // No symbols
-							},
-						},
-					},
-				},
-			},
-		},
-		"field without recipe": {
-			item: &model.Item{
-				Sections: []model.ItemSection{
-					{ID: "section1", Label: "Section 1"},
-				},
-				Fields: []model.ItemField{
-					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "value1", SectionID: "section1", Recipe: nil},
-				},
-			},
-			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
-			want: map[string]OnePasswordItemResourceSectionMapModel{
-				"Section 1": {
-					ID: types.StringValue("section1"),
-					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Field 1": {
-							ID:     types.StringValue("field1"),
-							Type:   types.StringValue("STRING"),
-							Value:  types.StringValue("value1"),
-							Recipe: nil,
-						},
-					},
-				},
-			},
-		},
 		"field without recipe in model - preserves existing recipe from plan": {
 			item: &model.Item{
 				Sections: []model.ItemSection{
@@ -1041,6 +940,95 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 							Type:  types.StringValue("STRING"),
 							Value: types.StringValue("value1"),
 							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+		},
+		"field with recipe in state and empty server value - server value used, recipe preserved": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					{ID: "field1", Label: "Password", Type: model.FieldTypeConcealed, Value: "", SectionID: "section1", Recipe: nil}, // Server returns empty
+				},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringValue("state-password-123"), // Password from state - NOT preserved
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringNull(), // Server value (empty -> null), NOT state value
+							Recipe: &PasswordRecipeModel{ // Recipe IS preserved from state
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+		},
+		"field with recipe in state and different server value - server value used, recipe preserved": {
+			item: &model.Item{
+				Sections: []model.ItemSection{
+					{ID: "section1", Label: "Section 1"},
+				},
+				Fields: []model.ItemField{
+					// Server returns different password (e.g., user changed it in 1Password directly)
+					{ID: "field1", Label: "Password", Type: model.FieldTypeConcealed, Value: "server-password-456", SectionID: "section1", Recipe: nil},
+				},
+			},
+			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringValue("old-password-123"), // Password from state - NOT preserved
+							Recipe: &PasswordRecipeModel{
+								Length:  types.Int64Value(20),
+								Digits:  types.BoolValue(true),
+								Symbols: types.BoolValue(true),
+							},
+						},
+					},
+				},
+			},
+			want: map[string]OnePasswordItemResourceSectionMapModel{
+				"Section 1": {
+					ID: types.StringValue("section1"),
+					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
+						"Password": {
+							ID:    types.StringValue("field1"),
+							Type:  types.StringValue("CONCEALED"),
+							Value: types.StringValue("server-password-456"), // Server is source of truth for VALUE
+							Recipe: &PasswordRecipeModel{ // Recipe IS preserved from state
 								Length:  types.Int64Value(20),
 								Digits:  types.BoolValue(true),
 								Symbols: types.BoolValue(true),
@@ -1152,7 +1140,7 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 				},
 			},
 		},
-		"preserve existing fields not in model": {
+		"item from server represents complete state - fields not in item are removed": {
 			item: &model.Item{
 				Sections: []model.ItemSection{
 					{ID: "section1", Label: "Section 1"},
@@ -1170,7 +1158,7 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 							Type:  types.StringValue("STRING"),
 							Value: types.StringValue("old-value"),
 						},
-						"Field 2": { // This field is not in model, should be preserved
+						"Field 2": { // This field is not in item from server, should be removed
 							ID:    types.StringValue("field2"),
 							Type:  types.StringValue("STRING"),
 							Value: types.StringValue("preserved-value"),
@@ -1185,14 +1173,10 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 						"Field 1": {
 							ID:     types.StringValue("field1"),
 							Type:   types.StringValue("STRING"),
-							Value:  types.StringValue("value1"), // Updated from model
+							Value:  types.StringValue("value1"), // Updated from item
 							Recipe: nil,
 						},
-						"Field 2": { // Preserved
-							ID:    types.StringValue("field2"),
-							Type:  types.StringValue("STRING"),
-							Value: types.StringValue("preserved-value"),
-						},
+						// Field 2 is removed - not in item from server
 					},
 				},
 			},
@@ -1217,82 +1201,6 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 				},
 			},
 		},
-		"recipe detection from value - digits only": {
-			item: &model.Item{
-				Sections: []model.ItemSection{
-					{ID: "section1", Label: "Section 1"},
-				},
-				Fields: []model.ItemField{
-					{
-						ID:        "field1",
-						Label:     "Password",
-						Type:      model.FieldTypeConcealed,
-						Value:     "Password123",
-						SectionID: "section1",
-						Recipe: &model.GeneratorRecipe{
-							Length:        12,
-							CharacterSets: []model.CharacterSet{model.CharacterSetDigits},
-						},
-					},
-				},
-			},
-			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
-			want: map[string]OnePasswordItemResourceSectionMapModel{
-				"Section 1": {
-					ID: types.StringValue("section1"),
-					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Password": {
-							ID:    types.StringValue("field1"),
-							Type:  types.StringValue("CONCEALED"),
-							Value: types.StringValue("Password123"),
-							Recipe: &PasswordRecipeModel{
-								Length:  types.Int64Value(12),
-								Digits:  types.BoolValue(true),  // Detected from value
-								Symbols: types.BoolValue(false), // No symbols
-							},
-						},
-					},
-				},
-			},
-		},
-		"recipe detection from value - symbols only": {
-			item: &model.Item{
-				Sections: []model.ItemSection{
-					{ID: "section1", Label: "Section 1"},
-				},
-				Fields: []model.ItemField{
-					{
-						ID:        "field1",
-						Label:     "Password",
-						Type:      model.FieldTypeConcealed,
-						Value:     "Password!@#",
-						SectionID: "section1",
-						Recipe: &model.GeneratorRecipe{
-							Length:        12,
-							CharacterSets: []model.CharacterSet{model.CharacterSetSymbols},
-						},
-					},
-				},
-			},
-			stateSectionMap: make(map[string]OnePasswordItemResourceSectionMapModel),
-			want: map[string]OnePasswordItemResourceSectionMapModel{
-				"Section 1": {
-					ID: types.StringValue("section1"),
-					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Password": {
-							ID:    types.StringValue("field1"),
-							Type:  types.StringValue("CONCEALED"),
-							Value: types.StringValue("Password!@#"),
-							Recipe: &PasswordRecipeModel{
-								Length:  types.Int64Value(12),
-								Digits:  types.BoolValue(false), // No digits
-								Symbols: types.BoolValue(true),  // Detected from value
-							},
-						},
-					},
-				},
-			},
-		},
 		"empty section with no fields": {
 			item: &model.Item{
 				Sections: []model.ItemSection{
@@ -1305,41 +1213,6 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 				"Section 1": {
 					ID:       types.StringValue("section1"),
 					FieldMap: make(map[string]OnePasswordItemResourceFieldMapModel),
-				},
-			},
-		},
-		"field with empty value becomes null": {
-			item: &model.Item{
-				Sections: []model.ItemSection{
-					{ID: "section1", Label: "Section 1"},
-				},
-				Fields: []model.ItemField{
-					{ID: "field1", Label: "Field 1", Type: model.FieldTypeString, Value: "", SectionID: "section1"},
-				},
-			},
-			stateSectionMap: map[string]OnePasswordItemResourceSectionMapModel{
-				"Section 1": {
-					ID: types.StringValue("section1"),
-					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Field 1": {
-							ID:    types.StringValue("field1"),
-							Type:  types.StringValue("STRING"),
-							Value: types.StringValue("existing-value"),
-						},
-					},
-				},
-			},
-			want: map[string]OnePasswordItemResourceSectionMapModel{
-				"Section 1": {
-					ID: types.StringValue("section1"),
-					FieldMap: map[string]OnePasswordItemResourceFieldMapModel{
-						"Field 1": {
-							ID:     types.StringValue("field1"),
-							Type:   types.StringValue("STRING"),
-							Value:  types.StringNull(), // Empty value becomes null
-							Recipe: nil,
-						},
-					},
 				},
 			},
 		},
@@ -1398,78 +1271,10 @@ func TestToStateSectionsAndFieldsMap(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			if tt.stateSectionMap == nil {
-				tt.stateSectionMap = make(map[string]OnePasswordItemResourceSectionMapModel)
-			}
+			updatedStateSectionMap := toStateSectionsAndFieldsMap(tt.item, tt.stateSectionMap)
 
-			diagnostics := toStateSectionsAndFieldsMap(tt.item, tt.stateSectionMap)
-
-			if (diagnostics.HasError()) != tt.wantErr {
-				t.Errorf("toStateSectionsAndFieldsMap() error = %v, wantErr %v", diagnostics.HasError(), tt.wantErr)
-				if diagnostics.HasError() {
-					for _, err := range diagnostics.Errors() {
-						t.Logf("Error: %s - %s", err.Summary(), err.Detail())
-					}
-				}
-				return
-			}
-
-			if !reflect.DeepEqual(tt.stateSectionMap, tt.want) {
-				t.Errorf("toStateSectionsAndFieldsMap() = %+v, want %+v", tt.stateSectionMap, tt.want)
-
-				// Detailed comparison
-				if len(tt.stateSectionMap) != len(tt.want) {
-					t.Errorf("Section count mismatch: got %d, want %d", len(tt.stateSectionMap), len(tt.want))
-				}
-
-				for label, wantSection := range tt.want {
-					gotSection, exists := tt.stateSectionMap[label]
-					if !exists {
-						t.Errorf("Missing section: %s", label)
-						continue
-					}
-
-					if gotSection.ID.ValueString() != wantSection.ID.ValueString() {
-						t.Errorf("Section %s ID = %s, want %s", label, gotSection.ID.ValueString(), wantSection.ID.ValueString())
-					}
-
-					if len(gotSection.FieldMap) != len(wantSection.FieldMap) {
-						t.Errorf("Section %s field count = %d, want %d", label, len(gotSection.FieldMap), len(wantSection.FieldMap))
-					}
-
-					for fieldLabel, wantField := range wantSection.FieldMap {
-						gotField, exists := gotSection.FieldMap[fieldLabel]
-						if !exists {
-							t.Errorf("Section %s missing field: %s", label, fieldLabel)
-							continue
-						}
-
-						if gotField.ID.ValueString() != wantField.ID.ValueString() {
-							t.Errorf("Section %s Field %s ID = %s, want %s", label, fieldLabel, gotField.ID.ValueString(), wantField.ID.ValueString())
-						}
-						if gotField.Type.ValueString() != wantField.Type.ValueString() {
-							t.Errorf("Section %s Field %s Type = %s, want %s", label, fieldLabel, gotField.Type.ValueString(), wantField.Type.ValueString())
-						}
-						if gotField.Value.ValueString() != wantField.Value.ValueString() {
-							t.Errorf("Section %s Field %s Value = %s, want %s", label, fieldLabel, gotField.Value.ValueString(), wantField.Value.ValueString())
-						}
-
-						if (gotField.Recipe == nil) != (wantField.Recipe == nil) {
-							t.Errorf("Section %s Field %s Recipe nil = %v, want %v", label, fieldLabel, gotField.Recipe == nil, wantField.Recipe == nil)
-						}
-						if gotField.Recipe != nil && wantField.Recipe != nil {
-							if gotField.Recipe.Length.ValueInt64() != wantField.Recipe.Length.ValueInt64() {
-								t.Errorf("Section %s Field %s Recipe Length = %d, want %d", label, fieldLabel, gotField.Recipe.Length.ValueInt64(), wantField.Recipe.Length.ValueInt64())
-							}
-							if gotField.Recipe.Digits.ValueBool() != wantField.Recipe.Digits.ValueBool() {
-								t.Errorf("Section %s Field %s Recipe Digits = %v, want %v", label, fieldLabel, gotField.Recipe.Digits.ValueBool(), wantField.Recipe.Digits.ValueBool())
-							}
-							if gotField.Recipe.Symbols.ValueBool() != wantField.Recipe.Symbols.ValueBool() {
-								t.Errorf("Section %s Field %s Recipe Symbols = %v, want %v", label, fieldLabel, gotField.Recipe.Symbols.ValueBool(), wantField.Recipe.Symbols.ValueBool())
-							}
-						}
-					}
-				}
+			if !reflect.DeepEqual(updatedStateSectionMap, tt.want) {
+				t.Errorf("toStateSectionsAndFieldsMap() = %+v, want %+v", updatedStateSectionMap, tt.want)
 			}
 		})
 	}
