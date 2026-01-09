@@ -29,7 +29,7 @@ data "onepassword_item" "example" {
 ### Optional
 
 - `note_value` (String, Sensitive) Secure Note value.
-- `section_map` (Attributes Map) A map of custom sections in the item, keyed by section label. This allows easy lookup of sections and fields by name. (see [below for nested schema](#nestedatt--section_map))
+- `section_map` (Attributes Map) A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label. Cannot be used together with `section`. Use either `section` (list) or `section_map` (map), but not both. (see [below for nested schema](#nestedatt--section_map))
 - `title` (String) The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.
 - `uuid` (String) The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.
 
@@ -38,7 +38,7 @@ data "onepassword_item" "example" {
 - `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key"]
 - `credential` (String, Sensitive) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
-- `file` (Block List) A list of files attached to the item. (see [below for nested schema](#nestedblock--file))
+- `file` (Block List) A list of files attached to the document item. (see [below for nested schema](#nestedblock--file))
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - `password` (String, Sensitive) Password for this item.
@@ -46,7 +46,7 @@ data "onepassword_item" "example" {
 - `private_key` (String, Sensitive) SSH Private Key in PKCS#8 for this item.
 - `private_key_openssh` (String, Sensitive) SSH Private key in OpenSSH format.
 - `public_key` (String) SSH Public Key for this item.
-- `section` (Block List) A list of custom sections in an item (see [below for nested schema](#nestedblock--section))
+- `section` (Block List) A list of custom sections in an item. Cannot be used together with `section_map`. Use either `section` (list) or `section_map` (map), but not both. (see [below for nested schema](#nestedblock--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
 - `type` (String) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
 - `url` (String) The primary URL for the item.
@@ -58,7 +58,7 @@ data "onepassword_item" "example" {
 Optional:
 
 - `field_map` (Attributes Map) A map of custom fields in the section, keyed by field label. (see [below for nested schema](#nestedatt--section_map--field_map))
-- `file_map` (Attributes Map) A map of files attached to the section, keyed by file ID. (see [below for nested schema](#nestedatt--section_map--file_map))
+- `file_map` (Attributes Map) A map of files attached to the section, keyed by file label. (see [below for nested schema](#nestedatt--section_map--file_map))
 
 Read-Only:
 
@@ -101,7 +101,7 @@ Read-Only:
 
 Read-Only:
 
-- `field` (Block List) (see [below for nested schema](#nestedblock--section--field))
+- `field` (Block List) A list of custom fields in the section (see [below for nested schema](#nestedblock--section--field))
 - `file` (Block List) A list of files attached to the section. (see [below for nested schema](#nestedblock--section--file))
 - `id` (String) A unique identifier for the section.
 - `label` (String) The label for the section.
