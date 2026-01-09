@@ -178,6 +178,11 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 							PlanModifiers: []planmodifier.String{
 								PasswordValueModifierForMapField(),
 							},
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(
+									path.MatchRelative().AtParent().AtName("password_recipe"),
+								),
+							},
 						},
 						"password_recipe": schema.SingleNestedAttribute{
 							MarkdownDescription: passwordRecipeDescription,
@@ -387,6 +392,11 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Sensitive:           true,
 										PlanModifiers: []planmodifier.String{
 											ValueModifier(),
+										},
+										Validators: []validator.String{
+											stringvalidator.ConflictsWith(
+												path.MatchRelative().AtParent().AtName("password_recipe"),
+											),
 										},
 									},
 								},
