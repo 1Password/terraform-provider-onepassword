@@ -675,3 +675,90 @@ func TestToModelTags(t *testing.T) {
 		})
 	}
 }
+
+func TestToModelSectionFieldMap(t *testing.T) {
+	tests := map[string]struct {
+		field        OnePasswordItemResourceFieldMapModel
+		fieldLabel   string
+		sectionID    string
+		sectionLabel string
+		wantErr      bool
+		validate     func(t *testing.T, field *model.ItemField)
+	}{
+		"with existing field ID": {
+			field: OnePasswordItemResourceFieldMapModel{
+				ID:    types.StringValue("existing-field-id"),
+				Type:  types.StringValue("STRING"),
+				Value: types.StringValue("test value"),
+				Recipe: &PasswordRecipeModel{
+					Length:  types.Int64Value(16),
+					Digits:  types.BoolValue(true),
+					Symbols: types.BoolValue(true),
+				},
+			},
+			fieldLabel:   "Test Field",
+			sectionID:    "section-id",
+			sectionLabel: "Section Label",
+			wantErr:      false,
+			validate: func(t *testing.T, field *model.ItemField) {
+				if field.ID != "existing-field-id" {
+					t.Errorf("Field.ID: got %v, want existing-field-id", field.ID)
+				}
+				if field.Label != "Test Field" {
+					t.Errorf("Field.Label: got %v, want Test Field", field.Label)
+				}
+				if field.SectionID != "section-id" {
+					t.Errorf("Field.SectionID: got %v, want section-id", field.SectionID)
+				}
+				if field.Value != "test value" {
+					t.Errorf("Field.Value: got %v, want test value", field.Value)
+				}
+				if field.Recipe == nil {
+					t.Error("Field.Recipe: should not be nil")
+					return
+				}
+				if field.Recipe.Length != 16 {
+					t.Errorf("Field.Recipe.Length: got %v, want 16", field.Recipe.Length)
+				}
+				hasDigits := false
+				hasSymbols := false
+				for _, cs := range field.Recipe.CharacterSets {
+					if cs == model.CharacterSetDigits {
+						hasDigits = true
+					}
+					if cs == model.CharacterSetSymbols {
+						hasSymbols = true
+					}
+				}
+				if !hasDigits {
+					t.Errorf("Field.Recipe.CharacterSets: expected to contain %v", model.CharacterSetDigits)
+				}
+				if !hasSymbols {
+					t.Errorf("Field.Recipe.CharacterSets: expected to contain %v", model.CharacterSetSymbols)
+				}
+			},
+		},
+	}
+
+	for description, test := range tests {
+		t.Run(description, func(t *testing.T) {
+			field, err := toModelSectionFieldMap(test.field, test.fieldLabel, test.sectionID, test.sectionLabel)
+			if (err != nil) != test.wantErr {
+				t.Errorf("Error: got err=%v, wantErr=%v", err != nil, test.wantErr)
+				return
+			}
+			if test.wantErr {
+				if field != nil {
+					t.Errorf("Field: got %v, want nil on error", field)
+				}
+				return
+			}
+			if field == nil {
+				t.Fatal("Field: got nil, want non-nil")
+			}
+			if test.validate != nil {
+				test.validate(t, field)
+			}
+		})
+	}
+}

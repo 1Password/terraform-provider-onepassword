@@ -243,15 +243,13 @@ func toModelSectionFieldMap(field OnePasswordItemResourceFieldMapModel, fieldLab
 		fieldID = sid
 	}
 
-	fieldValue := field.Value.ValueString()
 	modelItemField := &model.ItemField{
 		SectionID:    sectionID,
 		SectionLabel: sectionLabel,
 		ID:           fieldID,
 		Type:         model.ItemFieldType(op.ItemFieldType(field.Type.ValueString())),
-		Label:        fieldLabel, // Use the map key as the label
-		Value:        fieldValue,
-		Generate:     fieldValue == "", // Generate password if value is empty
+		Label:        fieldLabel,
+		Value:        field.Value.ValueString(),
 	}
 
 	recipe, err := parseGeneratorRecipeFromModel(field.Recipe)
