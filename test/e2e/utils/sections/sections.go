@@ -16,6 +16,18 @@ type TestSectionData struct {
 	Sections []TestSection
 }
 
+// TestSectionMapField represents a field in section_map
+type TestSectionMapField struct {
+	Type           string
+	Value          string
+	PasswordRecipe *map[string]any
+}
+
+// TestSectionMapEntry represents a section entry in section_map
+type TestSectionMapEntry struct {
+	FieldMap map[string]TestSectionMapField
+}
+
 // MapSections converts a list of TestSection to a list of maps that can be used in Terraform configuration
 func MapSections(sections []TestSection) []map[string]any {
 	mappedSections := make([]map[string]any, len(sections))
@@ -54,4 +66,35 @@ func mapFields(fields []TestField) []map[string]any {
 		mappedFields = append(mappedFields, fieldMap)
 	}
 	return mappedFields
+}
+
+// BuildSectionMap converts a map of section label to TestSectionMapEntry
+func BuildSectionMap(sections map[string]TestSectionMapEntry) map[string]any {
+	result := make(map[string]any)
+
+	for sectionLabel, sectionEntry := range sections {
+		fieldMap := make(map[string]any)
+
+		for fieldLabel, field := range sectionEntry.FieldMap {
+			fieldAttrs := map[string]any{
+				"type": field.Type,
+			}
+
+			if field.Value != "" {
+				fieldAttrs["value"] = field.Value
+			}
+
+			if field.PasswordRecipe != nil && len(*field.PasswordRecipe) > 0 {
+				fieldAttrs["password_recipe"] = *field.PasswordRecipe
+			}
+
+			fieldMap[fieldLabel] = fieldAttrs
+		}
+
+		result[sectionLabel] = map[string]any{
+			"field_map": fieldMap,
+		}
+	}
+
+	return result
 }
