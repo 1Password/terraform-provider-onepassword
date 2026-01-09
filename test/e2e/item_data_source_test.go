@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -483,18 +484,27 @@ func TestAccItemDataSourceSectionMap(t *testing.T) {
 				return fmt.Errorf("resource not found in state")
 			}
 
-			// Compare section IDs
-			section0ID := item.Primary.Attributes["section.0.id"]
-			sectionMapID := item.Primary.Attributes["section_map.Credentials.id"]
-			if section0ID != sectionMapID {
-				return fmt.Errorf("section.0.id (%s) != section_map.Credentials.id (%s)", section0ID, sectionMapID)
+			// Collect section IDs from the list
+			var listSectionIDs []string
+			for i := 0; ; i++ {
+				id := item.Primary.Attributes[fmt.Sprintf("section.%d.id", i)]
+				if id == "" {
+					break
+				}
+				listSectionIDs = append(listSectionIDs, id)
 			}
 
-			// Compare field values
-			section0Field0Value := item.Primary.Attributes["section.0.field.0.value"]
-			sectionMapFieldValue := item.Primary.Attributes["section_map.Credentials.field_map.api_key.value"]
-			if section0Field0Value != sectionMapFieldValue {
-				return fmt.Errorf("section.0.field.0.value != section_map.Credentials.field_map.api_key.value")
+			// Collect section IDs from the map
+			mapSectionIDs := []string{
+				item.Primary.Attributes["section_map.Credentials.id"],
+				item.Primary.Attributes["section_map.Database Config.id"],
+			}
+
+			// Compare slices (order-independent)
+			slices.Sort(listSectionIDs)
+			slices.Sort(mapSectionIDs)
+			if !slices.Equal(listSectionIDs, mapSectionIDs) {
+				return fmt.Errorf("section IDs mismatch: list=%v, map=%v", listSectionIDs, mapSectionIDs)
 			}
 
 			return nil
