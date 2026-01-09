@@ -176,7 +176,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 							Computed:            true,
 							Sensitive:           true,
 							PlanModifiers: []planmodifier.String{
-								ValueModifier(),
+								PasswordValueModifierForMapField(),
 							},
 						},
 						"password_recipe": schema.SingleNestedAttribute{
@@ -682,10 +682,7 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
 
 	if len(state.SectionMap) > 0 {
-		diagnostics := toStateSectionsAndFieldsMap(modelItem, state.SectionMap)
-		if diagnostics.HasError() {
-			return diagnostics
-		}
+		state.SectionMap = toStateSectionsAndFieldsMap(modelItem, state.SectionMap)
 	} else {
 		state.SectionList = toStateSectionsAndFieldsList(modelItem.Sections, modelItem.Fields, state.SectionList)
 	}
