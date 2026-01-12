@@ -49,3 +49,21 @@ func buildAttributeChecks(resourceName string, attrPath string, expectedValue an
 
 	return checks
 }
+
+// BuildSectionMapFieldValueCheck creates a check for a specific field value in section_map
+func BuildSectionMapFieldValueCheck(resourceName, sectionLabel, fieldLabel, expectedValue string) resource.TestCheckFunc {
+	path := fmt.Sprintf("section_map.%s.field_map.%s.value", sectionLabel, fieldLabel)
+	return resource.TestCheckResourceAttr(resourceName, path, expectedValue)
+}
+
+// BuildSectionMapFieldIDSetCheck creates a check that a field ID is set in section_map
+func BuildSectionMapFieldIDSetCheck(resourceName, sectionLabel, fieldLabel string) resource.TestCheckFunc {
+	path := fmt.Sprintf("section_map.%s.field_map.%s.id", sectionLabel, fieldLabel)
+	return resource.TestCheckResourceAttrSet(resourceName, path)
+}
+
+// BuildSectionMapIDSetCheck creates a check that a section ID is set in section_map
+func BuildSectionMapIDSetCheck(resourceName, sectionLabel string) resource.TestCheckFunc {
+	path := fmt.Sprintf("section_map.%s.id", sectionLabel)
+	return resource.TestCheckResourceAttrSet(resourceName, path)
+}

@@ -31,6 +31,39 @@ provider "onepassword" {
 
 variable "vault_id" {}
 
+# Using section_map for direct field access by label
+resource "onepassword_item" "demo_credentials" {
+  vault = var.vault_id
+
+  title    = "Demo API Credentials"
+  category = "login"
+
+  section_map = {
+    "api_credentials" = {
+      field_map = {
+        "api_key" = {
+          type  = "CONCEALED"
+          value = "your-api-key"
+        }
+        "api_secret" = {
+          type = "CONCEALED"
+          password_recipe = {
+            length  = 32
+            symbols = false
+          }
+        }
+      }
+    }
+  }
+}
+
+# Access fields directly by label
+output "api_key" {
+  value     = onepassword_item.demo_credentials.section_map["api_credentials"].field_map["api_key"].value
+  sensitive = true
+}
+
+# Using section (list) for block syntax
 resource "onepassword_item" "demo_login" {
   vault = var.vault_id
 

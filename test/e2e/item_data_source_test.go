@@ -446,6 +446,67 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 	})
 }
 
+func TestAccItemDataSourceSectionMap(t *testing.T) {
+
+	itemTitle := "Test Item with Sections"
+
+	// Build checks for section_map
+	sectionMapChecks := []resource.TestCheckFunc{
+		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.%", "2"),
+		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Credentials.id"),
+		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Database Config.id"),
+		// Field access via field_map
+		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Credentials.field_map.api_key.id"),
+		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.Credentials.field_map.api_key.type", "CONCEALED"),
+		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Credentials.field_map.api_key.value"),
+		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Credentials.field_map.api_secret.value"),
+		// File in Database Config section
+		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.Database Config.file_map.test.txt.content", "This is a test"),
+		resource.TestCheckResourceAttr("data.onepassword_item.test_item", "section_map.Database Config.file_map.test.txt.content_base64", "VGhpcyBpcyBhIHRlc3Q="),
+		resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", "section_map.Database Config.file_map.test.txt.id"),
+
+		// Verify section_map matches section list
+		resource.TestCheckFunc(func(s *terraform.State) error {
+			item, ok := s.RootModule().Resources["data.onepassword_item.test_item"]
+			if !ok {
+				return fmt.Errorf("resource not found in state")
+			}
+
+			// Compare section IDs
+			section0ID := item.Primary.Attributes["section.0.id"]
+			sectionMapID := item.Primary.Attributes["section_map.Credentials.id"]
+			if section0ID != sectionMapID {
+				return fmt.Errorf("section.0.id (%s) != section_map.Credentials.id (%s)", section0ID, sectionMapID)
+			}
+
+			// Compare field values
+			section0Field0Value := item.Primary.Attributes["section.0.field.0.value"]
+			sectionMapFieldValue := item.Primary.Attributes["section_map.Credentials.field_map.api_key.value"]
+			if section0Field0Value != sectionMapFieldValue {
+				return fmt.Errorf("section.0.field.0.value != section_map.Credentials.field_map.api_key.value")
+			}
+
+			return nil
+		}),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemDataSourceConfig(map[string]string{
+						"vault": testVaultID,
+						"title": itemTitle,
+					}),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(sectionMapChecks...),
+			},
+		},
+	})
+}
+
 func TestAccItemDataSource_VaultName(t *testing.T) {
 	createTestCase := func(name string, item testItem, identifierParam string, identifierValue string) itemDataSourceTestCase {
 		return itemDataSourceTestCase{

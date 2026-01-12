@@ -145,7 +145,7 @@ func toModelSectionField(field OnePasswordItemResourceFieldModel, sectionID, sec
 		Value:        field.Value.ValueString(),
 	}
 
-	recipe, err := parseGeneratorRecipe(field.Recipe)
+	recipe, err := parseGeneratorRecipeList(field.Recipe)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
 			"Item conversion error",
@@ -161,7 +161,7 @@ func toModelSectionField(field OnePasswordItemResourceFieldModel, sectionID, sec
 }
 
 func toModelSections(state OnePasswordItemResourceModel, modelItem *model.Item) diag.Diagnostics {
-	for _, section := range state.Section {
+	for _, section := range state.SectionList {
 		sectionID := section.ID.ValueString()
 		if sectionID == "" {
 			sid, err := uuid.GenerateUUID()
@@ -180,7 +180,7 @@ func toModelSections(state OnePasswordItemResourceModel, modelItem *model.Item) 
 		}
 		modelItem.Sections = append(modelItem.Sections, s)
 
-		for _, field := range section.Field {
+		for _, field := range section.FieldList {
 			modelItemField, diagnostics := toModelSectionField(field, s.ID, s.Label)
 			if diagnostics.HasError() {
 				return diagnostics
@@ -198,4 +198,102 @@ func toModelTags(ctx context.Context, state OnePasswordItemResourceModel) ([]str
 		return nil, diagnostics
 	}
 	return tags, nil
+}
+
+func parseGeneratorRecipeFromModel(recipe *PasswordRecipeModel) (*model.GeneratorRecipe, error) {
+	if recipe == nil {
+		return nil, nil
+	}
+
+	parsed := &model.GeneratorRecipe{
+		Length:        32,
+		CharacterSets: []model.CharacterSet{},
+	}
+
+	length := recipe.Length.ValueInt64()
+	if length > 64 {
+		return nil, fmt.Errorf("password_recipe.length must be an integer between 1 and 64")
+	}
+
+	if length > 0 {
+		parsed.Length = int(length)
+	}
+
+	if recipe.Digits.ValueBool() {
+		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetDigits)
+	}
+	if recipe.Symbols.ValueBool() {
+		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetSymbols)
+	}
+
+	return parsed, nil
+}
+
+func toModelSectionFieldMap(field OnePasswordItemResourceFieldMapModel, fieldLabel, sectionID, sectionLabel string) (*model.ItemField, diag.Diagnostics) {
+	fieldID := field.ID.ValueString()
+	// Generate field ID if empty
+	if fieldID == "" {
+		sid, err := uuid.GenerateUUID()
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+				"Item conversion error",
+				fmt.Sprintf("Unable to generate a field ID, has error: %v", err),
+			)}
+		}
+		fieldID = sid
+	}
+
+	modelItemField := &model.ItemField{
+		SectionID:    sectionID,
+		SectionLabel: sectionLabel,
+		ID:           fieldID,
+		Type:         model.ItemFieldType(op.ItemFieldType(field.Type.ValueString())),
+		Label:        fieldLabel,
+		Value:        field.Value.ValueString(),
+	}
+
+	recipe, err := parseGeneratorRecipeFromModel(field.Recipe)
+	if err != nil {
+		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
+			"Item conversion error",
+			fmt.Sprintf("Failed to parse generator recipe, got error: %s", err),
+		)}
+	}
+
+	if recipe != nil {
+		addRecipe(modelItemField, recipe)
+	}
+
+	return modelItemField, nil
+}
+
+func toModelSectionsFromMap(state OnePasswordItemResourceModel, modelItem *model.Item) diag.Diagnostics {
+	for sectionLabel, section := range state.SectionMap {
+		sectionID := section.ID.ValueString()
+		if sectionID == "" {
+			sid, err := uuid.GenerateUUID()
+			if err != nil {
+				return diag.Diagnostics{diag.NewErrorDiagnostic(
+					"Item conversion error",
+					fmt.Sprintf("Unable to generate a section ID, has error: %v", err),
+				)}
+			}
+			sectionID = sid
+		}
+
+		s := model.ItemSection{
+			ID:    sectionID,
+			Label: sectionLabel, // Use the map key as the label
+		}
+		modelItem.Sections = append(modelItem.Sections, s)
+
+		for fieldLabel, field := range section.FieldMap {
+			modelItemField, diagnostics := toModelSectionFieldMap(field, fieldLabel, s.ID, s.Label)
+			if diagnostics.HasError() {
+				return diagnostics
+			}
+			modelItem.Fields = append(modelItem.Fields, *modelItemField)
+		}
+	}
+	return nil
 }

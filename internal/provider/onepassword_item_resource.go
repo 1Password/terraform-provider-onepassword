@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -30,6 +29,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ resource.Resource = &OnePasswordItemResource{}
 var _ resource.ResourceWithImportState = &OnePasswordItemResource{}
+var _ resource.ResourceWithValidateConfig = &OnePasswordItemResource{}
 
 func NewOnePasswordItemResource() resource.Resource {
 	return &OnePasswordItemResource{}
@@ -42,24 +42,25 @@ type OnePasswordItemResource struct {
 
 // OnePasswordItemResourceModel describes the resource data model.
 type OnePasswordItemResourceModel struct {
-	ID                types.String                          `tfsdk:"id"`
-	UUID              types.String                          `tfsdk:"uuid"`
-	Vault             types.String                          `tfsdk:"vault"`
-	Category          types.String                          `tfsdk:"category"`
-	Title             types.String                          `tfsdk:"title"`
-	URL               types.String                          `tfsdk:"url"`
-	Hostname          types.String                          `tfsdk:"hostname"`
-	Database          types.String                          `tfsdk:"database"`
-	Port              types.String                          `tfsdk:"port"`
-	Type              types.String                          `tfsdk:"type"`
-	Tags              types.List                            `tfsdk:"tags"`
-	Username          types.String                          `tfsdk:"username"`
-	Password          types.String                          `tfsdk:"password"`
-	PasswordWO        types.String                          `tfsdk:"password_wo"`
-	PasswordWOVersion types.Int64                           `tfsdk:"password_wo_version"`
-	NoteValue         types.String                          `tfsdk:"note_value"`
-	Section           []OnePasswordItemResourceSectionModel `tfsdk:"section"`
-	Recipe            []PasswordRecipeModel                 `tfsdk:"password_recipe"`
+	ID                types.String                                      `tfsdk:"id"`
+	UUID              types.String                                      `tfsdk:"uuid"`
+	Vault             types.String                                      `tfsdk:"vault"`
+	Category          types.String                                      `tfsdk:"category"`
+	Title             types.String                                      `tfsdk:"title"`
+	URL               types.String                                      `tfsdk:"url"`
+	Hostname          types.String                                      `tfsdk:"hostname"`
+	Database          types.String                                      `tfsdk:"database"`
+	Port              types.String                                      `tfsdk:"port"`
+	Type              types.String                                      `tfsdk:"type"`
+	Tags              types.List                                        `tfsdk:"tags"`
+	Username          types.String                                      `tfsdk:"username"`
+	Password          types.String                                      `tfsdk:"password"`
+	PasswordWO        types.String                                      `tfsdk:"password_wo"`
+	PasswordWOVersion types.Int64                                       `tfsdk:"password_wo_version"`
+	NoteValue         types.String                                      `tfsdk:"note_value"`
+	SectionList       []OnePasswordItemResourceSectionListModel         `tfsdk:"section"`
+	SectionMap        map[string]OnePasswordItemResourceSectionMapModel `tfsdk:"section_map"`
+	Recipe            []PasswordRecipeModel                             `tfsdk:"password_recipe"`
 }
 
 type PasswordRecipeModel struct {
@@ -68,10 +69,27 @@ type PasswordRecipeModel struct {
 	Symbols types.Bool  `tfsdk:"symbols"`
 }
 
-type OnePasswordItemResourceSectionModel struct {
-	ID    types.String                        `tfsdk:"id"`
-	Label types.String                        `tfsdk:"label"`
-	Field []OnePasswordItemResourceFieldModel `tfsdk:"field"`
+// OnePasswordItemResourceSectionListModel is used for list-based sections
+type OnePasswordItemResourceSectionListModel struct {
+	ID        types.String                        `tfsdk:"id"`
+	Label     types.String                        `tfsdk:"label"`
+	FieldList []OnePasswordItemResourceFieldModel `tfsdk:"field"`
+}
+
+// OnePasswordItemResourceSectionMapModel is used for map-based sections
+// The map key serves as the section label
+type OnePasswordItemResourceSectionMapModel struct {
+	ID       types.String                                    `tfsdk:"id"`
+	FieldMap map[string]OnePasswordItemResourceFieldMapModel `tfsdk:"field_map"`
+}
+
+// OnePasswordItemResourceFieldMapModel is used for map-based fields (field_map attribute)
+// The map key serves as the field label
+type OnePasswordItemResourceFieldMapModel struct {
+	ID     types.String         `tfsdk:"id"`
+	Type   types.String         `tfsdk:"type"`
+	Value  types.String         `tfsdk:"value"`
+	Recipe *PasswordRecipeModel `tfsdk:"password_recipe"`
 }
 
 type OnePasswordItemResourceFieldModel struct {
@@ -115,6 +133,85 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					Optional:            true,
 					Computed:            true,
 					Default:             booldefault.StaticBool(true),
+				},
+			},
+		},
+	}
+
+	sectionNestedObjectSchemaForMap := schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: sectionIDDescription,
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseNonNullStateForUnknown(),
+				},
+			},
+			"field_map": schema.MapNestedAttribute{
+				MarkdownDescription: fieldMapDescription,
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: fieldIDDescription,
+							Optional:            true,
+							Computed:            true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseNonNullStateForUnknown(),
+							},
+						},
+						"type": schema.StringAttribute{
+							MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+							Optional:            true,
+							Computed:            true,
+							Default:             stringdefault.StaticString("STRING"),
+							Validators: []validator.String{
+								stringvalidator.OneOf(fieldTypes...),
+							},
+						},
+						"value": schema.StringAttribute{
+							MarkdownDescription: fieldValueDescription,
+							Optional:            true,
+							Computed:            true,
+							Sensitive:           true,
+							PlanModifiers: []planmodifier.String{
+								PasswordValueModifierForMapField(),
+							},
+							Validators: []validator.String{
+								stringvalidator.ConflictsWith(
+									path.MatchRelative().AtParent().AtName("password_recipe"),
+								),
+							},
+						},
+						"password_recipe": schema.SingleNestedAttribute{
+							MarkdownDescription: passwordRecipeDescription,
+							Optional:            true,
+							Attributes: map[string]schema.Attribute{
+								"length": schema.Int64Attribute{
+									MarkdownDescription: passwordLengthDescription,
+									Optional:            true,
+									Computed:            true,
+									Default:             int64default.StaticInt64(32),
+									Validators: []validator.Int64{
+										int64validator.Between(1, 64),
+									},
+								},
+								"digits": schema.BoolAttribute{
+									MarkdownDescription: passwordDigitsDescription,
+									Optional:            true,
+									Computed:            true,
+									Default:             booldefault.StaticBool(true),
+								},
+								"symbols": schema.BoolAttribute{
+									MarkdownDescription: passwordSymbolsDescription,
+									Optional:            true,
+									Computed:            true,
+									Default:             booldefault.StaticBool(true),
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -238,10 +335,15 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 				Sensitive:           true,
 			},
+			"section_map": schema.MapNestedAttribute{
+				MarkdownDescription: sectionMapDescription,
+				Optional:            true,
+				NestedObject:        sectionNestedObjectSchemaForMap,
+			},
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
-				MarkdownDescription: sectionsDescription,
+				MarkdownDescription: sectionListDescription,
 				NestedObject: schema.NestedBlockObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
@@ -259,7 +361,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					},
 					Blocks: map[string]schema.Block{
 						"field": schema.ListNestedBlock{
-							MarkdownDescription: sectionFieldsDescription,
+							MarkdownDescription: fieldListDescription,
 							NestedObject: schema.NestedBlockObject{
 								Attributes: map[string]schema.Attribute{
 									"id": schema.StringAttribute{
@@ -292,6 +394,9 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 											ValueModifier(),
 										},
 										Validators: []validator.String{
+											stringvalidator.ConflictsWith(
+												path.MatchRelative().AtParent().AtName("password_recipe"),
+											),
 											validateMonthYear(),
 										},
 									},
@@ -327,6 +432,27 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 	}
 
 	r.client = client
+}
+
+func (r *OnePasswordItemResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config OnePasswordItemResourceModel
+
+	// Read Terraform configuration data into the model
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Check if both section_map and section are set
+	hasSectionMap := len(config.SectionMap) > 0
+	hasSectionList := len(config.SectionList) > 0
+
+	if hasSectionMap && hasSectionList {
+		resp.Diagnostics.AddError(
+			"Conflicting Section Definitions",
+			"Cannot use both 'section' (list) and 'section_map' (map) at the same time. Please use only one of them.",
+		)
+	}
 }
 
 func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -486,9 +612,6 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	payload, _ := json.Marshal(item)
-	tflog.Info(ctx, "update op payload: "+string(payload))
-
 	updatedItem, err := r.client.UpdateItem(ctx, item, plan.Vault.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", plan.UUID.ValueString(), plan.Vault.ValueString(), err))
@@ -568,7 +691,13 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 	state.Vault = setStringValue(modelItem.VaultID)
 	state.Title = setStringValuePreservingEmpty(modelItem.Title, state.Title)
 	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
-	state.Section = toStateSectionsAndFields(modelItem.Sections, modelItem.Fields, state.Section)
+
+	if len(state.SectionMap) > 0 {
+		state.SectionMap = toStateSectionsAndFieldsMap(modelItem, state.SectionMap)
+	} else {
+		state.SectionList = toStateSectionsAndFieldsList(modelItem.Sections, modelItem.Fields, state.SectionList)
+	}
+
 	toStateTopLevelFields(modelItem.Fields, state)
 
 	for _, u := range modelItem.URLs {
@@ -605,7 +734,7 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	}
 
 	password := state.Password.ValueString()
-	recipe, err := parseGeneratorRecipe(state.Recipe)
+	recipe, err := parseGeneratorRecipeList(state.Recipe)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
 			"Error parsing generator recipe",
@@ -634,7 +763,12 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	}
 	modelItem.Tags = tags
 
-	diagnostics = toModelSections(state, modelItem)
+	if len(state.SectionMap) > 0 {
+		diagnostics = toModelSectionsFromMap(state, modelItem)
+	} else {
+		diagnostics = toModelSections(state, modelItem)
+	}
+
 	if diagnostics.HasError() {
 		return nil, diagnostics
 	}
@@ -642,35 +776,12 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	return modelItem, nil
 }
 
-func parseGeneratorRecipe(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {
+func parseGeneratorRecipeList(recipeObject []PasswordRecipeModel) (*model.GeneratorRecipe, error) {
 	if len(recipeObject) == 0 {
 		return nil, nil
 	}
 
-	recipe := recipeObject[0]
-
-	parsed := &model.GeneratorRecipe{
-		Length:        32,
-		CharacterSets: []model.CharacterSet{},
-	}
-
-	length := recipe.Length.ValueInt64()
-	if length > 64 {
-		return nil, fmt.Errorf("password_recipe.length must be an integer between 1 and 64")
-	}
-
-	if length > 0 {
-		parsed.Length = int(length)
-	}
-
-	if recipe.Digits.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetDigits)
-	}
-	if recipe.Symbols.ValueBool() {
-		parsed.CharacterSets = append(parsed.CharacterSets, model.CharacterSetSymbols)
-	}
-
-	return parsed, nil
+	return parseGeneratorRecipeFromModel(&recipeObject[0])
 }
 
 func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {

@@ -385,6 +385,51 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 	}
 }
 
+// TestAccItemResourceSectionList_ValueAndPasswordRecipeConflict tests that value and password_recipe
+// cannot be specified together in section list fields:
+func TestAccItemResourceSectionList_ValueAndPasswordRecipeConflict(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+
+	recipeMap := map[string]any{
+		"length":  20,
+		"digits":  true,
+		"symbols": true,
+	}
+
+	// Create section with a field that has both value and password_recipe set - this should fail validation
+	testSection := sections.TestSection{
+		Label: "Credentials",
+		Fields: []sections.TestField{
+			{
+				Label:          "Conflicting Field",
+				Type:           "CONCEALED",
+				Value:          "my-explicit-value",
+				PasswordRecipe: &recipeMap,
+			},
+		},
+	}
+
+	attrs := map[string]any{
+		"title":    addUniqueIDToTitle("Test Section List Value Recipe Conflict", uniqueID),
+		"category": "login",
+		"section":  sections.MapSections([]sections.TestSection{testSection}),
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
+			},
+		},
+	})
+}
+
 func TestAccItemResourceSectionsAndFields(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -1229,6 +1274,7 @@ func TestAccItemResourcePasswordWriteOnly(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					logStep(t, "CREATE_WITH_PASSWORD_WO"),
 					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "category", "login"),
 					resource.TestCheckResourceAttr("onepassword_item.test_item", "username", "testuser@example.com"),
@@ -1400,4 +1446,1116 @@ func logStep(t *testing.T, step string) resource.TestCheckFunc {
 		t.Log(step)
 		return nil
 	}
+}
+
+func TestAccItemResourceSectionMap_BasicCRUD(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap CRUD", uniqueID)
+	var itemUUID string
+
+	// Step 1: Create with single section and multiple field types
+	createSectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"credentials": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"api_key": {
+					Type:  "STRING",
+					Value: "initial-api-key",
+				},
+				"api_secret": {
+					Type:  "CONCEALED",
+					Value: "initial-secret",
+				},
+			},
+		},
+	})
+
+	createAttrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"username":    "testuser@example.com",
+		"section_map": createSectionMap,
+	}
+
+	// Step 2: Update field values
+	updateValuesSectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"credentials": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"api_key": {
+					Type:  "STRING",
+					Value: "updated-api-key",
+				},
+				"api_secret": {
+					Type:  "CONCEALED",
+					Value: "updated-secret",
+				},
+			},
+		},
+	})
+
+	updateValuesAttrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"username":    "testuser@example.com",
+		"section_map": updateValuesSectionMap,
+	}
+
+	// Step 3: Add new field to existing section
+	addFieldSectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"credentials": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"api_key": {
+					Type:  "STRING",
+					Value: "updated-api-key",
+				},
+				"api_secret": {
+					Type:  "CONCEALED",
+					Value: "updated-secret",
+				},
+				"environment": {
+					Type:  "STRING",
+					Value: "production",
+				},
+			},
+		},
+	})
+
+	addFieldAttrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"username":    "testuser@example.com",
+		"section_map": addFieldSectionMap,
+	}
+
+	// Step 4: Add new section
+	addSectionSectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"credentials": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"api_key": {
+					Type:  "STRING",
+					Value: "updated-api-key",
+				},
+				"api_secret": {
+					Type:  "CONCEALED",
+					Value: "updated-secret",
+				},
+				"environment": {
+					Type:  "STRING",
+					Value: "production",
+				},
+			},
+		},
+		"metadata": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"created_by": {
+					Type:  "STRING",
+					Value: "terraform",
+				},
+			},
+		},
+	})
+
+	addSectionAttrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"username":    "testuser@example.com",
+		"section_map": addSectionSectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_SECTION_MAP"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
+					checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "credentials"),
+					checks.BuildSectionMapFieldIDSetCheck("onepassword_item.test_item", "credentials", "api_key"),
+					checks.BuildSectionMapFieldIDSetCheck("onepassword_item.test_item", "credentials", "api_secret"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "api_key", "initial-api-key"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "api_secret", "initial-secret"),
+				),
+			},
+			// Step 2: Read/Refresh - verify no changes
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, createAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "READ_REFRESH_NO_CHANGES"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+				),
+			},
+			// Step 3: Update field values
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, updateValuesAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_FIELD_VALUES"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "api_key", "updated-api-key"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "api_secret", "updated-secret"),
+				),
+			},
+			// Step 4: Add new field to existing section
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, addFieldAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "ADD_FIELD_TO_SECTION"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					checks.BuildSectionMapFieldIDSetCheck("onepassword_item.test_item", "credentials", "environment"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "environment", "production"),
+				),
+			},
+			// Step 5: Add new section
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, addSectionAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "ADD_NEW_SECTION"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "metadata"),
+					checks.BuildSectionMapFieldIDSetCheck("onepassword_item.test_item", "metadata", "created_by"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "metadata", "created_by", "terraform"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourceSectionMap_FieldTypes tests all supported field types in section_map:
+func TestAccItemResourceSectionMap_FieldTypes(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap Field Types", uniqueID)
+	var itemUUID string
+
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"all_types": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"string_field": {
+					Type:  "STRING",
+					Value: "plain text value",
+				},
+				"concealed_field": {
+					Type:  "CONCEALED",
+					Value: "secret-value-123",
+				},
+				"email_field": {
+					Type:  "EMAIL",
+					Value: "test@example.com",
+				},
+				"url_field": {
+					Type:  "URL",
+					Value: "https://example.com",
+				},
+				"date_field": {
+					Type:  "DATE",
+					Value: "2025-01-06",
+				},
+				// TODO: Uncomment after addressing https://github.com/1Password/terraform-provider-onepassword/issues/311
+				// "month_year_field": {
+				// 	Type:  "MONTH_YEAR",
+				// 	Value: "01/2025",
+				// },
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": sectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_ALL_FIELD_TYPES"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					// Verify all field types
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.string_field.type", "STRING"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.string_field.value", "plain text value"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.concealed_field.type", "CONCEALED"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.concealed_field.value", "secret-value-123"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.email_field.type", "EMAIL"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.email_field.value", "test@example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.url_field.type", "URL"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.url_field.value", "https://example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.date_field.type", "DATE"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.date_field.value", "2025-01-06"),
+					// TODO: Uncomment after addressing https://github.com/1Password/terraform-provider-onepassword/issues/311
+					//resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.month_year_field.type", "MONTH_YEAR"),
+					//resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.all_types.field_map.month_year_field.value", "01/2025"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourceSectionMap_PasswordRecipe tests password generation in section_map fields:
+func TestAccItemResourceSectionMap_PasswordRecipe(t *testing.T) {
+	testCases := []struct {
+		name    string
+		length  int
+		digits  bool
+		symbols bool
+	}{
+		{name: "DefaultRecipe", length: 20, digits: true, symbols: true},
+		{name: "LongPassword", length: 64, digits: true, symbols: true},
+		{name: "NoDigits", length: 20, digits: false, symbols: true},
+		{name: "NoSymbols", length: 20, digits: true, symbols: false},
+		{name: "LettersOnly", length: 20, digits: false, symbols: false},
+	}
+
+	testVaultID := vault.GetTestVaultID(t)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uniqueID := uuid.New().String()
+			title := addUniqueIDToTitle("Test SectionMap Password Recipe", uniqueID)
+			var itemUUID string
+
+			recipe := map[string]any{
+				"length":  tc.length,
+				"digits":  tc.digits,
+				"symbols": tc.symbols,
+			}
+
+			sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+				"credentials": {
+					FieldMap: map[string]sections.TestSectionMapField{
+						"generated_password": {
+							Type:           "CONCEALED",
+							PasswordRecipe: &recipe,
+						},
+					},
+				},
+			})
+
+			attrs := map[string]any{
+				"title":       title,
+				"category":    "login",
+				"section_map": sectionMap,
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: tfconfig.CreateConfigBuilder()(
+							tfconfig.ProviderConfig(),
+							tfconfig.ItemResourceConfig(testVaultID, attrs),
+						),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							logStep(t, fmt.Sprintf("CREATE_WITH_PASSWORD_RECIPE_%s", tc.name)),
+							uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+							cleanup.RegisterItem(t, &itemUUID, testVaultID),
+							// Verify password was generated (value is set)
+							resource.TestCheckResourceAttrSet("onepassword_item.test_item", "section_map.credentials.field_map.generated_password.value"),
+							// Verify recipe attributes are preserved
+							resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.credentials.field_map.generated_password.password_recipe.length", fmt.Sprintf("%d", tc.length)),
+							resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.credentials.field_map.generated_password.password_recipe.digits", fmt.Sprintf("%t", tc.digits)),
+							resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.credentials.field_map.generated_password.password_recipe.symbols", fmt.Sprintf("%t", tc.symbols)),
+						),
+					},
+				},
+			})
+		})
+	}
+}
+
+// TestAccItemResourceSectionMap_ValueAndPasswordRecipeConflict tests that value and password_recipe
+// cannot be specified together in section_map fields:
+func TestAccItemResourceSectionMap_ValueAndPasswordRecipeConflict(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap Value Recipe Conflict", uniqueID)
+
+	recipe := map[string]any{
+		"length":  20,
+		"digits":  true,
+		"symbols": true,
+	}
+
+	// Create section_map with both value and password_recipe set - this should fail validation
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"credentials": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"conflicting_field": {
+					Type:           "CONCEALED",
+					Value:          "my-explicit-value",
+					PasswordRecipe: &recipe,
+				},
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": sectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				ExpectError: regexp.MustCompile("Invalid Attribute Combination"),
+			},
+		},
+	})
+}
+
+func TestAccItemResourceSectionMap_MultipleSections(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap Multiple Sections", uniqueID)
+	var itemUUID string
+
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"database": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"host": {Type: "STRING", Value: "db.example.com"},
+				"port": {Type: "STRING", Value: "5432"},
+				"name": {Type: "STRING", Value: "mydb"},
+			},
+		},
+		"credentials": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"username": {Type: "STRING", Value: "admin"},
+				"password": {Type: "CONCEALED", Value: "secret123"},
+			},
+		},
+		"metadata": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"environment": {Type: "STRING", Value: "production"},
+				"owner":       {Type: "EMAIL", Value: "team@example.com"},
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "database",
+		"section_map": sectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_MULTIPLE_SECTIONS"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					// Verify database section
+					checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "database"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "database", "host", "db.example.com"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "database", "port", "5432"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "database", "name", "mydb"),
+					// Verify credentials section
+					checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "credentials"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "username", "admin"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "password", "secret123"),
+					// Verify metadata section
+					checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "metadata"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "metadata", "environment", "production"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "metadata", "owner", "team@example.com"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourceSectionMap_RemoveFieldAndSection tests removal operations
+func TestAccItemResourceSectionMap_RemoveFieldAndSection(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap Remove", uniqueID)
+	var itemUUID string
+
+	// Step 1: Create with multiple sections and fields
+	initialSectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"section1": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"field1": {Type: "STRING", Value: "value1"},
+				"field2": {Type: "STRING", Value: "value2"},
+			},
+		},
+		"section2": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"field3": {Type: "STRING", Value: "value3"},
+			},
+		},
+	})
+
+	initialAttrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": initialSectionMap,
+	}
+
+	// Step 2: Remove field2 from section1
+	removeFieldSectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"section1": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"field1": {Type: "STRING", Value: "value1"},
+			},
+		},
+		"section2": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"field3": {Type: "STRING", Value: "value3"},
+			},
+		},
+	})
+
+	removeFieldAttrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": removeFieldSectionMap,
+	}
+
+	// Step 3: Remove section2 entirely
+	removeSectionSectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"section1": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"field1": {Type: "STRING", Value: "value1"},
+			},
+		},
+	})
+
+	removeSectionAttrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": removeSectionSectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, initialAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_INITIAL"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section1", "field1", "value1"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section1", "field2", "value2"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section2", "field3", "value3"),
+				),
+			},
+			// Step 2: Remove field
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, removeFieldAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "REMOVE_FIELD"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section1", "field1", "value1"),
+					// field2 should be gone - check no attribute
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section_map.section1.field_map.field2.value"),
+				),
+			},
+			// Step 3: Remove section
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, removeSectionAttrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "REMOVE_SECTION"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "section1"),
+					// section2 should be gone
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section_map.section2.id"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourceSectionMap_WithPasswordRecipeAndOtherFields
+func TestAccItemResourceSectionMap_WithPasswordRecipeAndOtherFields(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap Mixed Fields", uniqueID)
+	var itemUUID string
+
+	recipe := map[string]any{
+		"length":  30,
+		"digits":  true,
+		"symbols": true,
+	}
+
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"credentials": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"api_key": {
+					Type:  "STRING",
+					Value: "my-api-key-123",
+				},
+				"api_secret": {
+					Type:  "CONCEALED",
+					Value: "my-secret-value",
+				},
+				"generated_password": {
+					Type:           "CONCEALED",
+					PasswordRecipe: &recipe,
+				},
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"username":    "testuser@example.com",
+		"section_map": sectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_MIXED_FIELDS"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					// Verify regular fields
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "api_key", "my-api-key-123"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "credentials", "api_secret", "my-secret-value"),
+					// Verify generated password field
+					resource.TestCheckResourceAttrSet("onepassword_item.test_item", "section_map.credentials.field_map.generated_password.value"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.credentials.field_map.generated_password.password_recipe.length", "30"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.credentials.field_map.generated_password.password_recipe.digits", "true"),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.credentials.field_map.generated_password.password_recipe.symbols", "true"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourceSectionMap_EmptyValues tests handling of empty values
+func TestAccItemResourceSectionMap_EmptyValues(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap Empty Values", uniqueID)
+	var itemUUID string
+
+	// Create with empty value field
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"section1": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"empty_field": {
+					Type:  "STRING",
+					Value: "", // Empty value
+				},
+				"filled_field": {
+					Type:  "STRING",
+					Value: "has-value",
+				},
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": sectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_EMPTY_VALUES"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "section1"),
+					checks.BuildSectionMapFieldIDSetCheck("onepassword_item.test_item", "section1", "empty_field"),
+					checks.BuildSectionMapFieldIDSetCheck("onepassword_item.test_item", "section1", "filled_field"),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section1", "filled_field", "has-value"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourceSectionMap_AllCategories tests section_map with different item categories
+func TestAccItemResourceSectionMap_AllCategories(t *testing.T) {
+	testCases := []struct {
+		name     string
+		category string
+		attrs    map[string]any
+	}{
+		{
+			name:     "Login",
+			category: "login",
+			attrs: map[string]any{
+				"username": "testuser@example.com",
+			},
+		},
+		{
+			name:     "Password",
+			category: "password",
+			attrs:    map[string]any{},
+		},
+		{
+			name:     "Database",
+			category: "database",
+			attrs: map[string]any{
+				"database": "testdb",
+				"hostname": "localhost",
+			},
+		},
+		{
+			name:     "SecureNote",
+			category: "secure_note",
+			attrs: map[string]any{
+				"note_value": "This is a secure note",
+			},
+		},
+	}
+
+	testVaultID := vault.GetTestVaultID(t)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uniqueID := uuid.New().String()
+			title := addUniqueIDToTitle(fmt.Sprintf("Test SectionMap %s", tc.name), uniqueID)
+			var itemUUID string
+
+			sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+				"custom_section": {
+					FieldMap: map[string]sections.TestSectionMapField{
+						"custom_field": {
+							Type:  "STRING",
+							Value: "custom-value",
+						},
+					},
+				},
+			})
+
+			attrs := map[string]any{
+				"title":       title,
+				"category":    tc.category,
+				"section_map": sectionMap,
+			}
+
+			// Merge additional attrs
+			for k, v := range tc.attrs {
+				attrs[k] = v
+			}
+
+			resource.Test(t, resource.TestCase{
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: tfconfig.CreateConfigBuilder()(
+							tfconfig.ProviderConfig(),
+							tfconfig.ItemResourceConfig(testVaultID, attrs),
+						),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							logStep(t, fmt.Sprintf("CREATE_%s_WITH_SECTION_MAP", tc.name)),
+							uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+							cleanup.RegisterItem(t, &itemUUID, testVaultID),
+							resource.TestCheckResourceAttr("onepassword_item.test_item", "category", tc.category),
+							checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "custom_section"),
+							checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "custom_section", "custom_field", "custom-value"),
+						),
+					},
+				},
+			})
+		})
+	}
+}
+
+// TestAccItemResourceSectionMap_DuplicateKeys tests behavior when duplicate map keys are used
+func TestAccItemResourceSectionMap_DuplicateKeys(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+
+	t.Run("DuplicateSectionKeys_LastWins", func(t *testing.T) {
+		uniqueID := uuid.New().String()
+		var itemUUID string
+
+		config := fmt.Sprintf(`
+provider "onepassword" {}
+
+resource "onepassword_item" "test_item" {
+  vault    = "%s"
+  title    = "Test Duplicate Section Keys-%s"
+  category = "login"
+
+  section_map = {
+    "duplicate_section" = {
+      field_map = {
+        "field1" = {
+          type  = "STRING"
+          value = "first_value_should_be_overwritten"
+        }
+      }
+    }
+    "duplicate_section" = {
+      field_map = {
+        "field2" = {
+          type  = "STRING"
+          value = "second_value_wins"
+        }
+      }
+    }
+  }
+}
+`, testVaultID, uniqueID)
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Steps: []resource.TestStep{
+				{
+					Config: config,
+					Check: resource.ComposeAggregateTestCheckFunc(
+						logStep(t, "CREATE_DUPLICATE_SECTION_KEYS"),
+						uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						cleanup.RegisterItem(t, &itemUUID, testVaultID),
+						// Only one section should exist (the second definition)
+						checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "duplicate_section"),
+						// field2 from second definition should exist
+						checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "duplicate_section", "field2", "second_value_wins"),
+						// field1 from first definition should NOT exist (was overwritten)
+						resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section_map.duplicate_section.field_map.field1"),
+					),
+				},
+			},
+		})
+	})
+
+	t.Run("DuplicateFieldKeys_LastWins", func(t *testing.T) {
+		uniqueID := uuid.New().String()
+		var itemUUID string
+
+		config := fmt.Sprintf(`
+provider "onepassword" {}
+
+resource "onepassword_item" "test_item" {
+  vault    = "%s"
+  title    = "Test Duplicate Field Keys-%s"
+  category = "login"
+
+  section_map = {
+    "my_section" = {
+      field_map = {
+        "duplicate_field" = {
+          type  = "STRING"
+          value = "first_value_should_be_overwritten"
+        }
+        "duplicate_field" = {
+          type  = "STRING"
+          value = "second_value_wins"
+        }
+      }
+    }
+  }
+}
+`, testVaultID, uniqueID)
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Steps: []resource.TestStep{
+				{
+					Config: config,
+					Check: resource.ComposeAggregateTestCheckFunc(
+						logStep(t, "CREATE_DUPLICATE_FIELD_KEYS"),
+						uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						cleanup.RegisterItem(t, &itemUUID, testVaultID),
+						// Section should exist
+						checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "my_section"),
+						// Only one field should exist with the second (last) value
+						checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "my_section", "duplicate_field", "second_value_wins"),
+					),
+				},
+			},
+		})
+	})
+
+	t.Run("SameFieldLabelInDifferentSections_Success", func(t *testing.T) {
+		// Same field label in different sections is valid - each section has its own field_map
+		uniqueID := uuid.New().String()
+		title := addUniqueIDToTitle("Test Same Field Different Sections", uniqueID)
+		var itemUUID string
+
+		sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+			"section_a": {
+				FieldMap: map[string]sections.TestSectionMapField{
+					"common_field": {Type: "STRING", Value: "value in A"},
+				},
+			},
+			"section_b": {
+				FieldMap: map[string]sections.TestSectionMapField{
+					"common_field": {Type: "STRING", Value: "value in B"},
+				},
+			},
+		})
+
+		attrs := map[string]any{
+			"title":       title,
+			"category":    "login",
+			"section_map": sectionMap,
+		}
+
+		resource.Test(t, resource.TestCase{
+			ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+			Steps: []resource.TestStep{
+				{
+					Config: tfconfig.CreateConfigBuilder()(
+						tfconfig.ProviderConfig(),
+						tfconfig.ItemResourceConfig(testVaultID, attrs),
+					),
+					Check: resource.ComposeAggregateTestCheckFunc(
+						logStep(t, "CREATE_SAME_FIELD_DIFFERENT_SECTIONS"),
+						uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+						cleanup.RegisterItem(t, &itemUUID, testVaultID),
+						resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title),
+						checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "section_a"),
+						checks.BuildSectionMapIDSetCheck("onepassword_item.test_item", "section_b"),
+						checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section_a", "common_field", "value in A"),
+						checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "section_b", "common_field", "value in B"),
+					),
+				},
+			},
+		})
+	})
+}
+
+// TestAccItemResourceSectionMap_ConfigRestoresDriftedValue tests that when a field value
+// is changed directly in 1Password (outside Terraform), running terraform apply
+// restores the value from the config.
+func TestAccItemResourceSectionMap_ConfigRestoresDriftedValue(t *testing.T) {
+	t.Parallel()
+
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Config Restores Drift", uniqueID)
+	var itemUUID string
+	var sectionID string
+
+	configValue := "config-controlled-value"
+	driftedValue := "manually-changed-value"
+
+	// Create section map with the config value
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"my_section": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"my_field": {
+					Type:  "STRING",
+					Value: configValue,
+				},
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section_map": sectionMap,
+	}
+
+	captureSectionID := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			rs, ok := s.RootModule().Resources["onepassword_item.test_item"]
+			if !ok {
+				return fmt.Errorf("resource not found in state")
+			}
+
+			sectionID = rs.Primary.Attributes["section_map.my_section.id"]
+			if sectionID == "" {
+				return fmt.Errorf("section_map.my_section.id not found in state")
+			}
+
+			return nil
+		}
+	}
+
+	modifyFieldIn1Password := func() resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Log("MANUALLY_MODIFY_FIELD_VALUE_IN_1PASSWORD")
+			ctx := context.Background()
+
+			opClient, err := client.CreateTestClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			item, err := opClient.GetItem(ctx, itemUUID, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to get item: %w", err)
+			}
+
+			found := false
+			for i, field := range item.Fields {
+				if field.Label == "my_field" && field.SectionID == sectionID {
+					item.Fields[i].Value = driftedValue
+					found = true
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("field 'my_field' not found in section %s", sectionID)
+			}
+
+			_, err = opClient.UpdateItem(ctx, item, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to update item: %w", err)
+			}
+
+			// Verify the change was persisted
+			updatedItem, err := opClient.GetItem(ctx, itemUUID, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to verify updated item: %w", err)
+			}
+
+			for _, field := range updatedItem.Fields {
+				if field.Label == "my_field" && field.SectionID == sectionID {
+					if field.Value != driftedValue {
+						return fmt.Errorf("field value was not updated: expected %q, got %q", driftedValue, field.Value)
+					}
+					t.Logf("Verified field value in 1Password is now: %q", field.Value)
+					return nil
+				}
+			}
+
+			return fmt.Errorf("field not found after update")
+		}
+	}
+
+	// Helper to verify field value in 1Password matches expected value
+	verifyFieldValueIn1Password := func(expectedValue string) resource.TestCheckFunc {
+		return func(s *terraform.State) error {
+			t.Logf("VERIFY_FIELD_VALUE_IN_1PASSWORD: expecting %q", expectedValue)
+			ctx := context.Background()
+
+			opClient, err := client.CreateTestClient(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to create client: %w", err)
+			}
+
+			item, err := opClient.GetItem(ctx, itemUUID, testVaultID)
+			if err != nil {
+				return fmt.Errorf("failed to get item: %w", err)
+			}
+
+			for _, field := range item.Fields {
+				if field.Label == "my_field" && field.SectionID == sectionID {
+					if field.Value != expectedValue {
+						return fmt.Errorf("field value mismatch in 1Password: expected %q, got %q", expectedValue, field.Value)
+					}
+					t.Logf("Field value in 1Password matches expected: %q", field.Value)
+					return nil
+				}
+			}
+			return fmt.Errorf("field 'my_field' not found in 1Password")
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Step 1: Create item with config value
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_CONFIG_VALUE"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					captureSectionID(),
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "my_section", "my_field", configValue),
+					verifyFieldValueIn1Password(configValue),
+				),
+			},
+			// Step 2: Directly modify the field in 1Password (simulate drift)
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					modifyFieldIn1Password(),
+				),
+				// Expect non-empty plan because the value changed
+				ExpectNonEmptyPlan: true,
+			},
+			// Step 3: Apply again with same config - should restore config value
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "APPLY_RESTORES_CONFIG_VALUE"),
+					// Verify Terraform state has the config value
+					checks.BuildSectionMapFieldValueCheck("onepassword_item.test_item", "my_section", "my_field", configValue),
+					// Verify 1Password has the config value restored
+					verifyFieldValueIn1Password(configValue),
+				),
+			},
+			// Step 4: Verify no more changes needed
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "VERIFY_NO_CHANGES"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+				),
+			},
+		},
+	})
 }
