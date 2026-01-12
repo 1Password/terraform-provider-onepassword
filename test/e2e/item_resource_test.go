@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"os"
 	"regexp"
 	"testing"
 
@@ -105,6 +106,15 @@ var testItemsUpdatedAttrs = map[model.ItemCategory]map[string]any{
 		"note_value": "This is an updated secure note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
+}
+
+func TestMain(m *testing.M) {
+	// Initialize early if using custom vault (prevents race conditions in parallel tests)
+	// for default vault, this is instant as we already have the ID
+	vault.GetTestVaultID(nil)
+
+	code := m.Run()
+	os.Exit(code)
 }
 
 func TestAccItemResource(t *testing.T) {

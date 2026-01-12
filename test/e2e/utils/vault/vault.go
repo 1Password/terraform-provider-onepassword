@@ -14,12 +14,15 @@ var (
 	testVaultID     string
 )
 
-// GetTestVaultID returns the vault ID by querying by name once and caching the result.
+const defaultTestVaultID = "bbucuyq2nn4fozygwttxwizpcy"
+
+// GetTestVaultID returns the vault ID by querying by name once and caching the result or returns default ID.
 func GetTestVaultID(t *testing.T) string {
 	testVaultIDOnce.Do(func() {
 		vaultName := os.Getenv("OP_TEST_VAULT_NAME")
 		if vaultName == "" {
-			vaultName = "terraform-provider-acceptance-tests"
+			testVaultID = defaultTestVaultID
+			return
 		}
 
 		ctx := context.Background()
