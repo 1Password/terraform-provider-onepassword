@@ -590,35 +590,17 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
-	// Handle password_wo: update if version increased, preserve if version unchanged or decreased
-	passwordErr := r.handleWriteOnlyFieldUpdate(
-		ctx,
-		config.PasswordWOVersion,
-		state.PasswordWOVersion,
-		config.PasswordWO,
-		&plan.Password,
-		plan.ID,
-		model.FieldPurposePassword,
-		"password",
-	)
-	if passwordErr != nil {
-		resp.Diagnostics.AddError("1Password Item read error", passwordErr.Error())
-		return
-	}
-
-	// Handle note_value_wo: update if version increased, preserve if version unchanged or decreased
-	noteValueErr := r.handleWriteOnlyFieldUpdate(
-		ctx,
-		config.NoteValueWOVersion,
-		state.NoteValueWOVersion,
-		config.NoteValueWO,
-		&plan.NoteValue,
-		plan.ID,
-		model.FieldPurposeNotes,
-		"note_value",
-	)
-	if noteValueErr != nil {
-		resp.Diagnostics.AddError("1Password Item read error", noteValueErr.Error())
+	// Handle all write-only fields
+	vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
+	err := handleWriteOnlyFieldUpdates(&config, &state, &plan, func() (*model.Item, error) {
+		item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
+		if err != nil {
+			return nil, fmt.Errorf("could not read item '%s' from vault '%s' to preserve write-only fields: %s", itemUUID, vaultUUID, err)
+		}
+		return item, nil
+	})
+	if err != nil {
+		resp.Diagnostics.AddError("1Password Item read error", err.Error())
 		return
 	}
 
