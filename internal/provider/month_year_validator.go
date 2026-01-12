@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-var monthYearRegex = regexp.MustCompile(`^\d{6}$`)
+var monthYearRegex = regexp.MustCompile(`^\d{4}(0[1-9]|1[0-2])$`)
 
 func validateMonthYear() monthYearValidator {
 	return monthYearValidator{}
@@ -36,11 +36,17 @@ func (v monthYearValidator) ValidateString(ctx context.Context, req validator.St
 		return
 	}
 
-	if fieldType.ValueString() == "MONTH_YEAR" && !monthYearRegex.MatchString(req.ConfigValue.ValueString()) {
+	if fieldType.ValueString() != "MONTH_YEAR" {
+		return
+	}
+
+	value := req.ConfigValue.ValueString()
+
+	if !monthYearRegex.MatchString(value) {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid MONTH_YEAR format",
-			fmt.Sprintf("MONTH_YEAR values must be in YYYYMM format (e.g., 202401), got: %s", req.ConfigValue.ValueString()),
+			fmt.Sprintf("MONTH_YEAR values must be in YYYYMM format with valid month 01-12 (e.g., 202401), got: %s", value),
 		)
 	}
 }

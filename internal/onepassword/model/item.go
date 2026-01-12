@@ -217,6 +217,16 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 			field.Purpose = FieldPurposePassword
 		}
 
+		// Convert month-year from MM/YYYY to YYYYMM
+		if f.FieldType == sdk.ItemFieldTypeMonthYear && f.Value != "" {
+			parts := strings.Split(f.Value, "/")
+			if len(parts) == 2 {
+				month := parts[0]
+				year := parts[1]
+				field.Value = year + month
+			}
+		}
+
 		// Associate field with section if applicable
 		if f.SectionID != nil && *f.SectionID != "" {
 			if section, exists := sectionMap[*f.SectionID]; exists {
@@ -305,25 +315,11 @@ func toSDKField(f ItemField) sdk.ItemField {
 		}
 	}
 
-	// Convert month-year from YYYYMM or YYYY/MM to MM/YYYY format for SDK
+	// Convert month-year from YYYYMM to MM/YYYY format for SDK
 	if f.Type == FieldTypeMonthYear && f.Value != "" {
-		if strings.Contains(f.Value, "/") {
-			parts := strings.Split(f.Value, "/")
-			if len(parts) != 2 {
-				return sdk.ItemField{}
-			}
-
-			month := parts[0]
-			year := parts[1]
-
-			f.Value = year + "/" + month
-		} else if len(f.Value) == 6 {
-			month := f.Value[4:6]
-			year := f.Value[0:4]
-
-			f.Value = year + "/" + month
-		}
-
+		year := f.Value[0:4]
+		month := f.Value[4:6]
+		f.Value = month + "/" + year
 	}
 
 	field := sdk.ItemField{
