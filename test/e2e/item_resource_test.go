@@ -108,6 +108,8 @@ var testItemsUpdatedAttrs = map[model.ItemCategory]map[string]any{
 }
 
 func TestAccItemResource(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		category model.ItemCategory
 		name     string
@@ -122,6 +124,8 @@ func TestAccItemResource(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Generate unique identifier for this test run to avoid conflicts in parallel execution
 			uniqueID := uuid.New().String()
 
@@ -204,6 +208,8 @@ func TestAccItemResource(t *testing.T) {
 }
 
 func TestAccItemResourcePasswordGeneration(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name   string
 		recipe password.PasswordRecipe
@@ -229,6 +235,8 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 			item := testItemsToCreate[item]
 
 			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+				t.Parallel()
+
 				// Generate unique identifier for this test run to avoid conflicts in parallel execution
 				uniqueID := uuid.New().String()
 
@@ -270,6 +278,8 @@ func TestAccItemResourcePasswordGeneration(t *testing.T) {
 
 // Test that letters is not supported and will error if configured as this field is deprecated
 func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name    string
 		letters bool
@@ -284,6 +294,8 @@ func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Generate unique identifier for this test run to avoid conflicts in parallel execution
 			uniqueID := uuid.New().String()
 
@@ -318,6 +330,8 @@ func TestAccItemResourcePasswordGeneration_InvalidLetters(t *testing.T) {
 
 // TestAccItemResourceSectionFieldPasswordGeneration tests the generation of passwords on fields
 func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name   string
 		recipe password.PasswordRecipe
@@ -335,6 +349,8 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Generate unique identifier for this test run to avoid conflicts in parallel execution
 			uniqueID := uuid.New().String()
 
@@ -388,6 +404,8 @@ func TestAccItemResourceSectionFieldPasswordGeneration(t *testing.T) {
 // TestAccItemResourceSectionList_ValueAndPasswordRecipeConflict tests that value and password_recipe
 // cannot be specified together in section list fields:
 func TestAccItemResourceSectionList_ValueAndPasswordRecipeConflict(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 
@@ -431,6 +449,8 @@ func TestAccItemResourceSectionList_ValueAndPasswordRecipeConflict(t *testing.T)
 }
 
 func TestAccItemResourceSectionsAndFields(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name   string
 		create sections.TestSectionData
@@ -543,6 +563,8 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 			item := testItemsToCreate[item]
 
 			t.Run(fmt.Sprintf("%s_%s", tc.name, item.Attrs["category"]), func(t *testing.T) {
+				t.Parallel()
+
 				// Generate unique identifier for this test run to avoid conflicts in parallel execution
 				uniqueID := uuid.New().String()
 
@@ -602,6 +624,8 @@ func TestAccItemResourceSectionsAndFields(t *testing.T) {
 }
 
 func TestAccItemResourceTags(t *testing.T) {
+	t.Parallel()
+
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 
@@ -655,6 +679,8 @@ func TestAccItemResourceTags(t *testing.T) {
 }
 
 func TestAccRecreateNonExistingItem(t *testing.T) {
+	t.Parallel()
+
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 
@@ -745,6 +771,8 @@ func TestAccRecreateNonExistingItem(t *testing.T) {
 }
 
 func TestAccItemResource_DetectManualChanges(t *testing.T) {
+	t.Parallel()
+
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 	var itemUUID string
@@ -942,6 +970,8 @@ func TestAccItemResource_DetectManualChanges(t *testing.T) {
 }
 
 func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 
 	// Test all three categories that support password generation
@@ -1003,6 +1033,8 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 
 	for _, tc := range categories {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			uniqueID := uuid.New().String()
 			var itemUUID string
 
@@ -1034,6 +1066,8 @@ func TestAccItemResourcePasswordGenerationForAllCategories(t *testing.T) {
 }
 
 func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	var itemUUID string
 
@@ -1086,6 +1120,8 @@ func TestAccItemResourceEmptyStringPreservation(t *testing.T) {
 }
 
 func TestAccItemResourceNullVsEmptyString(t *testing.T) {
+	t.Parallel()
+
 	var itemUUID string
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
@@ -1119,6 +1155,8 @@ func TestAccItemResourceNullVsEmptyString(t *testing.T) {
 }
 
 func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test Clear Fields", uniqueID)
@@ -1210,6 +1248,8 @@ func TestAccItemResourceClearFieldsToEmptyString(t *testing.T) {
 
 // TestAccItemResourcePasswordWriteOnly tests the password_wo (write-only) functionality
 func TestAccItemResourcePasswordWriteOnly(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test Password Write-Only", uniqueID)
@@ -1343,6 +1383,8 @@ func TestAccItemResourcePasswordWriteOnly(t *testing.T) {
 
 // TestAccItemResourcePasswordWriteOnlyVersionDecrement tests that password is not updated when version is decremented
 func TestAccItemResourcePasswordWriteOnlyVersionDecrement(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test Password WO Version Decrement", uniqueID)
@@ -1449,6 +1491,8 @@ func logStep(t *testing.T, step string) resource.TestCheckFunc {
 }
 
 func TestAccItemResourceSectionMap_BasicCRUD(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test SectionMap CRUD", uniqueID)
@@ -1640,6 +1684,8 @@ func TestAccItemResourceSectionMap_BasicCRUD(t *testing.T) {
 
 // TestAccItemResourceSectionMap_FieldTypes tests all supported field types in section_map:
 func TestAccItemResourceSectionMap_FieldTypes(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test SectionMap Field Types", uniqueID)
@@ -1715,6 +1761,8 @@ func TestAccItemResourceSectionMap_FieldTypes(t *testing.T) {
 
 // TestAccItemResourceSectionMap_PasswordRecipe tests password generation in section_map fields:
 func TestAccItemResourceSectionMap_PasswordRecipe(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name    string
 		length  int
@@ -1732,6 +1780,8 @@ func TestAccItemResourceSectionMap_PasswordRecipe(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			uniqueID := uuid.New().String()
 			title := addUniqueIDToTitle("Test SectionMap Password Recipe", uniqueID)
 			var itemUUID string
@@ -1788,6 +1838,8 @@ func TestAccItemResourceSectionMap_PasswordRecipe(t *testing.T) {
 // TestAccItemResourceSectionMap_ValueAndPasswordRecipeConflict tests that value and password_recipe
 // cannot be specified together in section_map fields:
 func TestAccItemResourceSectionMap_ValueAndPasswordRecipeConflict(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test SectionMap Value Recipe Conflict", uniqueID)
@@ -1832,6 +1884,8 @@ func TestAccItemResourceSectionMap_ValueAndPasswordRecipeConflict(t *testing.T) 
 }
 
 func TestAccItemResourceSectionMap_MultipleSections(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test SectionMap Multiple Sections", uniqueID)
@@ -1898,6 +1952,8 @@ func TestAccItemResourceSectionMap_MultipleSections(t *testing.T) {
 
 // TestAccItemResourceSectionMap_RemoveFieldAndSection tests removal operations
 func TestAccItemResourceSectionMap_RemoveFieldAndSection(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test SectionMap Remove", uniqueID)
@@ -2011,6 +2067,8 @@ func TestAccItemResourceSectionMap_RemoveFieldAndSection(t *testing.T) {
 
 // TestAccItemResourceSectionMap_WithPasswordRecipeAndOtherFields
 func TestAccItemResourceSectionMap_WithPasswordRecipeAndOtherFields(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test SectionMap Mixed Fields", uniqueID)
@@ -2076,6 +2134,8 @@ func TestAccItemResourceSectionMap_WithPasswordRecipeAndOtherFields(t *testing.T
 
 // TestAccItemResourceSectionMap_EmptyValues tests handling of empty values
 func TestAccItemResourceSectionMap_EmptyValues(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 	uniqueID := uuid.New().String()
 	title := addUniqueIDToTitle("Test SectionMap Empty Values", uniqueID)
@@ -2127,6 +2187,8 @@ func TestAccItemResourceSectionMap_EmptyValues(t *testing.T) {
 
 // TestAccItemResourceSectionMap_AllCategories tests section_map with different item categories
 func TestAccItemResourceSectionMap_AllCategories(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name     string
 		category string
@@ -2165,6 +2227,8 @@ func TestAccItemResourceSectionMap_AllCategories(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			uniqueID := uuid.New().String()
 			title := addUniqueIDToTitle(fmt.Sprintf("Test SectionMap %s", tc.name), uniqueID)
 			var itemUUID string
@@ -2216,9 +2280,13 @@ func TestAccItemResourceSectionMap_AllCategories(t *testing.T) {
 
 // TestAccItemResourceSectionMap_DuplicateKeys tests behavior when duplicate map keys are used
 func TestAccItemResourceSectionMap_DuplicateKeys(t *testing.T) {
+	t.Parallel()
+
 	testVaultID := vault.GetTestVaultID(t)
 
 	t.Run("DuplicateSectionKeys_LastWins", func(t *testing.T) {
+		t.Parallel()
+
 		uniqueID := uuid.New().String()
 		var itemUUID string
 
@@ -2273,6 +2341,8 @@ resource "onepassword_item" "test_item" {
 	})
 
 	t.Run("DuplicateFieldKeys_LastWins", func(t *testing.T) {
+		t.Parallel()
+
 		uniqueID := uuid.New().String()
 		var itemUUID string
 
@@ -2321,6 +2391,8 @@ resource "onepassword_item" "test_item" {
 	})
 
 	t.Run("SameFieldLabelInDifferentSections_Success", func(t *testing.T) {
+		t.Parallel()
+
 		// Same field label in different sections is valid - each section has its own field_map
 		uniqueID := uuid.New().String()
 		title := addUniqueIDToTitle("Test Same Field Different Sections", uniqueID)
