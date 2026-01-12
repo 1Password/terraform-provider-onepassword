@@ -28,22 +28,9 @@ func handleWriteOnlyFieldUpdates(
 	plan *OnePasswordItemResourceModel,
 	refreshItem func() (*model.Item, error),
 ) error {
-	// Helper to check if a field needs the current item
-	needsItem := func(configVersion, stateVersion types.Int64) bool {
-		if configVersion.IsNull() {
-			return false
-		}
-		configVer := configVersion.ValueInt64()
-		stateVer := int64(0)
-		if !stateVersion.IsNull() {
-			stateVer = stateVersion.ValueInt64()
-		}
-		return configVer <= stateVer
-	}
-
 	// Check if any write-only field needs the current item
-	passwordNeedsItem := needsItem(config.PasswordWOVersion, state.PasswordWOVersion)
-	noteValueNeedsItem := needsItem(config.NoteValueWOVersion, state.NoteValueWOVersion)
+	passwordNeedsItem := shouldFetchCurrentItem(config.PasswordWOVersion, state.PasswordWOVersion)
+	noteValueNeedsItem := shouldFetchCurrentItem(config.NoteValueWOVersion, state.NoteValueWOVersion)
 
 	// Fetch item once if needed
 	var currentItem *model.Item
@@ -106,4 +93,17 @@ func handleWriteOnlyFieldUpdates(
 	}
 
 	return nil
+}
+
+// shouldFetchCurrentItem returns true if the write-only field version hasn't increased
+func shouldFetchCurrentItem(configVersion, stateVersion types.Int64) bool {
+	if configVersion.IsNull() {
+		return false
+	}
+	configVer := configVersion.ValueInt64()
+	stateVer := int64(0)
+	if !stateVersion.IsNull() {
+		stateVer = stateVersion.ValueInt64()
+	}
+	return configVer <= stateVer
 }
