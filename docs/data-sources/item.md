@@ -35,10 +35,11 @@ data "onepassword_item" "example" {
 
 ### Read-Only
 
-- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key"]
-- `credential` (String, Sensitive) API credential for this item.
+- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key" "api_credential"]
+- `credential` (String, Sensitive) (Only applies to the API credential category) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
 - `file` (Block List) A list of files attached to the document item. (see [below for nested schema](#nestedblock--file))
+- `filename` (String) (Only applies to the API credential category) The filename associated with the API credential.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - `password` (String, Sensitive) Password for this item.
@@ -48,9 +49,10 @@ data "onepassword_item" "example" {
 - `public_key` (String) SSH Public Key for this item.
 - `section` (Block List) A list of custom sections in an item. Cannot be used together with `section_map`. Use either `section` (list) or `section_map` (map), but not both. (see [below for nested schema](#nestedblock--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
-- `type` (String) (Only applies to the database category) The type of database. One of ["db2" "filemaker" "msaccess" "mssql" "mysql" "oracle" "postgresql" "sqlite" "other"]
+- `type` (String) (Only applies to database and API credential categories) The type of database or API Credential.
 - `url` (String) The primary URL for the item.
 - `username` (String) Username for this item.
+- `valid_from` (String) (Only applies to the API credential category) The timestamp from which the API credential is valid.
 
 <a id="nestedatt--section_map"></a>
 ### Nested Schema for `section_map`

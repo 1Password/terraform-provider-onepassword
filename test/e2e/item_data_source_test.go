@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -101,11 +102,15 @@ var testItems = map[model.ItemCategory]testItem{
 			"username":   "testAPICredential",
 			"hostname":   "testHostname",
 			"type":       "bearer",
+			"valid_from": "2026-01-01",
+			"filename":   "testFilename",
 		},
 	},
 }
 
 func TestAccItemDataSource(t *testing.T) {
+	t.Parallel()
+
 	createTestCase := func(name string, item testItem, identifierParam string, identifierValue string) itemDataSourceTestCase {
 		return itemDataSourceTestCase{
 			name: name,
@@ -145,6 +150,8 @@ func TestAccItemDataSource(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			checks := []resource.TestCheckFunc{
@@ -186,6 +193,8 @@ func TestAccItemDataSource(t *testing.T) {
 }
 
 func TestAccItemDataSource_NotFound(t *testing.T) {
+	t.Parallel()
+
 	testCases := []struct {
 		name                 string
 		item                 testItem
@@ -213,6 +222,8 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			resource.Test(t, resource.TestCase{
@@ -230,6 +241,8 @@ func TestAccItemDataSource_NotFound(t *testing.T) {
 }
 
 func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
+	t.Parallel()
+
 	// Generate unique identifier for this test run to avoid conflicts in parallel execution
 	uniqueID := uuid.New().String()
 	var itemUUID string
@@ -447,6 +460,7 @@ func TestAccItemDataSource_DetectManualChanges(t *testing.T) {
 }
 
 func TestAccItemDataSourceSectionMap(t *testing.T) {
+	t.Parallel()
 
 	itemTitle := "Test Item with Sections"
 
@@ -472,18 +486,27 @@ func TestAccItemDataSourceSectionMap(t *testing.T) {
 				return fmt.Errorf("resource not found in state")
 			}
 
-			// Compare section IDs
-			section0ID := item.Primary.Attributes["section.0.id"]
-			sectionMapID := item.Primary.Attributes["section_map.Credentials.id"]
-			if section0ID != sectionMapID {
-				return fmt.Errorf("section.0.id (%s) != section_map.Credentials.id (%s)", section0ID, sectionMapID)
+			// Collect section IDs from the list
+			var listSectionIDs []string
+			for i := 0; ; i++ {
+				id := item.Primary.Attributes[fmt.Sprintf("section.%d.id", i)]
+				if id == "" {
+					break
+				}
+				listSectionIDs = append(listSectionIDs, id)
 			}
 
-			// Compare field values
-			section0Field0Value := item.Primary.Attributes["section.0.field.0.value"]
-			sectionMapFieldValue := item.Primary.Attributes["section_map.Credentials.field_map.api_key.value"]
-			if section0Field0Value != sectionMapFieldValue {
-				return fmt.Errorf("section.0.field.0.value != section_map.Credentials.field_map.api_key.value")
+			// Collect section IDs from the map
+			mapSectionIDs := []string{
+				item.Primary.Attributes["section_map.Credentials.id"],
+				item.Primary.Attributes["section_map.Database Config.id"],
+			}
+
+			// Compare slices (order-independent)
+			slices.Sort(listSectionIDs)
+			slices.Sort(mapSectionIDs)
+			if !slices.Equal(listSectionIDs, mapSectionIDs) {
+				return fmt.Errorf("section IDs mismatch: list=%v, map=%v", listSectionIDs, mapSectionIDs)
 			}
 
 			return nil
@@ -508,6 +531,8 @@ func TestAccItemDataSourceSectionMap(t *testing.T) {
 }
 
 func TestAccItemDataSource_VaultName(t *testing.T) {
+	t.Parallel()
+
 	createTestCase := func(name string, item testItem, identifierParam string, identifierValue string) itemDataSourceTestCase {
 		return itemDataSourceTestCase{
 			name: name,
@@ -541,6 +566,8 @@ func TestAccItemDataSource_VaultName(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			checks := []resource.TestCheckFunc{

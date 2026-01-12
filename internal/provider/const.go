@@ -21,16 +21,19 @@ const (
 	passwordWriteOnceVersionDescription  = "An integer that must be incremented to trigger an update to the 'password_wo' field."
 	noteValueWriteOnceDescription        = "A write-only secure note value for this item. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later."
 	noteValueWriteOnceVersionDescription = "An integer that must be incremented to trigger an update to the 'note_value_wo' field."
-	credentialDescription                = "API credential for this item."
 	noteValueDescription                 = "Secure Note value."
 	publicKeyDescription                 = "SSH Public Key for this item."
 	privateKeyDescription                = "SSH Private Key in PKCS#8 for this item."
 	privateKeyOpenSSHDescription         = "SSH Private key in OpenSSH format."
+	credentialDescription                = "(Only applies to the API credential category) API credential for this item."
+	validFromDescription                 = "(Only applies to the API credential category) The timestamp from which the API credential is valid."
+	filenameDescription                  = "(Only applies to the API credential category) The filename associated with the API credential."
 
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
 	dbPortDescription     = "(Only applies to the database category) The port the database is listening on."
 	dbTypeDescription     = "(Only applies to the database category) The type of database."
+	typeDescription       = "(Only applies to database and API credential categories) The type of database or API Credential."
 
 	sectionListDescription  = "A list of custom sections in an item. Cannot be used together with `section_map`. Use either `section` (list) or `section_map` (map), but not both."
 	sectionMapDescription   = "A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label. Cannot be used together with `section`. Use either `section` (list) or `section_map` (map), but not both."
@@ -74,6 +77,7 @@ var (
 	dataSourceCategories = append(categories,
 		strings.ToLower(string(model.Document)),
 		strings.ToLower(string(model.SSHKey)),
+		strings.ToLower(string(model.APICredential)),
 	)
 
 	fieldPurposes = []string{
