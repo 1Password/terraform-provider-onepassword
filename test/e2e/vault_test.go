@@ -20,6 +20,8 @@ var testAccProtoV6ProviderFactories = map[string]func() (tfprotov6.ProviderServe
 }
 
 func TestAccVaultDataSource(t *testing.T) {
+	t.Parallel()
+
 	expectedVaultAttrs := map[string]string{
 		"description": "This vault contains the items that are used for 1Password Terraform Provider acceptance (e2e) tests.",
 		"name":        "terraform-provider-acceptance-tests",
@@ -59,6 +61,8 @@ func TestAccVaultDataSource(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
 			dataSourceBuilder := tfconfig.CreateConfigBuilder()
 
 			checks := make([]resource.TestCheckFunc, 0, len(tc.expectedAttrs))

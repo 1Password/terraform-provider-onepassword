@@ -14,7 +14,8 @@ on:
         required: true
 
 jobs:
-  e2e-test:
+  e2e-test-connect:
+    name: E2E Tests (Connect)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -64,11 +65,32 @@ jobs:
           PF_PID=$!
 
           # Run tests
-          make test-e2e
+          make test-e2e-connect
 
           # Cleanup: kill port-forward when done
           kill $PF_PID || true
         env:
           OP_CONNECT_TOKEN: ${{ secrets.OP_CONNECT_TOKEN }}
           OP_CONNECT_HOST: http://localhost:8080
+
+  e2e-test-service-account:
+    name: E2E Tests (Service Account)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Install dependencies
+        run: go mod tidy
+
+      - name: Run E2E tests (Service Account)
+        run: make test-e2e-service-account
+        env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
