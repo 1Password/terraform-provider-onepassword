@@ -3,13 +3,11 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
-
-var monthYearRegex = regexp.MustCompile(`^\d{4}(0[1-9]|1[0-2])$`)
 
 func validateMonthYear() monthYearValidator {
 	return monthYearValidator{}
@@ -42,7 +40,8 @@ func (v monthYearValidator) ValidateString(ctx context.Context, req validator.St
 
 	value := req.ConfigValue.ValueString()
 
-	if !monthYearRegex.MatchString(value) {
+	_, err := time.Parse("200601", value)
+	if err != nil {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
 			"Invalid MONTH_YEAR format",
