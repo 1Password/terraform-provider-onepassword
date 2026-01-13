@@ -182,6 +182,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 								stringvalidator.ConflictsWith(
 									path.MatchRelative().AtParent().AtName("password_recipe"),
 								),
+								validateMonthYear(),
 							},
 						},
 						"password_recipe": schema.SingleNestedAttribute{
@@ -397,6 +398,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 											stringvalidator.ConflictsWith(
 												path.MatchRelative().AtParent().AtName("password_recipe"),
 											),
+											validateMonthYear(),
 										},
 									},
 								},

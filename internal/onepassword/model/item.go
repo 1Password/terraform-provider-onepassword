@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
@@ -216,6 +217,16 @@ func fromSDKFields(item *sdk.Item, sectionMap map[string]ItemSection) []ItemFiel
 			field.Purpose = FieldPurposePassword
 		}
 
+		// Convert month-year from MM/YYYY to YYYYMM
+		if f.FieldType == sdk.ItemFieldTypeMonthYear && f.Value != "" {
+			parts := strings.Split(f.Value, "/")
+			if len(parts) == 2 {
+				month := parts[0]
+				year := parts[1]
+				field.Value = year + month
+			}
+		}
+
 		// Associate field with section if applicable
 		if f.SectionID != nil && *f.SectionID != "" {
 			if section, exists := sectionMap[*f.SectionID]; exists {
@@ -302,6 +313,13 @@ func toSDKField(f ItemField) sdk.ItemField {
 		} else {
 			fmt.Printf("Error generating password: %v\n", err)
 		}
+	}
+
+	// Convert month-year from YYYYMM to MM/YYYY format for SDK
+	if f.Type == FieldTypeMonthYear && f.Value != "" {
+		year := f.Value[0:4]
+		month := f.Value[4:6]
+		f.Value = month + "/" + year
 	}
 
 	field := sdk.ItemField{

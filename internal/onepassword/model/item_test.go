@@ -572,6 +572,46 @@ func TestFromSDKFields(t *testing.T) {
 				},
 			},
 		},
+		"should convert month-year from MM/YYYY to YYYYMM": {
+			input: &sdk.Item{
+				Fields: []sdk.ItemField{
+					{
+						ID:        "expiry",
+						Title:     "Expiration",
+						FieldType: sdk.ItemFieldTypeMonthYear,
+						Value:     "01/2024",
+					},
+				},
+			},
+			expected: []ItemField{
+				{
+					ID:    "expiry",
+					Label: "Expiration",
+					Type:  FieldTypeMonthYear,
+					Value: "202401",
+				},
+			},
+		},
+		"should handle empty month-year value from SDK": {
+			input: &sdk.Item{
+				Fields: []sdk.ItemField{
+					{
+						ID:        "expiry",
+						Title:     "Expiration",
+						FieldType: sdk.ItemFieldTypeMonthYear,
+						Value:     "",
+					},
+				},
+			},
+			expected: []ItemField{
+				{
+					ID:    "expiry",
+					Label: "Expiration",
+					Type:  FieldTypeMonthYear,
+					Value: "",
+				},
+			},
+		},
 	}
 
 	for description, test := range tests {
@@ -869,6 +909,44 @@ func TestToSDKFields(t *testing.T) {
 					FieldType: sdk.ItemFieldTypeText,
 					Value:     "value1",
 					SectionID: stringPtr("section1"),
+				},
+			},
+			expectedNotes: nil,
+		},
+		"should convert month-year from YYYYMM to MM/YYYY for SDK": {
+			inputFields: []ItemField{
+				{
+					ID:    "expiry",
+					Label: "Expiration",
+					Type:  FieldTypeMonthYear,
+					Value: "202401",
+				},
+			},
+			expectedFields: []sdk.ItemField{
+				{
+					ID:        "expiry",
+					Title:     "Expiration",
+					FieldType: sdk.ItemFieldTypeMonthYear,
+					Value:     "01/2024",
+				},
+			},
+			expectedNotes: nil,
+		},
+		"should handle empty month-year value to SDK": {
+			inputFields: []ItemField{
+				{
+					ID:    "expiry",
+					Label: "Expiration",
+					Type:  FieldTypeMonthYear,
+					Value: "",
+				},
+			},
+			expectedFields: []sdk.ItemField{
+				{
+					ID:        "expiry",
+					Title:     "Expiration",
+					FieldType: sdk.ItemFieldTypeMonthYear,
+					Value:     "",
 				},
 			},
 			expectedNotes: nil,
@@ -1658,7 +1736,7 @@ func TestFromConnectFields(t *testing.T) {
 				{ID: "f2", Type: connect.FieldTypeDate, Value: "1609459200"},
 				{ID: "f3", Type: connect.FieldTypeEmail, Value: "test@example.com"},
 				{ID: "f4", Type: connect.FieldTypeMenu, Value: "option1"},
-				{ID: "f5", Type: connect.FieldTypeMonthYear, Value: "2021-01"},
+				{ID: "f5", Type: connect.FieldTypeMonthYear, Value: "202101"},
 				{ID: "f6", Type: connect.FieldTypeOTP, Value: "123456"},
 				{ID: "f7", Type: connect.FieldTypeString, Value: "text"},
 				{ID: "f8", Type: connect.FieldTypeURL, Value: "https://example.com"},
@@ -1669,7 +1747,7 @@ func TestFromConnectFields(t *testing.T) {
 				{ID: "f2", Type: FieldTypeDate, Value: "2021-01-01"},
 				{ID: "f3", Type: FieldTypeEmail, Value: "test@example.com"},
 				{ID: "f4", Type: FieldTypeMenu, Value: "option1"},
-				{ID: "f5", Type: FieldTypeMonthYear, Value: "2021-01"},
+				{ID: "f5", Type: FieldTypeMonthYear, Value: "202101"},
 				{ID: "f6", Type: FieldTypeOTP, Value: "123456"},
 				{ID: "f7", Type: FieldTypeString, Value: "text"},
 				{ID: "f8", Type: FieldTypeURL, Value: "https://example.com"},
@@ -1985,7 +2063,7 @@ func TestToConnectFields(t *testing.T) {
 				{ID: "f2", Type: FieldTypeDate, Value: "2021-01-01"},
 				{ID: "f3", Type: FieldTypeEmail, Value: "test@example.com"},
 				{ID: "f4", Type: FieldTypeMenu, Value: "option1"},
-				{ID: "f5", Type: FieldTypeMonthYear, Value: "2021-01"},
+				{ID: "f5", Type: FieldTypeMonthYear, Value: "202101"},
 				{ID: "f6", Type: FieldTypeOTP, Value: "123456"},
 				{ID: "f7", Type: FieldTypeString, Value: "text"},
 				{ID: "f8", Type: FieldTypeURL, Value: "https://example.com"},
@@ -1995,7 +2073,7 @@ func TestToConnectFields(t *testing.T) {
 				{ID: "f2", Type: connect.FieldTypeDate, Value: "1609502460"}, // 2021-01-01 12:01:00 UTC
 				{ID: "f3", Type: connect.FieldTypeEmail, Value: "test@example.com"},
 				{ID: "f4", Type: connect.FieldTypeMenu, Value: "option1"},
-				{ID: "f5", Type: connect.FieldTypeMonthYear, Value: "2021-01"},
+				{ID: "f5", Type: connect.FieldTypeMonthYear, Value: "202101"},
 				{ID: "f6", Type: connect.FieldTypeOTP, Value: "123456"},
 				{ID: "f7", Type: connect.FieldTypeString, Value: "text"},
 				{ID: "f8", Type: connect.FieldTypeURL, Value: "https://example.com"},
