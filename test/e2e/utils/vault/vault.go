@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -12,12 +13,13 @@ import (
 var (
 	testVaultIDOnce sync.Once
 	testVaultID     string
+	testVaultIDErr  error
 )
 
 const defaultTestVaultID = "bbucuyq2nn4fozygwttxwizpcy"
 
-// GetTestVaultID returns the vault ID by querying by name once and caching the result or returns default ID of the terraform-provider-acceptance-tests vault.
-func GetTestVaultID(t *testing.T) string {
+// InitTestVaultID initializes the vault ID. Returns error if initialization fails.
+func InitTestVaultID() error {
 	testVaultIDOnce.Do(func() {
 		vaultName := os.Getenv("OP_TEST_VAULT_NAME")
 		if vaultName == "" {
@@ -28,22 +30,37 @@ func GetTestVaultID(t *testing.T) string {
 		ctx := context.Background()
 		client, err := client.CreateTestClient(ctx)
 		if err != nil {
-			t.Fatalf("failed to create test client: %v", err)
+			testVaultIDErr = fmt.Errorf("failed to create test client: %w", err)
+			return
 		}
 
 		vaults, err := client.GetVaultsByTitle(ctx, vaultName)
 		if err != nil {
-			t.Fatalf("failed to get vault by name %q: %v", vaultName, err)
+			testVaultIDErr = fmt.Errorf("failed to get vault by name %q: %w", vaultName, err)
+			return
 		}
 
 		if len(vaults) == 0 {
-			t.Fatalf("no vault found with name %q", vaultName)
+			testVaultIDErr = fmt.Errorf("no vault found with name %q", vaultName)
+			return
 		}
 		if len(vaults) > 1 {
-			t.Fatalf("multiple vaults found with name %q", vaultName)
+			testVaultIDErr = fmt.Errorf("multiple vaults found with name %q", vaultName)
+			return
 		}
 
 		testVaultID = vaults[0].ID
 	})
+
+	return testVaultIDErr
+}
+
+// GetTestVaultID returns the vault ID.
+func GetTestVaultID(t *testing.T) string {
+	err := InitTestVaultID()
+	if err != nil {
+		t.Fatalf("failed to get test vault ID: %v", err)
+	}
+
 	return testVaultID
 }

@@ -109,10 +109,13 @@ var testItemsUpdatedAttrs = map[model.ItemCategory]map[string]any{
 }
 
 func TestMain(m *testing.M) {
-	// Initialize early if using custom vault (prevents race conditions in parallel tests)
+	// Initialize vault early if using custom vault (prevents race conditions in parallel tests)
 	// for default vault, this is instant as we already have the ID
-	vault.GetTestVaultID(nil)
-
+	err := vault.InitTestVaultID()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize test vault: %v\n", err)
+		os.Exit(1)
+	}
 	code := m.Run()
 	os.Exit(code)
 }
