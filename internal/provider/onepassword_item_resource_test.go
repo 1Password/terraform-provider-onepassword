@@ -237,6 +237,62 @@ func TestAccItemResource_PasswordWriteOnlyAttributes(t *testing.T) {
 	})
 }
 
+func TestAccItemResource_NoteValueWriteOnly(t *testing.T) {
+	expectedItem := generateSecureNoteItem()
+	expectedVault := model.Vault{
+		ID:   expectedItem.VaultID,
+		Name: "VaultName",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccNoteValueWriteOnlyResourceConfig(expectedItem, "1"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test_wo", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("onepassword_item.test_wo", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("onepassword_item.test_wo", "note_value_wo_version", "1"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_wo", "note_value"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_wo", "note_value_wo"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResource_NoteValueWriteOnlyAttributes(t *testing.T) {
+	expectedItem := generateSecureNoteItem()
+	expectedVault := model.Vault{
+		ID:   expectedItem.VaultID,
+		Name: "VaultName",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccProviderConfig(testServer.URL) + testAccNoteValueWriteOnlyMissingVersionConfig(expectedItem),
+				ExpectError: regexp.MustCompile("Attribute \"note_value_wo_version\" must be specified when \"note_value_wo\" is"),
+			},
+			{
+				Config:      testAccProviderConfig(testServer.URL) + testAccNoteValueWriteOnlyMissingNoteValueConfig(expectedItem),
+				ExpectError: regexp.MustCompile("Attribute \"note_value_wo\" must be specified when \"note_value_wo_version\" is"),
+			},
+			{
+				Config:      testAccProviderConfig(testServer.URL) + testAccNoteValueWriteOnlyConflictNoteValueConfig(expectedItem),
+				ExpectError: regexp.MustCompile("Attribute \"note_value\" cannot be specified when \"note_value_wo\" is specified"),
+			},
+		},
+	})
+}
+
 func testAccDataBaseResourceConfig(expectedItem *model.Item) string {
 	return fmt.Sprintf(`
 
@@ -254,6 +310,73 @@ resource "onepassword_item" "test-database" {
   port = "%s"
   type = "%s"
 }`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[2].Value, expectedItem.Fields[3].Value, expectedItem.Fields[4].Value, expectedItem.Fields[5].Value)
+}
+
+func testAccNoteValueWriteOnlyResourceConfig(expectedItem *model.Item, version string) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test_wo" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  note_value_wo = <<EOT
+%s
+EOT
+  note_value_wo_version = "%s"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), strings.TrimSuffix(expectedItem.Fields[0].Value, "\n"), version)
+}
+
+func testAccNoteValueWriteOnlyMissingVersionConfig(expectedItem *model.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test_wo" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  note_value_wo = <<EOT
+%s
+EOT
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), strings.TrimSuffix(expectedItem.Fields[0].Value, "\n"))
+}
+
+func testAccNoteValueWriteOnlyMissingNoteValueConfig(expectedItem *model.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test_wo" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  note_value_wo_version = "1"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)))
+}
+
+func testAccNoteValueWriteOnlyConflictNoteValueConfig(expectedItem *model.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test_wo" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  note_value = <<EOT
+%s
+EOT
+  note_value_wo = <<EOT
+%s
+EOT
+  note_value_wo_version = "1"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[0].Value)
 }
 
 func testAccPasswordResourceConfig(expectedItem *model.Item) string {

@@ -85,6 +85,8 @@ resource "onepassword_item" "example_with_list" {
 - `database` (String) (Only applies to the database category) The name of the database.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `note_value` (String, Sensitive) Secure Note value.
+- `note_value_wo` (String, Sensitive) A write-only secure note value for this item. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later.
+- `note_value_wo_version` (Number) An integer that must be incremented to trigger an update to the 'note_value_wo' field.
 - `password` (String, Sensitive) Password for this item.
 - `password_recipe` (Block List) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedblock--password_recipe))
 - `password_wo` (String, Sensitive) A write-only password for this item. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later.
