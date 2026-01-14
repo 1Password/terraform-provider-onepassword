@@ -16,14 +16,13 @@
 # v3.1.0
 
 ## Features
-  * Add `section_map` and `field_map` attributes for organizing sections and fields in items. {#316}
-  * Add `filename` and `valid_from` attributes to item data source for API Credential items. {#210}
-  * Add `note_value_wo` attribute to item resource for write-only secure note values. {#304}
+  * Provider supports `section_map` and `field_map` attributes for organizing sections and fields in items. {#316}
+  * Provider supports `filename` and `valid_from` attributes to item data source for API Credential items. {#210}
+  * Provider supports `note_value_wo` attribute to item resource for write-only secure note values. {#304}
 
 ## Fixes
   * Provider validates that `password_recipe` and `value` cannot be used together in the same field. {#314}
   * `MONTH_YEAR` field type now enforces YYYYMM format to avoid state inconsistencies. {#311}
-  * E2E tests now run in parallel to improve test execution time. {#315}
 
 ---
 
