@@ -464,17 +464,25 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 }
 
 func (r *OnePasswordItemResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
-	var config OnePasswordItemResourceModel
+	var sectionList types.List
+	var sectionMap types.Map
 
-	// Read Terraform configuration data into the model
-	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("section"), &sectionList)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("section_map"), &sectionMap)...)
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	// Check if both section_map and section are set
-	hasSectionMap := len(config.SectionMap) > 0
-	hasSectionList := len(config.SectionList) > 0
+	// If either is unknown (e.g., dynamic block with unknown for_each), skip validation
+	// Validation will happen later when values are known
+	if sectionList.IsUnknown() || sectionMap.IsUnknown() {
+		return
+	}
+
+	// Check if both are set (non-null and have elements)
+	hasSectionList := !sectionList.IsNull() && len(sectionList.Elements()) > 0
+	hasSectionMap := !sectionMap.IsNull() && len(sectionMap.Elements()) > 0
 
 	if hasSectionMap && hasSectionList {
 		resp.Diagnostics.AddError(
