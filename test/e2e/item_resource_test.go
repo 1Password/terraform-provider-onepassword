@@ -2837,3 +2837,59 @@ func TestAccItemResourceSectionMap_ConfigRestoresDriftedValue(t *testing.T) {
 		},
 	})
 }
+
+// TestAccItemResource_SectionAndSectionMapConflict tests that using both section (block) and
+// section_map (attribute) at the same time results in a validation error.
+func TestAccItemResource_SectionAndSectionMapConflict(t *testing.T) {
+	t.Parallel()
+
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Section Conflict", uniqueID)
+
+	// Create a section block (list syntax)
+	sectionBlock := []map[string]any{
+		{
+			"label": "section_block",
+			"field": []map[string]any{
+				{
+					"label": "field1",
+					"type":  "STRING",
+					"value": "value1",
+				},
+			},
+		},
+	}
+
+	// Create a section_map (map syntax)
+	sectionMap := sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+		"section_map_entry": {
+			FieldMap: map[string]sections.TestSectionMapField{
+				"field2": {
+					Type:  "STRING",
+					Value: "value2",
+				},
+			},
+		},
+	})
+
+	attrs := map[string]any{
+		"title":       title,
+		"category":    "login",
+		"section":     sectionBlock,
+		"section_map": sectionMap,
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs),
+				),
+				ExpectError: regexp.MustCompile("Conflicting Section Definitions"),
+			},
+		},
+	})
+}
