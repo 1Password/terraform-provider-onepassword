@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v3.1.1)
+# v3.1.1
+
+## Fixes
+ * Provider properly handles dynamic sections. {#319}
+
+---
+
 [//]: # (START/v3.1.0)
 # v3.1.0
 
