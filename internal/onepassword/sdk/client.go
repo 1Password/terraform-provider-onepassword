@@ -32,7 +32,7 @@ func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error
 			decryptDetails := true
 			vaultList, listErr := c.sdkClient.Vaults().List(ctx, sdk.VaultListParams{DecryptDetails: &decryptDetails})
 			if listErr != nil {
-				return nil, fmt.Errorf("failed to get vault using sdk: %w (fallback list also failed: %v)", err, listErr)
+				return nil, fmt.Errorf("failed to get vault using sdk: %w (fallback list failed: %v)", err, listErr)
 			}
 
 			// Find vault with matching UUID
@@ -47,7 +47,7 @@ func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error
 			return nil, fmt.Errorf("failed to get vault using sdk: %w (vault with UUID %q not found in fallback list)", err, uuid)
 		}
 
-		return nil, fmt.Errorf("failed to get vault using sdk: %w (vault with UUID %q not found in fallback list)", err, uuid)
+		return nil, fmt.Errorf("failed to get vault using sdk: %w", err)
 	}
 
 	v := &model.Vault{}
