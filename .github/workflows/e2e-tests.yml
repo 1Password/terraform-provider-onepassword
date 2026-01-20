@@ -51,7 +51,8 @@ jobs:
             --set connect.create=true \
             --set-file connect.credentials=1password-credentials.json \
             --set operator.create=false \
-            --set operator.authMethod=connect
+            --set operator.authMethod=connect \
+            --set connect.api.env.OP_SYNC_TIMEOUT=1m
 
       - name: Wait for Connect service to be ready
         run: |
