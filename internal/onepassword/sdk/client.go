@@ -25,6 +25,28 @@ type SDKConfig struct {
 func (c *Client) GetVault(ctx context.Context, uuid string) (*model.Vault, error) {
 	vault, err := c.sdkClient.Vaults().GetOverview(ctx, uuid)
 	if err != nil {
+		// TODO: Remove this fallback once the SDK is stable
+		// This is a temporary workaround to a bug in the SDK when accessing vault directly by uuid
+		errStr := err.Error()
+		if strings.Contains(errStr, "enum Invocation") {
+			decryptDetails := true
+			vaultList, listErr := c.sdkClient.Vaults().List(ctx, sdk.VaultListParams{DecryptDetails: &decryptDetails})
+			if listErr != nil {
+				return nil, fmt.Errorf("failed to get vault using sdk: %w (fallback list failed: %v)", err, listErr)
+			}
+
+			// Find vault with matching UUID
+			for _, v := range vaultList {
+				if v.ID == uuid {
+					result := &model.Vault{}
+					result.FromSDKVault(&v)
+					return result, nil
+				}
+			}
+
+			return nil, fmt.Errorf("failed to get vault using sdk: %w (vault with UUID %q not found in fallback list)", err, uuid)
+		}
+
 		return nil, fmt.Errorf("failed to get vault using sdk: %w", err)
 	}
 
