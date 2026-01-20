@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v3.1.2)
+# v3.1.2
+
+## Fixes
+ * Provider now falls back to listing vaults when `GetOverview` fails with "enum Invocation" error for SDK. {#310}
+
+---
+
 [//]: # (START/v3.1.1)
 # v3.1.1
 
