@@ -9,6 +9,10 @@ import (
 const (
 	terraformItemIDDescription = "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`."
 
+	itemProvidingTypeDescription      = "Use this to get details of an item by its vault uuid and either the title or the uuid of the item."
+	itemProvidingTypeUUIDDescription  = "The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title."
+	itemProvidingTypeTitleDescription = "The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID."
+
 	itemUUIDDescription                  = "The UUID of the item. Item identifiers are unique within a specific vault."
 	vaultUUIDDescription                 = "The UUID of the vault the item is in."
 	categoryDescription                  = "The category of the item."

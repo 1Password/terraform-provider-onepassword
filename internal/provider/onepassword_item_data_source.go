@@ -129,7 +129,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.",
+		MarkdownDescription: itemProvidingTypeDescription,
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
@@ -141,7 +141,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Required:            true,
 			},
 			"uuid": schema.StringAttribute{
-				MarkdownDescription: "The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title.",
+				MarkdownDescription: itemProvidingTypeUUIDDescription,
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.String{
@@ -152,7 +152,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				},
 			},
 			"title": schema.StringAttribute{
-				MarkdownDescription: "The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.",
+				MarkdownDescription: itemProvidingTypeTitleDescription,
 				Optional:            true,
 				Computed:            true,
 			},
@@ -373,7 +373,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, err := getItemForDataSource(ctx, d.client, data)
+	item, err := getItemForProvidingType(ctx, d.client, data.Vault.ValueString(), data.Title.ValueString(), data.UUID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read item, got error: %s", err))
 		return
@@ -520,11 +520,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 }
 
-func getItemForDataSource(ctx context.Context, client onepassword.Client, data OnePasswordItemDataSourceModel) (*model.Item, error) {
-	vaultUUID := data.Vault.ValueString()
-	itemTitle := data.Title.ValueString()
-	itemUUID := data.UUID.ValueString()
-
+func getItemForProvidingType(ctx context.Context, client onepassword.Client, vaultUUID string, itemTitle string, itemUUID string) (*model.Item, error) {
 	if itemTitle != "" {
 		return client.GetItemByTitle(ctx, itemTitle, vaultUUID)
 	}
