@@ -1,4 +1,3 @@
-// internal/provider/onepassword_item_resource_ephemeral_test.go
 package provider
 
 import (

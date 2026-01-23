@@ -1,4 +1,3 @@
-// test/e2e/terraform/config/ephemeral_item_config.go
 package terraform
 
 import "fmt"

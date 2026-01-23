@@ -1,4 +1,3 @@
-// test/e2e/item_ephemeral_test.go
 package integration
 
 import (
