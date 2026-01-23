@@ -53,7 +53,7 @@ func (r *OnePasswordEphemeralItemResource) Metadata(ctx context.Context, req eph
 func (r *OnePasswordEphemeralItemResource) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: itemProvidingTypeDescription,
+		MarkdownDescription: itemEphemeralResourceDescription,
 
 		Attributes: map[string]schema.Attribute{
 			"vault": schema.StringAttribute{
@@ -96,7 +96,6 @@ func (r *OnePasswordEphemeralItemResource) Schema(ctx context.Context, req ephem
 			"note_value": schema.StringAttribute{
 				MarkdownDescription: noteValueDescription,
 				Computed:            true,
-				Optional:            true,
 				Sensitive:           true,
 			},
 			"credential": schema.StringAttribute{

@@ -12,6 +12,7 @@ import (
 	uuidutil "github.com/1Password/terraform-provider-onepassword/v2/test/e2e/utils/uuid"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
 func TestAccEphemeralItem_ReadAllItemTypes(t *testing.T) {
@@ -46,7 +47,17 @@ func TestAccEphemeralItem_ReadAllItemTypes(t *testing.T) {
 								"uuid":  itemType.item.UUID,
 							}),
 						),
-						Check: resource.ComposeAggregateTestCheckFunc(),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							// Verify ephemeral resource is NOT in state
+							resource.TestCheckFunc(func(s *terraform.State) error {
+								ephemeralResource := s.RootModule().Resources["ephemeral.onepassword_item.test_item"]
+								if ephemeralResource != nil {
+									return fmt.Errorf("ephemeral resource should not exist in state, but found: %+v", ephemeralResource)
+								}
+
+								return nil
+							}),
+						),
 					},
 				},
 			})
@@ -66,7 +77,17 @@ func TestAccEphemeralItem_ReadAllItemTypes(t *testing.T) {
 								"title": itemType.item.Title,
 							}),
 						),
-						Check: resource.ComposeAggregateTestCheckFunc(),
+						Check: resource.ComposeAggregateTestCheckFunc(
+							// Verify ephemeral resource is NOT in state
+							resource.TestCheckFunc(func(s *terraform.State) error {
+								ephemeralResource := s.RootModule().Resources["ephemeral.onepassword_item.test_item"]
+								if ephemeralResource != nil {
+									return fmt.Errorf("ephemeral resource should not exist in state, but found: %+v", ephemeralResource)
+								}
+
+								return nil
+							}),
+						),
 					},
 				},
 			})

@@ -129,7 +129,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: itemProvidingTypeDescription,
+		MarkdownDescription: itemDataSourceDescription,
 
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{

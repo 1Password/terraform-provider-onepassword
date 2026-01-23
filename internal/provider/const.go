@@ -9,7 +9,9 @@ import (
 const (
 	terraformItemIDDescription = "The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`."
 
-	itemProvidingTypeDescription      = "Use this to get details of an item by its vault uuid and either the title or the uuid of the item."
+	itemDataSourceDescription        = "Use this to get details of an item by its vault uuid and either the title or the uuid of the item."
+	itemEphemeralResourceDescription = "Use this ephemeral resource to retrieve item values without storing them in Terraform state. Useful for providing sensitive values to write-only arguments or other ephemeral contexts."
+
 	itemProvidingTypeUUIDDescription  = "The UUID of the item to retrieve. This field will be populated with the UUID of the item if the item it looked up by its title."
 	itemProvidingTypeTitleDescription = "The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID."
 
