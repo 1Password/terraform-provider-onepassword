@@ -26,7 +26,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
           ref: ${{ inputs.ref }}
 
       - name: Set up Go
@@ -87,7 +86,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0
           ref: ${{ inputs.ref }}
 
       - name: Set up Go
