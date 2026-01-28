@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       condition: ${{ steps.check.outputs.condition }}
+      ref: ${{ steps.check.outputs.ref }}
     steps:
       - name: Check if PR is from external contributor
         id: check
@@ -50,6 +51,7 @@ jobs:
             else
               echo "condition=pr-creation-maintainer" >> $GITHUB_OUTPUT
               echo "Setting condition=pr-creation-maintainer (internal PR creation)"
+              echo "ref=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
             fi
           elif [ "${{ github.event_name }}" == "repository_dispatch" ]; then
             # For repository_dispatch events (ok-to-test), check if sha matches
@@ -63,6 +65,7 @@ jobs:
             if [ -n "$SHA_PARAM" ] && [[ "$PR_HEAD_SHA" == *"$SHA_PARAM"* ]]; then
               echo "condition=dispatch-event" >> $GITHUB_OUTPUT
               echo "Setting condition=dispatch-event (sha matches)"
+              echo "ref=$PR_HEAD_SHA" >> $GITHUB_OUTPUT
             else
               echo "condition=skip" >> $GITHUB_OUTPUT
               echo "Setting condition=skip (sha does not match or empty)"
@@ -70,6 +73,7 @@ jobs:
           elif [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref_name }}" == "main" ]; then
             echo "condition=push-to-main" >> $GITHUB_OUTPUT
             echo "Setting condition=push-to-main (push to main)"
+            echo "ref=${{ github.sha }}" >> $GITHUB_OUTPUT
           else
             # Unknown event type
             echo "condition=skip" >> $GITHUB_OUTPUT
@@ -83,8 +87,10 @@ jobs:
       ||
       (needs.check-external-pr.outputs.condition == 'dispatch-event')
       ||
-      needs.check-external-pr.outputs.condition == 'push-to-main'
+      (needs.check-external-pr.outputs.condition == 'push-to-main')
     uses: ./.github/workflows/e2e-tests.yml
+    with:
+      ref: ${{ needs.check-external-pr.outputs.ref }}
     secrets:
       OP_CONNECT_CREDENTIALS: ${{ secrets.OP_CONNECT_CREDENTIALS }}
       OP_CONNECT_TOKEN: ${{ secrets.OP_CONNECT_TOKEN }}
