@@ -51,7 +51,7 @@ jobs:
             else
               echo "condition=pr-creation-maintainer" >> $GITHUB_OUTPUT
               echo "Setting condition=pr-creation-maintainer (internal PR creation)"
-
+              echo "ref=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
             fi
           elif [ "${{ github.event_name }}" == "repository_dispatch" ]; then
             # For repository_dispatch events (ok-to-test), check if sha matches
