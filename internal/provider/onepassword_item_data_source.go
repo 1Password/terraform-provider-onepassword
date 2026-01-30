@@ -373,7 +373,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 
 	// If applicable, this is a great opportunity to initialize any necessary
 	// provider client data and make a call using it.
-	item, err := getItemForProvidingType(ctx, d.client, data.Vault.ValueString(), data.Title.ValueString(), data.UUID.ValueString())
+	item, err := getItem(ctx, d.client, data.Vault.ValueString(), data.Title.ValueString(), data.UUID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read item, got error: %s", err))
 		return
@@ -520,7 +520,7 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 }
 
-func getItemForProvidingType(ctx context.Context, client onepassword.Client, vaultUUID string, itemTitle string, itemUUID string) (*model.Item, error) {
+func getItem(ctx context.Context, client onepassword.Client, vaultUUID string, itemTitle string, itemUUID string) (*model.Item, error) {
 	if itemTitle != "" {
 		return client.GetItemByTitle(ctx, itemTitle, vaultUUID)
 	}

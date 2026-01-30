@@ -19,19 +19,19 @@ import (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ ephemeral.EphemeralResourceWithConfigure = &OnePasswordEphemeralItemResource{}
+var _ ephemeral.EphemeralResourceWithConfigure = &OnePasswordItemEphemeral{}
 
-func NewEphemeralOnePasswordItemResource() ephemeral.EphemeralResource {
-	return &OnePasswordEphemeralItemResource{}
+func NewOnePasswordItemEphemeral() ephemeral.EphemeralResource {
+	return &OnePasswordItemEphemeral{}
 }
 
-// OnePasswordEphemeralItemResource defines the ephemeral resource implementation.
-type OnePasswordEphemeralItemResource struct {
+// OnePasswordItemEphemeral defines the ephemeral resource implementation.
+type OnePasswordItemEphemeral struct {
 	client onepassword.Client
 }
 
-// OnePasswordEphemeralItemResourceModel describes the data source data model.
-type OnePasswordEphemeralItemResourceModel struct {
+// OnePasswordItemEphemeralModel describes the data source data model.
+type OnePasswordItemEphemeralModel struct {
 	Vault             types.String `tfsdk:"vault"`
 	UUID              types.String `tfsdk:"uuid"`
 	Title             types.String `tfsdk:"title"`
@@ -46,14 +46,14 @@ type OnePasswordEphemeralItemResourceModel struct {
 	PrivateKeyOpenSSH types.String `tfsdk:"private_key_openssh"`
 }
 
-func (r *OnePasswordEphemeralItemResource) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
+func (r *OnePasswordItemEphemeral) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_item"
 }
 
-func (r *OnePasswordEphemeralItemResource) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
+func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: itemEphemeralResourceDescription,
+		MarkdownDescription: itemEphemeralDescription,
 
 		Attributes: map[string]schema.Attribute{
 			"vault": schema.StringAttribute{
@@ -121,7 +121,7 @@ func (r *OnePasswordEphemeralItemResource) Schema(ctx context.Context, req ephem
 	}
 }
 
-func (r *OnePasswordEphemeralItemResource) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
+func (r *OnePasswordItemEphemeral) Configure(ctx context.Context, req ephemeral.ConfigureRequest, resp *ephemeral.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -141,8 +141,8 @@ func (r *OnePasswordEphemeralItemResource) Configure(ctx context.Context, req ep
 	r.client = client
 }
 
-func (r *OnePasswordEphemeralItemResource) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
-	var data OnePasswordEphemeralItemResourceModel
+func (r *OnePasswordItemEphemeral) Open(ctx context.Context, req ephemeral.OpenRequest, resp *ephemeral.OpenResponse) {
+	var data OnePasswordItemEphemeralModel
 
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -150,7 +150,7 @@ func (r *OnePasswordEphemeralItemResource) Open(ctx context.Context, req ephemer
 		return
 	}
 
-	item, err := getItemForProvidingType(ctx, r.client, data.Vault.ValueString(), data.Title.ValueString(), data.UUID.ValueString())
+	item, err := getItem(ctx, r.client, data.Vault.ValueString(), data.Title.ValueString(), data.UUID.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read item, got error: %s", err))
 		return

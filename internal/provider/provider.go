@@ -181,7 +181,7 @@ func (p *OnePasswordProvider) Resources(ctx context.Context) []func() resource.R
 
 func (p *OnePasswordProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
 	return []func() ephemeral.EphemeralResource{
-		NewEphemeralOnePasswordItemResource,
+		NewOnePasswordItemEphemeral,
 	}
 }
 

@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 )
 
-func TestAccEphemeralItemResource_ReadByUUID(t *testing.T) {
+func TestAccEphemeralItem_ReadByUUID(t *testing.T) {
 	expectedItem := generateLoginItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -36,7 +36,7 @@ func TestAccEphemeralItemResource_ReadByUUID(t *testing.T) {
 	})
 }
 
-func TestAccEphemeralItemResource_ReadByTitle(t *testing.T) {
+func TestAccEphemeralItem_ReadByTitle(t *testing.T) {
 	expectedItem := generateLoginItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -80,7 +80,7 @@ func TestAccEphemeralItemResource_ReadLoginItem(t *testing.T) {
 	})
 }
 
-func TestAccEphemeralItemResource_ReadPasswordItem(t *testing.T) {
+func TestAccEphemeralItem_ReadPasswordItem(t *testing.T) {
 	expectedItem := generatePasswordItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -102,7 +102,7 @@ func TestAccEphemeralItemResource_ReadPasswordItem(t *testing.T) {
 	})
 }
 
-func TestAccEphemeralItemResource_ReadDatabaseItem(t *testing.T) {
+func TestAccEphemeralItem_ReadDatabaseItem(t *testing.T) {
 	expectedItem := generateDatabaseItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -124,7 +124,7 @@ func TestAccEphemeralItemResource_ReadDatabaseItem(t *testing.T) {
 	})
 }
 
-func TestAccEphemeralItemResource_ReadSecureNoteItem(t *testing.T) {
+func TestAccEphemeralItem_ReadSecureNoteItem(t *testing.T) {
 	expectedItem := generateSecureNoteItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -146,7 +146,7 @@ func TestAccEphemeralItemResource_ReadSecureNoteItem(t *testing.T) {
 	})
 }
 
-func TestAccEphemeralItemResource_ReadSSHKeyItem(t *testing.T) {
+func TestAccEphemeralItem_ReadSSHKeyItem(t *testing.T) {
 	expectedItem := generateSSHKeyItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -168,7 +168,7 @@ func TestAccEphemeralItemResource_ReadSSHKeyItem(t *testing.T) {
 	})
 }
 
-func TestAccEphemeralItemResource_ReadApiCredentialItem(t *testing.T) {
+func TestAccEphemeralItem_ReadApiCredentialItem(t *testing.T) {
 	expectedItem := generateApiCredentialItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -190,7 +190,7 @@ func TestAccEphemeralItemResource_ReadApiCredentialItem(t *testing.T) {
 	})
 }
 
-func TestAccEphemeralItemResource_ReadDocumentItem(t *testing.T) {
+func TestAccEphemeralItem_ReadDocumentItem(t *testing.T) {
 	expectedItem := generateDocumentItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -212,7 +212,7 @@ func TestAccEphemeralItemResource_ReadDocumentItem(t *testing.T) {
 	})
 }
 
-func TestAccEphemeralItemResource_UseInWriteOnlyPasswordField(t *testing.T) {
+func TestAccEphemeralItem_UseInWriteOnlyPasswordField(t *testing.T) {
 	expectedItem := generateLoginItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -253,7 +253,7 @@ resource "onepassword_item" "test" {
 	})
 }
 
-func TestAccEphemeralItemResource_UseInWriteOnlyNoteValueField(t *testing.T) {
+func TestAccEphemeralItem_UseInWriteOnlyNoteValueField(t *testing.T) {
 	expectedItem := generateSecureNoteItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -291,7 +291,7 @@ resource "onepassword_item" "test" {
 	})
 }
 
-func TestAccEphemeralItemResource_ValidationError_MissingUUIDAndTitle(t *testing.T) {
+func TestAccEphemeralItem_ValidationError_MissingUUIDAndTitle(t *testing.T) {
 	expectedItem := generateLoginItem()
 	expectedVault := model.Vault{
 		ID:          expectedItem.VaultID,
@@ -317,7 +317,7 @@ ephemeral "onepassword_item" "test" {
 	})
 }
 
-func TestAccEphemeralItemResource_ValidationError_ItemNotFound(t *testing.T) {
+func TestAccEphemeralItem_ValidationError_ItemNotFound(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.String() == "/v1/vaults/gs2jpwmahszwq25a7jiw45e4je/items/nonexistent" {
 			w.WriteHeader(http.StatusNotFound)
