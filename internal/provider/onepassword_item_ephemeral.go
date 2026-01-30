@@ -68,7 +68,7 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 				Required:            true,
 			},
 			"uuid": schema.StringAttribute{
-				MarkdownDescription: itemProvidingTypeUUIDDescription,
+				MarkdownDescription: itemLookupUUIDDescription,
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.String{
@@ -79,7 +79,7 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 				},
 			},
 			"title": schema.StringAttribute{
-				MarkdownDescription: itemProvidingTypeTitleDescription,
+				MarkdownDescription: itemLookupTitleDescription,
 				Optional:            true,
 				Computed:            true,
 			},

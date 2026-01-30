@@ -141,7 +141,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				Required:            true,
 			},
 			"uuid": schema.StringAttribute{
-				MarkdownDescription: itemProvidingTypeUUIDDescription,
+				MarkdownDescription: itemLookupUUIDDescription,
 				Optional:            true,
 				Computed:            true,
 				Validators: []validator.String{
@@ -152,7 +152,7 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 				},
 			},
 			"title": schema.StringAttribute{
-				MarkdownDescription: itemProvidingTypeTitleDescription,
+				MarkdownDescription: itemLookupTitleDescription,
 				Optional:            true,
 				Computed:            true,
 			},
