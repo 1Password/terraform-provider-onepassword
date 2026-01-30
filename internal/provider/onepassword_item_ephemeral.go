@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral/schema"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -32,11 +31,15 @@ type OnePasswordItemEphemeral struct {
 
 // OnePasswordItemEphemeralModel describes the data source data model.
 type OnePasswordItemEphemeralModel struct {
+	ID                types.String `tfsdk:"id"`
 	Vault             types.String `tfsdk:"vault"`
 	UUID              types.String `tfsdk:"uuid"`
 	Title             types.String `tfsdk:"title"`
 	URL               types.String `tfsdk:"url"`
 	Hostname          types.String `tfsdk:"hostname"`
+	Database          types.String `tfsdk:"database"`
+	Port              types.String `tfsdk:"port"`
+	Type              types.String `tfsdk:"type"`
 	Username          types.String `tfsdk:"username"`
 	Password          types.String `tfsdk:"password"`
 	NoteValue         types.String `tfsdk:"note_value"`
@@ -56,6 +59,10 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 		MarkdownDescription: itemEphemeralDescription,
 
 		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: terraformItemIDDescription,
+				Computed:            true,
+			},
 			"vault": schema.StringAttribute{
 				MarkdownDescription: vaultUUIDDescription,
 				Required:            true,
@@ -82,6 +89,18 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 			},
 			"hostname": schema.StringAttribute{
 				MarkdownDescription: dbHostnameDescription,
+				Computed:            true,
+			},
+			"database": schema.StringAttribute{
+				MarkdownDescription: dbDatabaseDescription,
+				Computed:            true,
+			},
+			"port": schema.StringAttribute{
+				MarkdownDescription: dbPortDescription,
+				Computed:            true,
+			},
+			"type": schema.StringAttribute{
+				MarkdownDescription: typeDescription,
 				Computed:            true,
 			},
 			"username": schema.StringAttribute{
@@ -156,6 +175,7 @@ func (r *OnePasswordItemEphemeral) Open(ctx context.Context, req ephemeral.OpenR
 		return
 	}
 
+	data.ID = types.StringValue(itemTerraformID(item))
 	data.UUID = types.StringValue(item.ID)
 	data.Vault = types.StringValue(item.VaultID)
 	data.Title = types.StringValue(item.Title)
@@ -183,6 +203,12 @@ func (r *OnePasswordItemEphemeral) Open(ctx context.Context, req ephemeral.OpenR
 					data.Password = types.StringValue(f.Value)
 				case "hostname", "server":
 					data.Hostname = types.StringValue(f.Value)
+				case "database":
+					data.Database = types.StringValue(f.Value)
+				case "port":
+					data.Port = types.StringValue(f.Value)
+				case "type", "database_type":
+					data.Type = types.StringValue(f.Value)
 				case "public_key":
 					data.PublicKey = types.StringValue(f.Value)
 				case "private_key":
@@ -198,8 +224,6 @@ func (r *OnePasswordItemEphemeral) Open(ctx context.Context, req ephemeral.OpenR
 			}
 		}
 	}
-
-	tflog.Trace(ctx, "read an item data source")
 
 	// Save data into ephemeral result data
 	resp.Diagnostics.Append(resp.Result.Set(ctx, &data)...)
