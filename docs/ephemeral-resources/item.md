@@ -3,12 +3,12 @@
 page_title: "onepassword_item Ephemeral Resource - onepassword"
 subcategory: ""
 description: |-
-  Use this ephemeral resource to retrieve item values without storing them in Terraform state. Useful for providing sensitive values to write-only arguments or other ephemeral contexts.
+  Use this to retrieve item values without storing them in Terraform state. Useful for providing sensitive values to write-only arguments or other ephemeral contexts.
 ---
 
 # onepassword_item (Ephemeral Resource)
 
-Use this ephemeral resource to retrieve item values without storing them in Terraform state. Useful for providing sensitive values to write-only arguments or other ephemeral contexts.
+Use this to retrieve item values without storing them in Terraform state. Useful for providing sensitive values to write-only arguments or other ephemeral contexts.
 
 ## Example Usage
 
@@ -41,11 +41,15 @@ ephemeral "onepassword_item" "example_by_uuid" {
 ### Read-Only
 
 - `credential` (String, Sensitive) (Only applies to the API credential category) API credential for this item.
+- `database` (String) (Only applies to the database category) The name of the database.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
+- `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
 - `note_value` (String, Sensitive) Secure Note value.
 - `password` (String, Sensitive) Password for this item.
+- `port` (String) (Only applies to the database category) The port the database is listening on.
 - `private_key` (String, Sensitive) SSH Private Key in PKCS#8 for this item.
 - `private_key_openssh` (String, Sensitive) SSH Private key in OpenSSH format.
 - `public_key` (String) SSH Public Key for this item.
+- `type` (String) (Only applies to database and API credential categories) The type of database or API Credential.
 - `url` (String) The primary URL for the item.
 - `username` (String) Username for this item.
