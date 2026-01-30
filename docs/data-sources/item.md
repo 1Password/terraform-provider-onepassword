@@ -3,12 +3,12 @@
 page_title: "onepassword_item Data Source - onepassword"
 subcategory: ""
 description: |-
-  Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.
+  Use this to get details of an item by its vault uuid and either the title or the uuid of the item.
 ---
 
 # onepassword_item (Data Source)
 
-Use this data source to get details of an item by its vault uuid and either the title or the uuid of the item.
+Use this to get details of an item by its vault uuid and either the title or the uuid of the item.
 
 ## Example Usage
 
