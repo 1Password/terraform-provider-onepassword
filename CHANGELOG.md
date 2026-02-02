@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v3.2.0)
+# v3.2.0
+
+## Features
+  * Provider supports ephemeral `onepassword_item` for retrieving item values without persisting them in state. {#212}
+
+---
+
 [//]: # (START/v3.1.2)
 # v3.1.2
 
