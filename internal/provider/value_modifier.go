@@ -49,11 +49,30 @@ func (m valueModifier) PlanModifyString(ctx context.Context, req planmodifier.St
 		return
 	}
 
-	if !reflect.DeepEqual(statePasswordRecipe, planPasswordRecipe) {
+	// if !reflect.DeepEqual(statePasswordRecipe, planPasswordRecipe) {
+	// 	return
+	// }
+
+	// resp.PlanValue = req.StateValue
+
+	if reflect.DeepEqual(statePasswordRecipe, planPasswordRecipe) {
+		resp.PlanValue = req.StateValue
 		return
 	}
 
-	resp.PlanValue = req.StateValue
+	if shouldPreservePasswordValue(statePasswordRecipe, planPasswordRecipe) {
+		resp.PlanValue = req.StateValue
+	}
+}
+
+// shouldPreservePasswordValue returns true when the modifier should copy state password to plan:
+func shouldPreservePasswordValue(stateRecipe, planRecipe []PasswordRecipeModel) bool {
+	if reflect.DeepEqual(stateRecipe, planRecipe) {
+		return true
+	}
+	stateEmpty := len(stateRecipe) == 0
+	planSet := len(planRecipe) > 0
+	return stateEmpty && planSet
 }
 
 // PasswordValueModifierForMapField is used for map-based fields where password_recipe is a SingleNestedAttribute
