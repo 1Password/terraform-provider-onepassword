@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v3.2.1)
+# v3.2.1
+
+## Fixes
+ * `onepassword-sdk-go` dependecy is updated to the latest stable v0.4.0. {#333}
+
+---
+
 [//]: # (START/v3.2.0)
 # v3.2.0
 
