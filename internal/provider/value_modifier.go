@@ -54,7 +54,7 @@ func (m valueModifier) PlanModifyString(ctx context.Context, req planmodifier.St
 	}
 }
 
-// shouldPreservePasswordValue returns true when the modifier should copy state password to plan:
+// shouldPreservePasswordValue returns true when the modifier should copy state password to plan
 func shouldPreservePasswordValue(stateRecipe, planRecipe []PasswordRecipeModel) bool {
 	if reflect.DeepEqual(stateRecipe, planRecipe) {
 		return true
