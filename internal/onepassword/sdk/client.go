@@ -210,6 +210,24 @@ func (c *Client) GetFileContent(ctx context.Context, file *model.ItemFile, itemU
 	return content, nil
 }
 
+// GetEnvironmentVariables reads environment variables from a 1Password Environment.
+func (c *Client) GetEnvironmentVariables(ctx context.Context, environmentID string) ([]model.EnvironmentVariable, error) {
+	res, err := c.sdkClient.Environments().GetVariables(ctx, environmentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get environment variables using sdk: %w", err)
+	}
+
+	result := make([]model.EnvironmentVariable, len(res.Variables))
+	for i, v := range res.Variables {
+		result[i] = model.EnvironmentVariable{
+			Name:   v.Name,
+			Value:  v.Value,
+			Masked: v.Masked,
+		}
+	}
+	return result, nil
+}
+
 func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {
 	var sdkClient *sdk.Client
 	var err error
