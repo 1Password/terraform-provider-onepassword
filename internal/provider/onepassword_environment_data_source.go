@@ -61,6 +61,7 @@ func (d *OnePasswordEnvironmentDataSource) Schema(ctx context.Context, req datas
 				ElementType:         types.StringType,
 				MarkdownDescription: "A map of environment variable names to their values. Use this for passing secrets into Terraform resources or for use in `environment` blocks.",
 				Computed:            true,
+				Sensitive:           true,
 			},
 		},
 		Blocks: map[string]schema.Block{
