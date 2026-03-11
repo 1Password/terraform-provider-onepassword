@@ -139,6 +139,9 @@ func (d *OnePasswordEnvironmentDataSource) Read(ctx context.Context, req datasou
 
 	variablesMapVal, diags := types.MapValueFrom(ctx, types.StringType, variablesMap)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 	data.Variables = variablesMapVal
 	data.Metadata = metadataList
 
