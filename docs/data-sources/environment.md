@@ -37,7 +37,7 @@ output "env_variables" {
 
 - `id` (String) The Terraform resource identifier for this environment in the format `environments/<environment_id>`.
 - `metadata` (Block List) Metadata for each environment variable (name, value, and masked flag). Use this when you need the full structure; use `variables` for a simple name-to-value map. (see [below for nested schema](#nestedblock--metadata))
-- `variables` (Map of String) A map of environment variable names to their values. Use this for passing secrets into Terraform resources or for use in `environment` blocks.
+- `variables` (Map of String, Sensitive) A map of environment variable names to their values. Use this for passing secrets into Terraform resources or for use in `environment` blocks.
 
 <a id="nestedblock--metadata"></a>
 ### Nested Schema for `metadata`
