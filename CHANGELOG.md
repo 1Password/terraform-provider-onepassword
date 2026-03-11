@@ -2,6 +2,18 @@
 # Latest
 
 ## Features
+  * Provider adds `onepassword_environment` datasource for reading environment variables from 1Password Environments (service account or desktop app auth only). {#302}
+
+## Fixes
+  * Provider removes fallback to listing vaults when `GetOverview` fails; this workaround is no longer needed with the stable SDK. {#339}
+  * Replace slash-command-dispatch fork with upstream v5 in the ok-to-test workflow. {#338}
+
+---
+
+[//]: # (START/v3.3.0)
+# v3.3.0
+
+## Features
   * A user-friendly description of a new feature. {issue-number}
 
 ## Fixes
