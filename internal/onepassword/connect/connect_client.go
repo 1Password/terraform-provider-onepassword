@@ -240,6 +240,11 @@ func (c *Client) DeleteItem(ctx context.Context, item *model.Item, vaultUuid str
 	return nil
 }
 
+// GetEnvironmentVariables returns an error because 1Password Environments are only supported when using the 1Password SDK (service account or desktop app authentication), not with 1Password Connect.
+func (c *Client) GetEnvironmentVariables(_ context.Context, _ string) ([]model.EnvironmentVariable, error) {
+	return nil, fmt.Errorf("1Password Environments are only supported when using service account or desktop app authentication; they are not available with 1Password Connect")
+}
+
 func (c *Client) GetFileContent(_ context.Context, file *model.ItemFile, itemUUID, vaultUUID string) ([]byte, error) {
 	connectFile := &onepassword.File{
 		ID:          file.ID,
