@@ -115,10 +115,6 @@ func (d *OnePasswordEnvironmentDataSource) Read(ctx context.Context, req datasou
 	}
 
 	environmentID := data.EnvironmentID.ValueString()
-	if environmentID == "" {
-		resp.Diagnostics.AddError("Missing environment_id", "The environment_id attribute is required.")
-		return
-	}
 
 	variables, err := d.client.GetEnvironmentVariables(ctx, environmentID)
 	if err != nil {
