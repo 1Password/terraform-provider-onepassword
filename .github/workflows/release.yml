@@ -146,6 +146,22 @@ jobs:
           TAG=${GITHUB_REF#refs/tags/}
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "Release tag: $TAG"
+      - name: Attach SBOM
+        run: |
+          set -e
+          PROJECT_NAME="terraform-provider-onepassword"
+          TAG="${{ steps.get_tag.outputs.tag }}"
+          VERSION=${TAG#v}
+          OUT="${PROJECT_NAME}_${VERSION}_sbom.json"
+          curl -sS -f \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -o "$OUT" \
+            "https://api.github.com/repos/${{ github.repository }}/dependency-graph/sbom"
+          gh release upload "$TAG" --repo "${{ github.repository }}" "$OUT" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload manifest.json
         run: |
           PROJECT_NAME="terraform-provider-onepassword"
