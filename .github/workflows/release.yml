@@ -148,7 +148,6 @@ jobs:
           echo "Release tag: $TAG"
       - name: Attach SBOM
         run: |
-          set -e
           PROJECT_NAME="terraform-provider-onepassword"
           TAG="${{ steps.get_tag.outputs.tag }}"
           VERSION=${TAG#v}
