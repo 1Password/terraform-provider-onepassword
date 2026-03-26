@@ -36,9 +36,8 @@ jobs:
       - name: Create kind cluster
         uses: helm/kind-action@v1
 
-      # TODO: Revisit when azure/setup-kubectl ships a release on Node 24 (v4 is still node20;
       - name: Install kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
 
       - name: Install dependencies
         run: go mod tidy
