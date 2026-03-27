@@ -37,7 +37,7 @@ jobs:
         uses: helm/kind-action@v1
 
       - name: Install kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
 
       - name: Install dependencies
         run: go mod tidy
