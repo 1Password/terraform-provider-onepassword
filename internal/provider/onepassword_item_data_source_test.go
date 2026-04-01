@@ -393,6 +393,75 @@ func TestAccItemDataSourceSectionMapFileMap(t *testing.T) {
 	})
 }
 
+func TestAccItemDataSourceRootFileMap(t *testing.T) {
+	expectedItem := generateDocumentItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	first_content, err := expectedItem.Files[0].Content()
+	if err != nil {
+		t.Fatalf("Error getting content of first file: %v", err)
+	}
+
+	second_content, err := expectedItem.Files[1].Content()
+	if err != nil {
+		t.Fatalf("Error getting content of second file: %v", err)
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("file_map.%s.id", expectedItem.Files[0].Name), expectedItem.Files[0].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("file_map.%s.content", expectedItem.Files[0].Name), string(first_content)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("file_map.%s.id", expectedItem.Files[1].Name), expectedItem.Files[1].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("file_map.%s.content_base64", expectedItem.Files[1].Name), base64.StdEncoding.EncodeToString(second_content)),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemDataSourceRootFieldMap(t *testing.T) {
+	expectedItem := generateItemWithRootCustomFields()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	customField := expectedItem.Fields[2]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "id", fmt.Sprintf("vaults/%s/items/%s", expectedVault.ID, expectedItem.ID)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.id", customField.Label), customField.ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.value", customField.Label), customField.Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.type", customField.Label), string(customField.Type)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.id", expectedItem.Fields[0].Label), expectedItem.Fields[0].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.id", expectedItem.Fields[1].Label), expectedItem.Fields[1].ID),
+				),
+			},
+		},
+	})
+}
+
 func testAccItemDataSourceConfig(vault, uuid string) string {
 	return fmt.Sprintf(`
 data "onepassword_item" "test" {
