@@ -57,6 +57,8 @@ type OnePasswordItemDataSourceModel struct {
 	PrivateKeyOpenSSH types.String                              `tfsdk:"private_key_openssh"`
 	SectionList       []OnePasswordItemSectionListModel         `tfsdk:"section"`
 	SectionMap        map[string]OnePasswordItemSectionMapModel `tfsdk:"section_map"`
+	FieldMap          map[string]OnePasswordItemFieldMapModel   `tfsdk:"field_map"`
+	FileMap           map[string]OnePasswordItemFileMapModel    `tfsdk:"file_map"`
 	File              []OnePasswordItemFileListModel            `tfsdk:"file"`
 }
 
@@ -285,6 +287,51 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 					},
 				},
 			},
+			"field_map": schema.MapNestedAttribute{
+				MarkdownDescription: rootFieldMapDescription,
+				Computed:            true,
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: fieldIDDescription,
+							Computed:            true,
+						},
+						"type": schema.StringAttribute{
+							MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+							Computed:            true,
+						},
+						"value": schema.StringAttribute{
+							MarkdownDescription: fieldValueDescription,
+							Computed:            true,
+							Sensitive:           true,
+						},
+					},
+				},
+			},
+			"file_map": schema.MapNestedAttribute{
+				MarkdownDescription: rootFileMapDescription,
+				Computed:            true,
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: fileIDDescription,
+							Computed:            true,
+						},
+						"content": schema.StringAttribute{
+							MarkdownDescription: fileContentDescription,
+							Computed:            true,
+							Sensitive:           true,
+						},
+						"content_base64": schema.StringAttribute{
+							MarkdownDescription: fileContentBase64Description,
+							Computed:            true,
+							Sensitive:           true,
+						},
+					},
+				},
+			},
 		},
 
 		Blocks: map[string]schema.Block{
@@ -446,6 +493,8 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 	data.SectionMap = sectionMap
 
+	fieldMap := make(map[string]OnePasswordItemFieldMapModel)
+
 	for _, f := range item.Fields {
 		switch f.Purpose {
 		case model.FieldPurposeUsername:
@@ -484,11 +533,18 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.ValidFrom = types.StringValue(f.Value)
 				case "filename":
 					data.Filename = types.StringValue(f.Value)
-
+				}
+				fieldMap[f.Label] = OnePasswordItemFieldMapModel{
+					ID:    types.StringValue(f.ID),
+					Type:  types.StringValue(string(f.Type)),
+					Value: types.StringValue(f.Value),
 				}
 			}
 		}
 	}
+	data.FieldMap = fieldMap
+
+	fileMap := make(map[string]OnePasswordItemFileMapModel)
 
 	for _, f := range item.Files {
 		if f.SectionID == "" {
@@ -500,15 +556,20 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 			if err != nil {
 				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
 			}
-			file := OnePasswordItemFileListModel{
+			data.File = append(data.File, OnePasswordItemFileListModel{
 				ID:            types.StringValue(f.ID),
 				Name:          types.StringValue(f.Name),
 				Content:       types.StringValue(string(content)),
 				ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+			})
+			fileMap[f.Name] = OnePasswordItemFileMapModel{
+				ID:            types.StringValue(f.ID),
+				Content:       types.StringValue(string(content)),
+				ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
 			}
-			data.File = append(data.File, file)
 		}
 	}
+	data.FileMap = fileMap
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
 	tflog.Trace(ctx, "read an item data source")

@@ -28,6 +28,8 @@ data "onepassword_item" "example" {
 
 ### Optional
 
+- `field_map` (Attributes Map) A map of all root-level fields (fields not in any section), keyed by field label. This includes both standard fields (username, password, etc.) and any custom fields added at the root level. (see [below for nested schema](#nestedatt--field_map))
+- `file_map` (Attributes Map) A map of all root-level files (files not in any section), keyed by file name. (see [below for nested schema](#nestedatt--file_map))
 - `note_value` (String, Sensitive) Secure Note value.
 - `section_map` (Attributes Map) A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label. Cannot be used together with `section`. Use either `section` (list) or `section_map` (map), but not both. (see [below for nested schema](#nestedatt--section_map))
 - `title` (String) The title of the item to retrieve. This field will be populated with the title of the item if the item it looked up by its UUID.
@@ -53,6 +55,26 @@ data "onepassword_item" "example" {
 - `url` (String) The primary URL for the item.
 - `username` (String) Username for this item.
 - `valid_from` (String) (Only applies to the API credential category) The timestamp from which the API credential is valid.
+
+<a id="nestedatt--field_map"></a>
+### Nested Schema for `field_map`
+
+Read-Only:
+
+- `id` (String) A unique identifier for the field.
+- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
+- `value` (String, Sensitive) The value of the field.
+
+
+<a id="nestedatt--file_map"></a>
+### Nested Schema for `file_map`
+
+Read-Only:
+
+- `content` (String, Sensitive) The content of the file.
+- `content_base64` (String, Sensitive) The content of the file in base64 encoding. (Use this for binary files.)
+- `id` (String) The UUID of the file.
+
 
 <a id="nestedatt--section_map"></a>
 ### Nested Schema for `section_map`

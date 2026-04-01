@@ -54,8 +54,10 @@ const (
 	fileContentDescription       = "The content of the file."
 	fileContentBase64Description = "The content of the file in base64 encoding. (Use this for binary files.)"
 
-	fieldListDescription  = "A list of custom fields in the section"
-	fieldMapDescription   = "A map of custom fields in the section, keyed by field label."
+	rootFieldMapDescription = "A map of all root-level fields (fields not in any section), keyed by field label. This includes both standard fields (username, password, etc.) and any custom fields added at the root level."
+	rootFileMapDescription  = "A map of all root-level files (files not in any section), keyed by file name."
+	fieldListDescription    = "A list of custom fields in the section"
+	fieldMapDescription     = "A map of custom fields in the section, keyed by field label."
 	fieldIDDescription    = "A unique identifier for the field."
 	fieldLabelDescription = "The label for the field."
 	fieldTypeDescription  = "The type of value stored in the field."
