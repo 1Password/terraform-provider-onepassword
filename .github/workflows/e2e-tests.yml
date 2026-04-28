@@ -33,6 +33,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
       - name: Create kind cluster
         uses: helm/kind-action@v1
 
@@ -92,6 +97,11 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
 
       - name: Install dependencies
         run: go mod tidy
