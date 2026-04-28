@@ -14,6 +14,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
       - name: Build
         run: go build -v ./...
 
