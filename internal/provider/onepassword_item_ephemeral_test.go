@@ -212,6 +212,51 @@ func TestAccEphemeralItem_ReadDocumentItem(t *testing.T) {
 	})
 }
 
+func TestAccEphemeralItem_ReadItemWithSectionsAndFiles(t *testing.T) {
+	expectedItem := generateLoginItemWithFiles()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccEphemeralItemConfig(expectedItem.VaultID, expectedItem.ID),
+				Check:  resource.ComposeAggregateTestCheckFunc(),
+			},
+		},
+	})
+}
+
+func TestAccEphemeralItem_ReadItemWithTagsAndCategory(t *testing.T) {
+	expectedItem := generateLoginItem()
+	expectedItem.Tags = []string{"prod", "infra"}
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccEphemeralItemConfig(expectedItem.VaultID, expectedItem.ID),
+				Check:  resource.ComposeAggregateTestCheckFunc(),
+			},
+		},
+	})
+}
+
 func TestAccEphemeralItem_UseInWriteOnlyPasswordField(t *testing.T) {
 	expectedItem := generateLoginItem()
 	expectedVault := model.Vault{

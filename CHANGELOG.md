@@ -2,6 +2,7 @@
 # Latest
 
 ## Features
+  * `onepassword_item` ephemeral resource now exposes all fields supported by the `onepassword_item` data source (`category`, `tags`, `valid_from`, `filename`, `section`, `section_map`, `file`), allowing users to substitute an ephemeral block in place of a data source without losing access to any item field. {#330}
   * A user-friendly description of a new feature. {issue-number}
 
 ## Fixes
