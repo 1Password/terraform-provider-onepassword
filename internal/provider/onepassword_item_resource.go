@@ -60,6 +60,9 @@ type OnePasswordItemResourceModel struct {
 	NoteValue          types.String                                      `tfsdk:"note_value"`
 	NoteValueWO        types.String                                      `tfsdk:"note_value_wo"`
 	NoteValueWOVersion types.Int64                                       `tfsdk:"note_value_wo_version"`
+	Credential         types.String                                      `tfsdk:"credential"`
+	Filename           types.String                                      `tfsdk:"filename"`
+	ValidFrom          types.String                                      `tfsdk:"valid_from"`
 	SectionList        []OnePasswordItemResourceSectionListModel         `tfsdk:"section"`
 	SectionMap         map[string]OnePasswordItemResourceSectionMapModel `tfsdk:"section_map"`
 	Recipe             []PasswordRecipeModel                             `tfsdk:"password_recipe"`
@@ -363,6 +366,19 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 						path.Expressions{path.MatchRoot("note_value_wo")}...,
 					),
 				},
+			},
+			"credential": schema.StringAttribute{
+				MarkdownDescription: credentialDescription,
+				Optional:            true,
+				Sensitive:           true,
+			},
+			"filename": schema.StringAttribute{
+				MarkdownDescription: filenameDescription,
+				Optional:            true,
+			},
+			"valid_from": schema.StringAttribute{
+				MarkdownDescription: validFromDescription,
+				Optional:            true,
 			},
 			"section_map": schema.MapNestedAttribute{
 				MarkdownDescription: sectionMapDescription,
@@ -762,6 +778,9 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	case "secure_note":
 		modelItem.Category = model.SecureNote
 		modelItem.Fields = toModelSecureNoteFields(state)
+	case "api_credential":
+		modelItem.Category = model.APICredential
+		modelItem.Fields = toModelApiCredentialFields(state)
 	}
 
 	tags, diagnostics := toModelTags(ctx, state)

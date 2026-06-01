@@ -83,7 +83,7 @@ resource "onepassword_item" "example_with_list" {
 
 > **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
-- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note"]
+- `category` (String) The category of the item. One of ["login" "password" "secure_note" "document" "ssh_key" "database" "api_credential"]
 - `database` (String) (Only applies to the database category) The name of the database.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
 - `note_value` (String, Sensitive) Secure Note value.

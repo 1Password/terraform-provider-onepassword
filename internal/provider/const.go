@@ -79,11 +79,11 @@ var (
 		strings.ToLower(string(model.Password)),
 		strings.ToLower(string(model.Database)),
 		strings.ToLower(string(model.SecureNote)),
+		strings.ToLower(string(model.APICredential)),
 	}
 	dataSourceCategories = append(categories,
 		strings.ToLower(string(model.Document)),
 		strings.ToLower(string(model.SSHKey)),
-		strings.ToLower(string(model.APICredential)),
 	)
 
 	fieldPurposes = []string{
