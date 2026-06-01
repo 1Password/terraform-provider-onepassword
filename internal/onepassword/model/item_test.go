@@ -41,6 +41,10 @@ func TestFromModelCategoryToSDK(t *testing.T) {
 			input:    Database,
 			expected: sdk.ItemCategoryDatabase,
 		},
+		"should convert APICredential category": {
+			input:    APICredential,
+			expected: sdk.ItemCategoryAPICredentials,
+		},
 		"should return zero value for unknown category": {
 			input:    ItemCategory("UNKNOWN"),
 			expected: sdk.ItemCategory(""),
@@ -85,6 +89,10 @@ func TestFromSDKCategoryToModel(t *testing.T) {
 		"should convert Database category": {
 			input:    sdk.ItemCategoryDatabase,
 			expected: Database,
+		},
+		"should convert APICredential category": {
+			input:    sdk.ItemCategoryAPICredentials,
+			expected: APICredential,
 		},
 		"should return zero value for unknown category": {
 			input:    sdk.ItemCategory("UNKNOWN"),
@@ -217,6 +225,7 @@ func TestCategoryConversionRoundTrip(t *testing.T) {
 		Document,
 		SSHKey,
 		Database,
+		APICredential,
 	}
 
 	for _, category := range categories {
