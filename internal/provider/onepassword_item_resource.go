@@ -285,10 +285,10 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: fmt.Sprintf(enumDescription, dbTypeDescription, dbTypes),
+				MarkdownDescription: typeDescription,
 				Optional:            true,
 				Validators: []validator.String{
-					stringvalidator.OneOfCaseInsensitive(dbTypes...),
+					validateType(),
 				},
 			},
 			"tags": schema.ListAttribute{

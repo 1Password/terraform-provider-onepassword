@@ -38,7 +38,6 @@ const (
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"
 	dbDatabaseDescription = "(Only applies to the database category) The name of the database."
 	dbPortDescription     = "(Only applies to the database category) The port the database is listening on."
-	dbTypeDescription     = "(Only applies to the database category) The type of database."
 	typeDescription       = "(Only applies to database and API credential categories) The type of database or API Credential."
 
 	sectionListDescription  = "A list of custom sections in an item. Cannot be used together with `section_map`. Use either `section` (list) or `section_map` (map), but not both."
@@ -72,7 +71,8 @@ const (
 )
 
 var (
-	dbTypes = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
+	dbTypes            = []string{"db2", "filemaker", "msaccess", "mssql", "mysql", "oracle", "postgresql", "sqlite", "other"}
+	apiCredentialTypes = []string{"bearer", "json", "jwt", "other"}
 
 	categories = []string{
 		strings.ToLower(string(model.Login)),
