@@ -2,7 +2,9 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -29,24 +31,34 @@ type OnePasswordItemEphemeral struct {
 	client onepassword.Client
 }
 
-// OnePasswordItemEphemeralModel describes the data source data model.
+// OnePasswordItemEphemeralModel describes the ephemeral resource data model.
+// Fields mirror OnePasswordItemDataSourceModel so users can substitute an
+// ephemeral block in place of a data source without losing access to any
+// item field. See issue #330.
 type OnePasswordItemEphemeralModel struct {
-	ID                types.String `tfsdk:"id"`
-	Vault             types.String `tfsdk:"vault"`
-	UUID              types.String `tfsdk:"uuid"`
-	Title             types.String `tfsdk:"title"`
-	URL               types.String `tfsdk:"url"`
-	Hostname          types.String `tfsdk:"hostname"`
-	Database          types.String `tfsdk:"database"`
-	Port              types.String `tfsdk:"port"`
-	Type              types.String `tfsdk:"type"`
-	Username          types.String `tfsdk:"username"`
-	Password          types.String `tfsdk:"password"`
-	NoteValue         types.String `tfsdk:"note_value"`
-	Credential        types.String `tfsdk:"credential"`
-	PublicKey         types.String `tfsdk:"public_key"`
-	PrivateKey        types.String `tfsdk:"private_key"`
-	PrivateKeyOpenSSH types.String `tfsdk:"private_key_openssh"`
+	ID                types.String                              `tfsdk:"id"`
+	Vault             types.String                              `tfsdk:"vault"`
+	UUID              types.String                              `tfsdk:"uuid"`
+	Title             types.String                              `tfsdk:"title"`
+	Category          types.String                              `tfsdk:"category"`
+	URL               types.String                              `tfsdk:"url"`
+	Hostname          types.String                              `tfsdk:"hostname"`
+	Database          types.String                              `tfsdk:"database"`
+	Port              types.String                              `tfsdk:"port"`
+	Type              types.String                              `tfsdk:"type"`
+	Tags              types.List                                `tfsdk:"tags"`
+	Username          types.String                              `tfsdk:"username"`
+	Password          types.String                              `tfsdk:"password"`
+	NoteValue         types.String                              `tfsdk:"note_value"`
+	Credential        types.String                              `tfsdk:"credential"`
+	ValidFrom         types.String                              `tfsdk:"valid_from"`
+	Filename          types.String                              `tfsdk:"filename"`
+	PublicKey         types.String                              `tfsdk:"public_key"`
+	PrivateKey        types.String                              `tfsdk:"private_key"`
+	PrivateKeyOpenSSH types.String                              `tfsdk:"private_key_openssh"`
+	SectionList       []OnePasswordItemSectionListModel         `tfsdk:"section"`
+	SectionMap        map[string]OnePasswordItemSectionMapModel `tfsdk:"section_map"`
+	File              []OnePasswordItemFileListModel            `tfsdk:"file"`
 }
 
 func (r *OnePasswordItemEphemeral) Metadata(ctx context.Context, req ephemeral.MetadataRequest, resp *ephemeral.MetadataResponse) {
@@ -54,8 +66,35 @@ func (r *OnePasswordItemEphemeral) Metadata(ctx context.Context, req ephemeral.M
 }
 
 func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.SchemaRequest, resp *ephemeral.SchemaResponse) {
+	// Note: the ephemeral framework does not permit Computed-only blocks
+	// (block counts in the result must match block counts in config), so
+	// section/file are exposed as Computed ListNestedAttributes here even
+	// though the data source uses blocks. The resulting access pattern in
+	// HCL is identical (e.g. ephemeral.onepassword_item.x.section[0].field[0].value).
+	fileNestedObject := schema.NestedAttributeObject{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: fileIDDescription,
+				Computed:            true,
+			},
+			"name": schema.StringAttribute{
+				MarkdownDescription: fileNameDescription,
+				Computed:            true,
+			},
+			"content": schema.StringAttribute{
+				MarkdownDescription: fileContentDescription,
+				Computed:            true,
+				Sensitive:           true,
+			},
+			"content_base64": schema.StringAttribute{
+				MarkdownDescription: fileContentBase64Description,
+				Computed:            true,
+				Sensitive:           true,
+			},
+		},
+	}
+
 	resp.Schema = schema.Schema{
-		// This description is used by the documentation generator and the language server.
 		MarkdownDescription: itemEphemeralDescription,
 
 		Attributes: map[string]schema.Attribute{
@@ -83,6 +122,10 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 				Optional:            true,
 				Computed:            true,
 			},
+			"category": schema.StringAttribute{
+				MarkdownDescription: fmt.Sprintf(enumDescription, categoryDescription, dataSourceCategories),
+				Computed:            true,
+			},
 			"url": schema.StringAttribute{
 				MarkdownDescription: urlDescription,
 				Computed:            true,
@@ -103,6 +146,11 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 				MarkdownDescription: typeDescription,
 				Computed:            true,
 			},
+			"tags": schema.ListAttribute{
+				MarkdownDescription: tagsDescription,
+				Computed:            true,
+				ElementType:         types.StringType,
+			},
 			"username": schema.StringAttribute{
 				MarkdownDescription: usernameDescription,
 				Computed:            true,
@@ -122,6 +170,14 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 				Computed:            true,
 				Sensitive:           true,
 			},
+			"valid_from": schema.StringAttribute{
+				MarkdownDescription: validFromDescription,
+				Computed:            true,
+			},
+			"filename": schema.StringAttribute{
+				MarkdownDescription: filenameDescription,
+				Computed:            true,
+			},
 			"public_key": schema.StringAttribute{
 				MarkdownDescription: publicKeyDescription,
 				Computed:            true,
@@ -135,6 +191,115 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 				MarkdownDescription: privateKeyOpenSSHDescription,
 				Computed:            true,
 				Sensitive:           true,
+			},
+			"section_map": schema.MapNestedAttribute{
+				MarkdownDescription: sectionMapDescription,
+				Computed:            true,
+				Optional:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: sectionIDDescription,
+							Computed:            true,
+						},
+						"field_map": schema.MapNestedAttribute{
+							MarkdownDescription: fieldMapDescription,
+							Computed:            true,
+							Optional:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fieldIDDescription,
+										Computed:            true,
+									},
+									"type": schema.StringAttribute{
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+										Computed:            true,
+									},
+									"value": schema.StringAttribute{
+										MarkdownDescription: fieldValueDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+						"file_map": schema.MapNestedAttribute{
+							MarkdownDescription: fileMapDescription,
+							Computed:            true,
+							Optional:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fileIDDescription,
+										Computed:            true,
+									},
+									"content": schema.StringAttribute{
+										MarkdownDescription: fileContentDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+									"content_base64": schema.StringAttribute{
+										MarkdownDescription: fileContentBase64Description,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			"section": schema.ListNestedAttribute{
+				MarkdownDescription: sectionListDescription,
+				Computed:            true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							MarkdownDescription: sectionIDDescription,
+							Computed:            true,
+						},
+						"label": schema.StringAttribute{
+							MarkdownDescription: sectionLabelDescription,
+							Computed:            true,
+						},
+						"field": schema.ListNestedAttribute{
+							MarkdownDescription: fieldListDescription,
+							Computed:            true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"id": schema.StringAttribute{
+										MarkdownDescription: fieldIDDescription,
+										Computed:            true,
+									},
+									"label": schema.StringAttribute{
+										MarkdownDescription: fieldLabelDescription,
+										Computed:            true,
+									},
+									"type": schema.StringAttribute{
+										MarkdownDescription: fmt.Sprintf(enumDescription, fieldTypeDescription, fieldTypes),
+										Computed:            true,
+									},
+									"value": schema.StringAttribute{
+										MarkdownDescription: fieldValueDescription,
+										Computed:            true,
+										Sensitive:           true,
+									},
+								},
+							},
+						},
+						"file": schema.ListNestedAttribute{
+							MarkdownDescription: fileListDescription,
+							Computed:            true,
+							NestedObject:        fileNestedObject,
+						},
+					},
+				},
+			},
+			"file": schema.ListNestedAttribute{
+				MarkdownDescription: documentFileListDescription,
+				Computed:            true,
+				NestedObject:        fileNestedObject,
 			},
 		},
 	}
@@ -179,12 +344,67 @@ func (r *OnePasswordItemEphemeral) Open(ctx context.Context, req ephemeral.OpenR
 	data.UUID = types.StringValue(item.ID)
 	data.Vault = types.StringValue(item.VaultID)
 	data.Title = types.StringValue(item.Title)
+	data.Category = types.StringValue(strings.ToLower(string(item.Category)))
 
 	for _, u := range item.URLs {
 		if u.Primary {
 			data.URL = types.StringValue(u.URL)
 		}
 	}
+
+	tags, diag := types.ListValueFrom(ctx, types.StringType, item.Tags)
+	resp.Diagnostics.Append(diag...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.Tags = tags
+
+	for _, s := range item.Sections {
+		section := OnePasswordItemSectionListModel{
+			ID:    types.StringValue(s.ID),
+			Label: types.StringValue(s.Label),
+		}
+
+		for _, f := range item.Fields {
+			if f.SectionID != "" && f.SectionID == s.ID {
+				section.Field = append(section.Field, OnePasswordItemFieldListModel{
+					ID:    types.StringValue(f.ID),
+					Label: types.StringValue(f.Label),
+					Type:  types.StringValue(string(f.Type)),
+					Value: types.StringValue(f.Value),
+				})
+			}
+		}
+
+		for _, f := range item.Files {
+			if f.SectionID != "" && f.SectionID == s.ID {
+				content, err := f.Content()
+				if err != nil {
+					// content has not yet been loaded, fetch it
+					content, err = r.client.GetFileContent(ctx, &f, item.ID, item.VaultID)
+				}
+				if err != nil {
+					resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+				}
+				file := OnePasswordItemFileListModel{
+					ID:            types.StringValue(f.ID),
+					Name:          types.StringValue(f.Name),
+					Content:       types.StringValue(string(content)),
+					ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+				}
+				section.File = append(section.File, file)
+			}
+		}
+
+		data.SectionList = append(data.SectionList, section)
+	}
+
+	sectionMap, diag := buildSectionMap(ctx, item, r.client)
+	resp.Diagnostics.Append(diag...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	data.SectionMap = sectionMap
 
 	for _, f := range item.Fields {
 		switch f.Purpose {
@@ -220,8 +440,32 @@ func (r *OnePasswordItemEphemeral) Open(ctx context.Context, req ephemeral.OpenR
 					data.PrivateKeyOpenSSH = types.StringValue(openSSHPrivateKey)
 				case "credential":
 					data.Credential = types.StringValue(f.Value)
+				case "validFrom":
+					data.ValidFrom = types.StringValue(f.Value)
+				case "filename":
+					data.Filename = types.StringValue(f.Value)
 				}
 			}
+		}
+	}
+
+	for _, f := range item.Files {
+		if f.SectionID == "" {
+			content, err := f.Content()
+			if err != nil {
+				// content has not yet been loaded, fetch it
+				content, err = r.client.GetFileContent(ctx, &f, item.ID, item.VaultID)
+			}
+			if err != nil {
+				resp.Diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read file, got error: %s", err))
+			}
+			file := OnePasswordItemFileListModel{
+				ID:            types.StringValue(f.ID),
+				Name:          types.StringValue(f.Name),
+				Content:       types.StringValue(string(content)),
+				ContentBase64: types.StringValue(base64.StdEncoding.EncodeToString(content)),
+			}
+			data.File = append(data.File, file)
 		}
 	}
 
