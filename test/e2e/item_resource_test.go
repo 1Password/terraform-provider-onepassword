@@ -70,6 +70,18 @@ var testItemsToCreate = map[model.ItemCategory]testResourceItem{
 			"tags":       []string{"firstTestTag", "secondTestTag"},
 		},
 	},
+	model.APICredential: {
+		Attrs: map[string]any{
+			"title":      "Test API Credential Create",
+			"category":   "api_credential",
+			"credential": "testCredential",
+			"username":   "testAPICredential",
+			"hostname":   "testHostname",
+			"type":       "bearer",
+			"valid_from": "2026-01-01",
+			"filename":   "testFilename",
+		},
+	},
 }
 
 var testItemsUpdatedAttrs = map[model.ItemCategory]map[string]any{
@@ -106,6 +118,16 @@ var testItemsUpdatedAttrs = map[model.ItemCategory]map[string]any{
 		"note_value": "This is an updated secure note",
 		"tags":       []string{"firstUpdatedTestTag", "secondUpdatedTestTag"},
 	},
+	model.APICredential: {
+		"title":      "Test API Credential Create",
+		"category":   "api_credential",
+		"credential": "updatedTestCredential",
+		"username":   "updatedTestAPICredential",
+		"hostname":   "updatedTestHostname",
+		"type":       "bearer",
+		"valid_from": "2026-05-01",
+		"filename":   "updatedTestFilename",
+	},
 }
 
 func TestMain(m *testing.M) {
@@ -129,6 +151,7 @@ func TestAccItemResource(t *testing.T) {
 		{category: model.Password, name: "Password"},
 		{category: model.Database, name: "Database"},
 		{category: model.SecureNote, name: "SecureNote"},
+		{category: model.APICredential, name: "APICredential"},
 	}
 
 	testVaultID := vault.GetTestVaultID(t)

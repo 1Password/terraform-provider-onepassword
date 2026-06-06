@@ -180,6 +180,38 @@ func TestAccItemResourceDocument(t *testing.T) {
 	})
 }
 
+func TestAccItemResourceApiCredential(t *testing.T) {
+	expectedItem := generateApiCredentialItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccApiCredentialResourceConfig(expectedItem),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					// verify local values
+					resource.TestCheckResourceAttr("onepassword_item.test-api", "title", expectedItem.Title),
+					resource.TestCheckResourceAttr("onepassword_item.test-api", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("onepassword_item.test-api", "username", expectedItem.Fields[0].Value),
+					resource.TestCheckResourceAttr("onepassword_item.test-api", "credential", expectedItem.Fields[1].Value),
+					resource.TestCheckResourceAttr("onepassword_item.test-api", "type", expectedItem.Fields[2].Value),
+					resource.TestCheckResourceAttr("onepassword_item.test-api", "filename", expectedItem.Fields[3].Value),
+					resource.TestCheckResourceAttr("onepassword_item.test-api", "valid_from", expectedItem.Fields[4].Value),
+					resource.TestCheckResourceAttr("onepassword_item.test-api", "hostname", expectedItem.Fields[5].Value),
+				),
+			},
+		},
+	})
+}
+
 func TestAccItemResource_PasswordWriteOnly(t *testing.T) {
 	expectedItem := generatePasswordItem()
 	expectedVault := model.Vault{
@@ -500,6 +532,25 @@ resource "onepassword_item" "test-document" {
   title = "%s"
   category = "%s"
 }`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)))
+}
+
+func testAccApiCredentialResourceConfig(expectedItem *model.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-api" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  username = "%s"
+  credential = "%s"
+  type = "%s"
+  filename = "%s"
+  valid_from = "%s"
+  hostname = "%s"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[1].Value, expectedItem.Fields[2].Value, expectedItem.Fields[3].Value, expectedItem.Fields[4].Value, expectedItem.Fields[5].Value)
 }
 
 func testAccResourceWithSectionsConfig(expectedItem *model.Item) string {
