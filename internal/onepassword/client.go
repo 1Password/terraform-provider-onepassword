@@ -18,6 +18,7 @@ type Client interface {
 	CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error)
 	UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error)
 	DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error
+	GetItems(ctx context.Context, vaultUUID string, itemTitlesOrIDs []string) ([]*model.Item, error)
 	GetFileContent(ctx context.Context, file *model.ItemFile, itemUUid, vaultUuid string) ([]byte, error)
 	// GetEnvironmentVariables reads variables from a 1Password Environment. Only supported when using the 1Password SDK (service account or desktop app); not supported with 1Password Connect.
 	GetEnvironmentVariables(ctx context.Context, environmentID string) ([]model.EnvironmentVariable, error)

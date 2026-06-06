@@ -123,6 +123,100 @@ func (c *Client) GetItemByTitle(ctx context.Context, title string, vaultUuid str
 	return modelItem, nil
 }
 
+func (c *Client) GetItems(ctx context.Context, vaultUUID string, itemTitlesOrIDs []string) ([]*model.Item, error) {
+	resolvedVaultUUID, err := c.resolveVaultUUID(ctx, vaultUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Separate UUIDs from titles
+	var ids []string
+	var titles []string
+	// Track the original index for each ID so we can return items in order
+	idOrder := make(map[string][]int)
+	for i, v := range itemTitlesOrIDs {
+		if util.IsValidUUID(v) {
+			ids = append(ids, v)
+			idOrder[v] = append(idOrder[v], i)
+		} else {
+			titles = append(titles, v)
+		}
+	}
+
+	// Resolve titles to IDs if any titles were provided
+	if len(titles) > 0 {
+		overviews, err := c.sdkClient.Items().List(ctx, resolvedVaultUUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list items for title resolution: %w", err)
+		}
+
+		titleToID := make(map[string]string, len(titles))
+		titleCounts := make(map[string]int, len(titles))
+		titleSet := make(map[string]bool, len(titles))
+		for _, t := range titles {
+			titleSet[t] = true
+		}
+		for _, overview := range overviews {
+			if titleSet[overview.Title] {
+				titleToID[overview.Title] = overview.ID
+				titleCounts[overview.Title]++
+			}
+		}
+
+		for i, title := range itemTitlesOrIDs {
+			if util.IsValidUUID(title) {
+				continue
+			}
+			count := titleCounts[title]
+			if count == 0 {
+				return nil, fmt.Errorf("found 0 item(s) in vault %q with title %q", vaultUUID, title)
+			}
+			if count > 1 {
+				return nil, fmt.Errorf("found %d item(s) in vault %q with title %q", count, vaultUUID, title)
+			}
+			resolvedID := titleToID[title]
+			ids = append(ids, resolvedID)
+			idOrder[resolvedID] = append(idOrder[resolvedID], i)
+		}
+	}
+
+	// Batch fetch all items by ID
+	response, err := c.sdkClient.Items().GetAll(ctx, resolvedVaultUUID, ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to batch get items using sdk: %w", err)
+	}
+
+	// Build a map of ID -> model.Item from the response
+	fetchedItems := make(map[string]*model.Item, len(response.IndividualResponses))
+	for i, resp := range response.IndividualResponses {
+		if resp.Error != nil {
+			return nil, fmt.Errorf("failed to get item %q: %s", ids[i], resp.Error.Type)
+		}
+		if resp.Content == nil {
+			return nil, fmt.Errorf("failed to get item %q: empty response", ids[i])
+		}
+		modelItem := &model.Item{}
+		if err := modelItem.FromSDKItemToModel(resp.Content); err != nil {
+			return nil, fmt.Errorf("failed to convert item %q: %w", ids[i], err)
+		}
+		fetchedItems[ids[i]] = modelItem
+	}
+
+	// Reassemble in original order
+	items := make([]*model.Item, len(itemTitlesOrIDs))
+	for id, indices := range idOrder {
+		item, ok := fetchedItems[id]
+		if !ok {
+			return nil, fmt.Errorf("item %q not found in batch response", id)
+		}
+		for _, idx := range indices {
+			items[idx] = item
+		}
+	}
+
+	return items, nil
+}
+
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	params := item.FromModelItemToSDKCreateParams()
 
