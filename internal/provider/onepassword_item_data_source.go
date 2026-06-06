@@ -496,6 +496,14 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	fieldMap := make(map[string]OnePasswordItemFieldMapModel)
 
 	for _, f := range item.Fields {
+		if f.SectionID == "" {
+			fieldMap[f.Label] = OnePasswordItemFieldMapModel{
+				ID:    types.StringValue(f.ID),
+				Type:  types.StringValue(string(f.Type)),
+				Value: types.StringValue(f.Value),
+			}
+		}
+
 		switch f.Purpose {
 		case model.FieldPurposeUsername:
 			data.Username = types.StringValue(f.Value)
@@ -533,11 +541,6 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 					data.ValidFrom = types.StringValue(f.Value)
 				case "filename":
 					data.Filename = types.StringValue(f.Value)
-				}
-				fieldMap[f.Label] = OnePasswordItemFieldMapModel{
-					ID:    types.StringValue(f.ID),
-					Type:  types.StringValue(string(f.Type)),
-					Value: types.StringValue(f.Value),
 				}
 			}
 		}

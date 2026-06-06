@@ -462,6 +462,65 @@ func TestAccItemDataSourceRootFieldMap(t *testing.T) {
 	})
 }
 
+func TestAccItemDataSourceRootFieldMapIncludesPurposeFields(t *testing.T) {
+	expectedItem := generateBaseItem()
+	expectedItem.Category = model.Login
+	expectedItem.Fields = []model.ItemField{
+		{
+			ID:      "username",
+			Label:   "username",
+			Type:    model.FieldTypeString,
+			Value:   "test_user",
+			Purpose: model.FieldPurposeUsername,
+		},
+		{
+			ID:      "password",
+			Label:   "password",
+			Type:    model.FieldTypeConcealed,
+			Value:   "test_password",
+			Purpose: model.FieldPurposePassword,
+		},
+		{
+			ID:      "notesPlain",
+			Label:   "notesPlain",
+			Type:    model.FieldTypeString,
+			Value:   "test notes",
+			Purpose: model.FieldPurposeNotes,
+		},
+	}
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(&expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccItemDataSourceConfig(expectedItem.VaultID, expectedItem.ID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "username", expectedItem.Fields[0].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "password", expectedItem.Fields[1].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "note_value", expectedItem.Fields[2].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.id", expectedItem.Fields[0].Label), expectedItem.Fields[0].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.value", expectedItem.Fields[0].Label), expectedItem.Fields[0].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.type", expectedItem.Fields[0].Label), string(expectedItem.Fields[0].Type)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.id", expectedItem.Fields[1].Label), expectedItem.Fields[1].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.value", expectedItem.Fields[1].Label), expectedItem.Fields[1].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.type", expectedItem.Fields[1].Label), string(expectedItem.Fields[1].Type)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.id", expectedItem.Fields[2].Label), expectedItem.Fields[2].ID),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.value", expectedItem.Fields[2].Label), expectedItem.Fields[2].Value),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", fmt.Sprintf("field_map.%s.type", expectedItem.Fields[2].Label), string(expectedItem.Fields[2].Type)),
+				),
+			},
+		},
+	})
+}
+
 func testAccItemDataSourceConfig(vault, uuid string) string {
 	return fmt.Sprintf(`
 data "onepassword_item" "test" {

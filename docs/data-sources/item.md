@@ -28,7 +28,7 @@ data "onepassword_item" "example" {
 
 ### Optional
 
-- `field_map` (Attributes Map) A map of all root-level fields (fields not in any section), keyed by field label. This includes both standard fields (username, password, etc.) and any custom fields added at the root level. (see [below for nested schema](#nestedatt--field_map))
+- `field_map` (Attributes Map) A map of all API root-level fields whose `SectionID` is empty, keyed by field label. This includes both standard fields (username, password, etc.) and any custom fields added at the API root level. Fields that appear unsectioned in the 1Password UI may still be stored under the built-in `add more` section and are exposed through `section_map` instead. (see [below for nested schema](#nestedatt--field_map))
 - `file_map` (Attributes Map) A map of all root-level files (files not in any section), keyed by file name. (see [below for nested schema](#nestedatt--file_map))
 - `note_value` (String, Sensitive) Secure Note value.
 - `section_map` (Attributes Map) A map of custom sections in an item, keyed by section label. This allows direct lookup of sections and their fields by label. Cannot be used together with `section`. Use either `section` (list) or `section_map` (map), but not both. (see [below for nested schema](#nestedatt--section_map))
