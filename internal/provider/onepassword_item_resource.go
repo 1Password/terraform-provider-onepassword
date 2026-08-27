@@ -30,6 +30,7 @@ import (
 var _ resource.Resource = &OnePasswordItemResource{}
 var _ resource.ResourceWithImportState = &OnePasswordItemResource{}
 var _ resource.ResourceWithValidateConfig = &OnePasswordItemResource{}
+var _ resource.ResourceWithModifyPlan = &OnePasswordItemResource{}
 
 func NewOnePasswordItemResource() resource.Resource {
 	return &OnePasswordItemResource{}
@@ -48,6 +49,8 @@ type OnePasswordItemResourceModel struct {
 	Category           types.String                                      `tfsdk:"category"`
 	Title              types.String                                      `tfsdk:"title"`
 	URL                types.String                                      `tfsdk:"url"`
+	CreatedAt          types.String                                      `tfsdk:"created_at"`
+	UpdatedAt          types.String                                      `tfsdk:"updated_at"`
 	Hostname           types.String                                      `tfsdk:"hostname"`
 	Database           types.String                                      `tfsdk:"database"`
 	Port               types.String                                      `tfsdk:"port"`
@@ -268,6 +271,17 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 			"url": schema.StringAttribute{
 				MarkdownDescription: urlDescription,
 				Optional:            true,
+			},
+			"created_at": schema.StringAttribute{
+				MarkdownDescription: createdAtDescription,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"updated_at": schema.StringAttribute{
+				MarkdownDescription: updatedAtDescription,
+				Computed:            true,
 			},
 			"hostname": schema.StringAttribute{
 				MarkdownDescription: dbHostnameDescription,
@@ -492,6 +506,20 @@ func (r *OnePasswordItemResource) ValidateConfig(ctx context.Context, req resour
 	}
 }
 
+// ModifyPlan marks `updated_at` as unknown whenever a change is planned. 1Password
+// sets the timestamp when it writes the item, so carrying the prior state value
+// forward would make the planned value disagree with the applied one.
+func (r *OnePasswordItemResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	// Nothing to do on create (no prior state) or destroy (no plan).
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+		return
+	}
+
+	if !req.Plan.Raw.Equal(req.State.Raw) {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("updated_at"), types.StringUnknown())...)
+	}
+}
+
 func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan OnePasswordItemResourceModel
 	var config OnePasswordItemResourceModel
@@ -698,6 +726,8 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 	state.Vault = setStringValue(modelItem.VaultID)
 	state.Title = setStringValuePreservingEmpty(modelItem.Title, state.Title)
 	state.Category = setStringValue(strings.ToLower(string(modelItem.Category)))
+	state.CreatedAt = setTimeValue(modelItem.CreatedAt)
+	state.UpdatedAt = setTimeValue(modelItem.UpdatedAt)
 
 	if len(state.SectionMap) > 0 {
 		state.SectionMap = toStateSectionsAndFieldsMap(modelItem, state.SectionMap)

@@ -41,6 +41,8 @@ type OnePasswordItemDataSourceModel struct {
 	Title             types.String                              `tfsdk:"title"`
 	Category          types.String                              `tfsdk:"category"`
 	URL               types.String                              `tfsdk:"url"`
+	CreatedAt         types.String                              `tfsdk:"created_at"`
+	UpdatedAt         types.String                              `tfsdk:"updated_at"`
 	Hostname          types.String                              `tfsdk:"hostname"`
 	Database          types.String                              `tfsdk:"database"`
 	Port              types.String                              `tfsdk:"port"`
@@ -162,6 +164,14 @@ func (d *OnePasswordItemDataSource) Schema(ctx context.Context, req datasource.S
 			},
 			"url": schema.StringAttribute{
 				MarkdownDescription: urlDescription,
+				Computed:            true,
+			},
+			"created_at": schema.StringAttribute{
+				MarkdownDescription: createdAtDescription,
+				Computed:            true,
+			},
+			"updated_at": schema.StringAttribute{
+				MarkdownDescription: updatedAtDescription,
 				Computed:            true,
 			},
 			"hostname": schema.StringAttribute{
@@ -383,6 +393,8 @@ func (d *OnePasswordItemDataSource) Read(ctx context.Context, req datasource.Rea
 	data.UUID = types.StringValue(item.ID)
 	data.Vault = types.StringValue(item.VaultID)
 	data.Title = types.StringValue(item.Title)
+	data.CreatedAt = setTimeValue(item.CreatedAt)
+	data.UpdatedAt = setTimeValue(item.UpdatedAt)
 
 	for _, u := range item.URLs {
 		if u.Primary {

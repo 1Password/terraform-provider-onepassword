@@ -42,6 +42,7 @@ ephemeral "onepassword_item" "example_by_uuid" {
 ### Read-Only
 
 - `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key" "api_credential"]
+- `created_at` (String) The date and time the item was created in 1Password, as an RFC 3339 timestamp in UTC.
 - `credential` (String, Sensitive) (Only applies to the API credential category) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
 - `file` (Attributes List) A list of files attached to the document item. (see [below for nested schema](#nestedatt--file))
@@ -57,6 +58,7 @@ ephemeral "onepassword_item" "example_by_uuid" {
 - `section` (Attributes List) A list of custom sections in an item. Cannot be used together with `section_map`. Use either `section` (list) or `section_map` (map), but not both. (see [below for nested schema](#nestedatt--section))
 - `tags` (List of String) An array of strings of the tags assigned to the item.
 - `type` (String) (Only applies to database and API credential categories) The type of database or API Credential.
+- `updated_at` (String) The date and time the item was last changed in 1Password, as an RFC 3339 timestamp in UTC. This is the item's own modification time, so it also moves when the item is changed outside Terraform.
 - `url` (String) The primary URL for the item.
 - `username` (String) Username for this item.
 - `valid_from` (String) (Only applies to the API credential category) The timestamp from which the API credential is valid.

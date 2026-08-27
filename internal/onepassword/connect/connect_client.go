@@ -133,6 +133,7 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Verify the item exists (newly created items have version 1).
 	// Ignore errors from Retry404UntilCondition - if create succeeded, we return the created item even if retry times out
+	var propagatedItem *onepassword.Item
 	_ = util.Retry404UntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(createdItem.ID, vaultUuid)
 		if err != nil {
@@ -141,12 +142,21 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 		}
 		// Item exists, check if it has version 1 (newly created)
 		if fetchedItem != nil && fetchedItem.Version == 1 {
+			propagatedItem = fetchedItem
 			return true, nil
 		}
 
 		// Item exists but version doesn't match yet, continue retrying with "condition not met" error
 		return false, fmt.Errorf("condition not met: item version is %d, expected 1", fetchedItem.Version)
 	})
+
+	// Prefer the item Connect reports once the create has propagated: it carries
+	// the server managed metadata (createdAt/updatedAt), which the create
+	// response does not reliably report. Fall back to the create response when
+	// the item did not propagate in time.
+	if propagatedItem != nil {
+		createdItem = propagatedItem
+	}
 
 	// Convert created Connect Item back to model Item
 	modelItem := &model.Item{}
@@ -179,6 +189,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 	// Wait for Connect to propagate the update to the local SQLite database.
 	// The sync service needs time to sync changes from the remote service to the local database.
 	// Use Retry404UntilCondition to retry until the item version matches the expected version.
+	var propagatedItem *onepassword.Item
 	err = util.Retry404UntilCondition(ctx, func() (bool, error) {
 		fetchedItem, err := c.connectClient.GetItemByUUID(updatedItem.ID, vaultUuid)
 		if err != nil {
@@ -187,6 +198,7 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		}
 		// Compare versions to verify the update has propagated
 		if fetchedItem != nil && fetchedItem.Version == expectedVersion {
+			propagatedItem = fetchedItem
 			return true, nil
 		}
 		// Version doesn't match yet, continue retrying with "condition not met" error
@@ -194,6 +206,14 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// The update response reports pre-update metadata - the same reason the
+	// version has to be incremented by hand above - so `updatedAt` in it is the
+	// time of the *previous* change to the item. Report what Connect says the
+	// item looks like now instead.
+	if propagatedItem != nil {
+		updatedItem = propagatedItem
 	}
 
 	// Convert updated Connect Item back to model Item

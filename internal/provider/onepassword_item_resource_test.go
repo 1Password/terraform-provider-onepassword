@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
@@ -37,6 +38,8 @@ func TestAccItemResourceDatabase(t *testing.T) {
 					resource.TestCheckResourceAttr("onepassword_item.test-database", "port", expectedItem.Fields[4].Value),
 					resource.TestCheckResourceAttr("onepassword_item.test-database", "type", expectedItem.Fields[5].Value),
 					resource.TestCheckResourceAttrSet("onepassword_item.test-database", "password"),
+					resource.TestCheckResourceAttr("onepassword_item.test-database", "created_at", testItemCreatedAt.Format(time.RFC3339)),
+					resource.TestCheckResourceAttr("onepassword_item.test-database", "updated_at", testItemUpdatedAt.Format(time.RFC3339)),
 				),
 			},
 		},

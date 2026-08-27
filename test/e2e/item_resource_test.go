@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -148,12 +149,14 @@ func TestAccItemResource(t *testing.T) {
 			updatedAttrs["title"] = addUniqueIDToTitle(updatedAttrs["title"].(string), uniqueID)
 
 			var itemUUID string
+			var createdAt, updatedAt time.Time
 
 			// Build check functions for create step
 			createChecks := []resource.TestCheckFunc{
 				logStep(t, "CREATE"),
 				uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
 				cleanup.RegisterItem(t, &itemUUID, testVaultID),
+				checks.CaptureItemTimestamps("onepassword_item.test_item", &createdAt, &updatedAt),
 			}
 			bcCreate := checks.BuildItemChecks("onepassword_item.test_item", createAttrs)
 			createChecks = append(createChecks, bcCreate...)
@@ -162,6 +165,7 @@ func TestAccItemResource(t *testing.T) {
 			updateChecks := []resource.TestCheckFunc{
 				logStep(t, "UPDATE"),
 				uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+				checks.VerifyItemTimestampsAfterUpdate("onepassword_item.test_item", &createdAt, &updatedAt),
 			}
 			bcUpdate := checks.BuildItemChecks("onepassword_item.test_item", updatedAttrs)
 			updateChecks = append(updateChecks, bcUpdate...)
