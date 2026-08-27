@@ -103,9 +103,11 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 					itemToReturn.Fields = append(itemToReturn.Fields, itemField)
 				}
 
-				// Set the ID and VaultID
+				// Set the ID, VaultID and the server managed timestamps
 				itemToReturn.ID = expectedItem.ID
 				itemToReturn.VaultID = expectedItem.VaultID
+				itemToReturn.CreatedAt = expectedItem.CreatedAt
+				itemToReturn.UpdatedAt = expectedItem.UpdatedAt
 
 				// Convert back to Connect format for response
 				connectItemToReturn, err := itemToReturn.FromModelItemToConnect()

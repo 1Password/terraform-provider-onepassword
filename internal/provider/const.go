@@ -20,6 +20,8 @@ const (
 	categoryDescription                  = "The category of the item."
 	itemTitleDescription                 = "The title of the item."
 	urlDescription                       = "The primary URL for the item."
+	createdAtDescription                 = "The date and time the item was created in 1Password, as an RFC 3339 timestamp in UTC."
+	updatedAtDescription                 = "The date and time the item was last changed in 1Password, as an RFC 3339 timestamp in UTC. This is the item's own modification time, so it also moves when the item is changed outside Terraform."
 	tagsDescription                      = "An array of strings of the tags assigned to the item."
 	usernameDescription                  = "Username for this item."
 	passwordDescription                  = "Password for this item."

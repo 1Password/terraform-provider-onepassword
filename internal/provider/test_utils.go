@@ -7,10 +7,18 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	"golang.org/x/crypto/ssh"
 
 	"github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword/model"
+)
+
+// Timestamps 1Password reports for the mocked items. They are server managed,
+// so the test server always answers with these values.
+var (
+	testItemCreatedAt = time.Date(2024, 3, 1, 10, 30, 0, 0, time.UTC)
+	testItemUpdatedAt = time.Date(2024, 5, 2, 11, 45, 0, 0, time.UTC)
 )
 
 func generateBaseItem() model.Item {
@@ -18,6 +26,8 @@ func generateBaseItem() model.Item {
 	item.ID = "rix6gwgpuyog4gqplegvrp3dbm"
 	item.VaultID = "gs2jpwmahszwq25a7jiw45e4je"
 	item.Title = "test item"
+	item.CreatedAt = testItemCreatedAt
+	item.UpdatedAt = testItemUpdatedAt
 
 	return item
 }

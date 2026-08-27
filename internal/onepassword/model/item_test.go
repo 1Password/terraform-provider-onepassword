@@ -3,6 +3,7 @@ package model
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
@@ -1231,6 +1232,29 @@ func TestFromSDKItemToModel(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		"should convert item timestamps": {
+			input: &sdk.Item{
+				ID:        "item1",
+				Title:     "Test Item",
+				VaultID:   "vault1",
+				Category:  sdk.ItemCategoryLogin,
+				CreatedAt: time.Date(2024, 3, 1, 10, 30, 0, 0, time.UTC),
+				UpdatedAt: time.Date(2024, 5, 2, 11, 45, 0, 0, time.UTC),
+			},
+			expected: &Item{
+				ID:        "item1",
+				Title:     "Test Item",
+				VaultID:   "vault1",
+				Category:  Login,
+				URLs:      []ItemURL{},
+				Sections:  []ItemSection{},
+				Fields:    []ItemField{},
+				Files:     []ItemFile{},
+				CreatedAt: time.Date(2024, 3, 1, 10, 30, 0, 0, time.UTC),
+				UpdatedAt: time.Date(2024, 5, 2, 11, 45, 0, 0, time.UTC),
+			},
+			wantErr: false,
+		},
 		"should convert item with sections and fields": {
 			input: &sdk.Item{
 				ID:       "item1",
@@ -2235,6 +2259,29 @@ func TestFromConnectItemToModel(t *testing.T) {
 				Sections: []ItemSection{},
 				Fields:   []ItemField{},
 				Files:    []ItemFile{},
+			},
+			wantErr: false,
+		},
+		"should convert item timestamps": {
+			input: &connect.Item{
+				ID:        "item1",
+				Title:     "Test Item",
+				Vault:     connect.ItemVault{ID: "vault1"},
+				Category:  connect.ItemCategory("LOGIN"),
+				CreatedAt: time.Date(2024, 3, 1, 10, 30, 0, 0, time.UTC),
+				UpdatedAt: time.Date(2024, 5, 2, 11, 45, 0, 0, time.UTC),
+			},
+			expected: &Item{
+				ID:        "item1",
+				Title:     "Test Item",
+				VaultID:   "vault1",
+				Category:  Login,
+				URLs:      []ItemURL{},
+				Sections:  []ItemSection{},
+				Fields:    []ItemField{},
+				Files:     []ItemFile{},
+				CreatedAt: time.Date(2024, 3, 1, 10, 30, 0, 0, time.UTC),
+				UpdatedAt: time.Date(2024, 5, 2, 11, 45, 0, 0, time.UTC),
 			},
 			wantErr: false,
 		},
