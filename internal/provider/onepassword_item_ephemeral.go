@@ -52,6 +52,7 @@ type OnePasswordItemEphemeralModel struct {
 	NoteValue         types.String                              `tfsdk:"note_value"`
 	Credential        types.String                              `tfsdk:"credential"`
 	ValidFrom         types.String                              `tfsdk:"valid_from"`
+	Expires           types.String                              `tfsdk:"expires"`
 	Filename          types.String                              `tfsdk:"filename"`
 	PublicKey         types.String                              `tfsdk:"public_key"`
 	PrivateKey        types.String                              `tfsdk:"private_key"`
@@ -172,6 +173,10 @@ func (r *OnePasswordItemEphemeral) Schema(ctx context.Context, req ephemeral.Sch
 			},
 			"valid_from": schema.StringAttribute{
 				MarkdownDescription: validFromDescription,
+				Computed:            true,
+			},
+			"expires": schema.StringAttribute{
+				MarkdownDescription: expiresDescription,
 				Computed:            true,
 			},
 			"filename": schema.StringAttribute{
@@ -442,6 +447,8 @@ func (r *OnePasswordItemEphemeral) Open(ctx context.Context, req ephemeral.OpenR
 					data.Credential = types.StringValue(f.Value)
 				case "validFrom":
 					data.ValidFrom = types.StringValue(f.Value)
+				case "expires":
+					data.Expires = types.StringValue(f.Value)
 				case "filename":
 					data.Filename = types.StringValue(f.Value)
 				}
