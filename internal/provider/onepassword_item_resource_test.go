@@ -529,3 +529,317 @@ resource "onepassword_item" "test-database" {
 		expectedItem.Fields[0].Value,
 	)
 }
+
+func TestAccItemResourceSSHKey(t *testing.T) {
+	expectedItem := generateSSHKeyItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-ssh-key" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "ssh_key"
+}`, expectedItem.VaultID, expectedItem.Title),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test-ssh-key", "category", "ssh_key"),
+					resource.TestCheckResourceAttr("onepassword_item.test-ssh-key", "ssh_key_type", "ed25519"),
+					resource.TestCheckResourceAttr("onepassword_item.test-ssh-key", "key_type", "Ed25519"),
+					resource.TestMatchResourceAttr("onepassword_item.test-ssh-key", "public_key", regexp.MustCompile(`^ssh-ed25519 `)),
+					resource.TestMatchResourceAttr("onepassword_item.test-ssh-key", "fingerprint", regexp.MustCompile(`^SHA256:`)),
+					resource.TestMatchResourceAttr("onepassword_item.test-ssh-key", "private_key", regexp.MustCompile(`BEGIN OPENSSH PRIVATE KEY`)),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResourceSSHKeyRSA(t *testing.T) {
+	expectedItem := generateSSHKeyItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-ssh-key" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "ssh_key"
+  ssh_key_type = "rsa"
+  ssh_key_bits = 2048
+}`, expectedItem.VaultID, expectedItem.Title),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test-ssh-key", "key_type", "RSA, 2048-bit"),
+					resource.TestMatchResourceAttr("onepassword_item.test-ssh-key", "public_key", regexp.MustCompile(`^ssh-rsa `)),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResourceAPICredential(t *testing.T) {
+	expectedItem := generateApiCredentialResourceItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-api-credential" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "test item"
+  category = "api_credential"
+  username = "test_user"
+  credential = "test_credential"
+  valid_from = "2026-01-01"
+  filename = "test_filename"
+}`, expectedItem.VaultID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test-api-credential", "category", "api_credential"),
+					resource.TestCheckResourceAttr("onepassword_item.test-api-credential", "credential", "test_credential"),
+					resource.TestCheckResourceAttr("onepassword_item.test-api-credential", "valid_from", "2026-01-01"),
+					resource.TestCheckResourceAttr("onepassword_item.test-api-credential", "filename", "test_filename"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResourceServer(t *testing.T) {
+	expectedItem := generateServerItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-server" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "test item"
+  category = "server"
+  username = "test_user"
+  admin_console_url = "https://console.example.com"
+  admin_console_username = "admin_user"
+  admin_console_password = "admin_password"
+}`, expectedItem.VaultID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test-server", "category", "server"),
+					resource.TestCheckResourceAttr("onepassword_item.test-server", "username", "test_user"),
+					resource.TestCheckResourceAttr("onepassword_item.test-server", "admin_console_url", "https://console.example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test-server", "admin_console_username", "admin_user"),
+					resource.TestCheckResourceAttr("onepassword_item.test-server", "admin_console_password", "admin_password"),
+					// The admin_console section is category-managed and must not
+					// surface as generic section state.
+					resource.TestCheckResourceAttr("onepassword_item.test-server", "section.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResourceWirelessRouter(t *testing.T) {
+	expectedItem := generateRouterItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-router" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "test item"
+  category = "wireless_router"
+  username = "test_user"
+  network_name = "test-network"
+  server_address = "192.168.1.1"
+  wireless_security = "WPA2"
+  wireless_password = "wireless_password"
+}`, expectedItem.VaultID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test-router", "category", "wireless_router"),
+					resource.TestCheckResourceAttr("onepassword_item.test-router", "network_name", "test-network"),
+					resource.TestCheckResourceAttr("onepassword_item.test-router", "server_address", "192.168.1.1"),
+					resource.TestCheckResourceAttr("onepassword_item.test-router", "wireless_security", "WPA2"),
+					resource.TestCheckResourceAttr("onepassword_item.test-router", "wireless_password", "wireless_password"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResourceSoftwareLicense(t *testing.T) {
+	expectedItem := generateSoftwareLicenseItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-license" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "test item"
+  category = "software_license"
+  license_key = "ABCD-1234-EFGH-5678"
+  version = "1.2.3"
+  licensed_to = "Test User"
+  registered_email = "test@example.com"
+  download_link = "https://example.com/download"
+}`, expectedItem.VaultID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test-license", "category", "software_license"),
+					resource.TestCheckResourceAttr("onepassword_item.test-license", "license_key", "ABCD-1234-EFGH-5678"),
+					resource.TestCheckResourceAttr("onepassword_item.test-license", "version", "1.2.3"),
+					resource.TestCheckResourceAttr("onepassword_item.test-license", "licensed_to", "Test User"),
+					resource.TestCheckResourceAttr("onepassword_item.test-license", "registered_email", "test@example.com"),
+					resource.TestCheckResourceAttr("onepassword_item.test-license", "download_link", "https://example.com/download"),
+					// The customer and publisher sections are category-managed.
+					resource.TestCheckResourceAttr("onepassword_item.test-license", "section.#", "0"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResourceMemorablePassword(t *testing.T) {
+	expectedItem := generatePasswordItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-memorable" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "test item"
+  category = "password"
+  username = "test_user"
+  password_recipe {
+    type = "memorable"
+    word_count = 3
+    separator = "hyphens"
+  }
+}`, expectedItem.VaultID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestMatchResourceAttr("onepassword_item.test-memorable", "password", regexp.MustCompile(`^[A-Za-z]+(-[A-Za-z]+){2}$`)),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemResourcePINPassword(t *testing.T) {
+	expectedItem := generatePasswordItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "VaultName",
+		Description: "This vault will be retrieved for testing",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-pin" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "test item"
+  category = "password"
+  username = "test_user"
+  password_recipe {
+    type = "pin"
+    length = 6
+  }
+}`, expectedItem.VaultID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestMatchResourceAttr("onepassword_item.test-pin", "password", regexp.MustCompile(`^[0-9]{6}$`)),
+				),
+			},
+		},
+	})
+}

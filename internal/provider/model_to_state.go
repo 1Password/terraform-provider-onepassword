@@ -4,9 +4,11 @@ import (
 	"context"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword/model"
+	opssh "github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword/ssh"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -38,6 +40,46 @@ func toStateTags(ctx context.Context, modelTags []string, stateTags types.List) 
 	}
 
 	return stateTags, nil
+}
+
+func toStateRecipe(r *model.GeneratorRecipe) PasswordRecipeModel {
+	kind := "random"
+	switch r.Kind {
+	case model.RecipeKindMemorable:
+		kind = "memorable"
+	case model.RecipeKindPin:
+		kind = "pin"
+	}
+
+	charSets := map[string]bool{}
+	for _, s := range r.CharacterSets {
+		charSets[strings.ToLower(string(s))] = true
+	}
+
+	separator := r.Separator
+	if separator == "" {
+		separator = "hyphens"
+	}
+	wordList := r.WordList
+	if wordList == "" {
+		wordList = "full_words"
+	}
+	wordCount := r.WordCount
+	if wordCount == 0 {
+		wordCount = 3
+	}
+
+	return PasswordRecipeModel{
+		Type:              types.StringValue(kind),
+		Length:            types.Int64Value(int64(r.Length)),
+		Digits:            types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
+		Symbols:           types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
+		ExcludeCharacters: setStringValue(r.ExcludeCharacters),
+		WordCount:         types.Int64Value(int64(wordCount)),
+		Separator:         types.StringValue(separator),
+		Capitalize:        types.BoolValue(r.Capitalize),
+		WordList:          types.StringValue(wordList),
+	}
 }
 
 func toStateSectionsAndFieldsList(modelSections []model.ItemSection, modelFields []model.ItemField, stateSections []OnePasswordItemResourceSectionListModel) []OnePasswordItemResourceSectionListModel {
@@ -86,16 +128,8 @@ func toStateSectionsAndFieldsList(modelSections []model.ItemSection, modelFields
 				stateField.Value = setStringValuePreservingEmpty(f.Value, stateField.Value)
 
 				if f.Recipe != nil {
-					charSets := map[string]bool{}
-					for _, s := range f.Recipe.CharacterSets {
-						charSets[strings.ToLower(string(s))] = true
-					}
-
-					stateField.Recipe = []PasswordRecipeModel{{
-						Length:  types.Int64Value(int64(f.Recipe.Length)),
-						Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
-						Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
-					}}
+					recipe := toStateRecipe(f.Recipe)
+					stateField.Recipe = []PasswordRecipeModel{recipe}
 				}
 
 				if newField {
@@ -149,16 +183,8 @@ func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]On
 			}
 
 			if modelField.Recipe != nil {
-				charSets := map[string]bool{}
-				for _, s := range modelField.Recipe.CharacterSets {
-					charSets[strings.ToLower(string(s))] = true
-				}
-
-				field.Recipe = &PasswordRecipeModel{
-					Length:  types.Int64Value(int64(modelField.Recipe.Length)),
-					Digits:  types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetDigits))]),
-					Symbols: types.BoolValue(charSets[strings.ToLower(string(model.CharacterSetSymbols))]),
-				}
+				recipe := toStateRecipe(modelField.Recipe)
+				field.Recipe = &recipe
 			} else if sectionExists {
 				// If server didn't return a recipe - preserve from existing plan/state if available
 				if existingField, fieldExists := existingSection.FieldMap[modelField.Label]; fieldExists {
@@ -173,6 +199,126 @@ func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]On
 	}
 
 	return sectionMap
+}
+
+// categoryManagedSectionIDs lists the 1Password template section IDs that the
+// provider itself creates for a category. They are excluded from the generic
+// section state because their fields surface as top-level attributes; showing
+// them as sections would create permanent drift against user configuration.
+func categoryManagedSectionIDs(category model.ItemCategory) map[string]bool {
+	switch category {
+	case model.Server:
+		return map[string]bool{"admin_console": true}
+	case model.SoftwareLicense:
+		return map[string]bool{"customer": true, "publisher": true}
+	default:
+		return nil
+	}
+}
+
+// toStateCategoryFields maps category-specific fields back to their top-level
+// attributes, matching by field ID regardless of section.
+func toStateCategoryFields(modelItem *model.Item, state *OnePasswordItemResourceModel) {
+	byID := func(id string) (model.ItemField, bool) {
+		for _, f := range modelItem.Fields {
+			if f.ID == id {
+				return f, true
+			}
+		}
+		return model.ItemField{}, false
+	}
+
+	switch modelItem.Category {
+	case model.SSHKey:
+		if f, ok := byID("private_key"); ok && f.Value != "" {
+			if openSSH, err := opssh.PrivateKeyToOpenSSH([]byte(f.Value), modelItem.ID); err == nil {
+				state.PrivateKey = setStringValue(openSSH)
+			} else {
+				state.PrivateKey = setStringValue(f.Value)
+			}
+
+			// The public key, fingerprint, and key type are derived from the
+			// stored private key: the account API synthesizes them for
+			// SDK-created items, while Connect items may not carry them at
+			// all (see 1Password/connect#107).
+			if pub, err := opssh.PublicKeyFromPrivateKey(f.Value); err == nil {
+				state.PublicKey = setStringValue(pub)
+				if fingerprint, err := opssh.PublicKeyFingerprint(pub); err == nil {
+					state.Fingerprint = setStringValue(fingerprint)
+				}
+				if keyType, err := opssh.KeyTypeFromPublicKey(pub); err == nil {
+					state.SSHKeyTypeOf = setStringValue(keyType)
+
+					// ssh_key_type and ssh_key_bits are not stored on the item;
+					// derive them from the public key so imported state matches.
+					if state.SSHKeyType.IsNull() || state.SSHKeyType.IsUnknown() {
+						switch {
+						case keyType == "Ed25519":
+							state.SSHKeyType = types.StringValue("ed25519")
+							if state.SSHKeyBits.IsNull() || state.SSHKeyBits.IsUnknown() {
+								state.SSHKeyBits = types.Int64Value(2048)
+							}
+						case strings.HasPrefix(keyType, "RSA, "):
+							state.SSHKeyType = types.StringValue("rsa")
+							bitsStr := strings.TrimSuffix(strings.TrimPrefix(keyType, "RSA, "), "-bit")
+							if bits, err := strconv.Atoi(bitsStr); err == nil && (state.SSHKeyBits.IsNull() || state.SSHKeyBits.IsUnknown()) {
+								state.SSHKeyBits = types.Int64Value(int64(bits))
+							}
+						}
+					}
+				}
+			}
+		}
+	case model.APICredential:
+		if f, ok := byID("credential"); ok {
+			state.Credential = setStringValuePreservingEmpty(f.Value, state.Credential)
+		}
+		if f, ok := byID("validFrom"); ok {
+			state.ValidFrom = setStringValuePreservingEmpty(f.Value, state.ValidFrom)
+		}
+		if f, ok := byID("filename"); ok {
+			state.Filename = setStringValuePreservingEmpty(f.Value, state.Filename)
+		}
+	case model.Server:
+		if f, ok := byID("admin_console_url"); ok {
+			state.AdminConsoleURL = setStringValuePreservingEmpty(f.Value, state.AdminConsoleURL)
+		}
+		if f, ok := byID("admin_console_username"); ok {
+			state.AdminConsoleUsername = setStringValuePreservingEmpty(f.Value, state.AdminConsoleUsername)
+		}
+		if f, ok := byID("admin_console_password"); ok {
+			state.AdminConsolePassword = setStringValuePreservingEmpty(f.Value, state.AdminConsolePassword)
+		}
+	case model.Router:
+		if f, ok := byID("network_name"); ok {
+			state.NetworkName = setStringValuePreservingEmpty(f.Value, state.NetworkName)
+		}
+		if f, ok := byID("server"); ok {
+			state.ServerAddress = setStringValuePreservingEmpty(f.Value, state.ServerAddress)
+		}
+		if f, ok := byID("wireless_security"); ok {
+			state.WirelessSecurity = setStringValuePreservingEmpty(f.Value, state.WirelessSecurity)
+		}
+		if f, ok := byID("wireless_password"); ok {
+			state.WirelessPassword = setStringValuePreservingEmpty(f.Value, state.WirelessPassword)
+		}
+	case model.SoftwareLicense:
+		if f, ok := byID("reg_code"); ok {
+			state.LicenseKey = setStringValuePreservingEmpty(f.Value, state.LicenseKey)
+		}
+		if f, ok := byID("product_version"); ok {
+			state.Version = setStringValuePreservingEmpty(f.Value, state.Version)
+		}
+		if f, ok := byID("download_link"); ok {
+			state.DownloadLink = setStringValuePreservingEmpty(f.Value, state.DownloadLink)
+		}
+		if f, ok := byID("reg_name"); ok {
+			state.LicensedTo = setStringValuePreservingEmpty(f.Value, state.LicensedTo)
+		}
+		if f, ok := byID("reg_email"); ok {
+			state.RegisteredEmail = setStringValuePreservingEmpty(f.Value, state.RegisteredEmail)
+		}
+	}
 }
 
 func toStateTopLevelFields(modelFields []model.ItemField, state *OnePasswordItemResourceModel) {

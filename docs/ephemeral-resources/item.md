@@ -41,7 +41,7 @@ ephemeral "onepassword_item" "example_by_uuid" {
 
 ### Read-Only
 
-- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key" "api_credential"]
+- `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "ssh_key" "api_credential" "server" "wireless_router" "software_license" "document"]
 - `credential` (String, Sensitive) (Only applies to the API credential category) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
 - `file` (Attributes List) A list of files attached to the document item. (see [below for nested schema](#nestedatt--file))
@@ -79,7 +79,7 @@ Read-Only:
 Read-Only:
 
 - `id` (String) A unique identifier for the field.
-- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
+- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU" "SSH_KEY"]
 - `value` (String, Sensitive) The value of the field.
 
 
@@ -122,7 +122,7 @@ Read-Only:
 
 - `id` (String) A unique identifier for the field.
 - `label` (String) The label for the field.
-- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
+- `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU" "SSH_KEY"]
 - `value` (String, Sensitive) The value of the field.
 
 

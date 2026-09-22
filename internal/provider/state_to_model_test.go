@@ -10,6 +10,102 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword/model"
 )
 
+func TestParseGeneratorRecipeFromModel(t *testing.T) {
+	tests := map[string]struct {
+		recipe  *PasswordRecipeModel
+		want    *model.GeneratorRecipe
+		wantErr bool
+	}{
+		"nil recipe returns nil": {
+			recipe:  nil,
+			want:    nil,
+			wantErr: false,
+		},
+		"defaults to random when type is unset": {
+			recipe: &PasswordRecipeModel{
+				Length: types.Int64Value(20),
+				Digits: types.BoolValue(true),
+			},
+			want: &model.GeneratorRecipe{
+				Kind:          model.RecipeKindRandom,
+				Length:        20,
+				CharacterSets: []model.CharacterSet{model.CharacterSetDigits},
+				WordCount:     3,
+			},
+			wantErr: false,
+		},
+		"random with exclude characters": {
+			recipe: &PasswordRecipeModel{
+				Type:              types.StringValue("random"),
+				Length:            types.Int64Value(32),
+				Digits:            types.BoolValue(true),
+				Symbols:           types.BoolValue(true),
+				ExcludeCharacters: types.StringValue("lIO0"),
+			},
+			want: &model.GeneratorRecipe{
+				Kind:              model.RecipeKindRandom,
+				Length:            32,
+				CharacterSets:     []model.CharacterSet{model.CharacterSetDigits, model.CharacterSetSymbols},
+				ExcludeCharacters: "lIO0",
+				WordCount:         3,
+			},
+			wantErr: false,
+		},
+		"memorable recipe": {
+			recipe: &PasswordRecipeModel{
+				Type:       types.StringValue("memorable"),
+				WordCount:  types.Int64Value(4),
+				Separator:  types.StringValue("spaces"),
+				Capitalize: types.BoolValue(true),
+				WordList:   types.StringValue("syllables"),
+			},
+			want: &model.GeneratorRecipe{
+				Kind:          model.RecipeKindMemorable,
+				Length:        32,
+				CharacterSets: []model.CharacterSet{},
+				WordCount:     4,
+				Separator:     "spaces",
+				Capitalize:    true,
+				WordList:      "syllables",
+			},
+			wantErr: false,
+		},
+		"pin recipe": {
+			recipe: &PasswordRecipeModel{
+				Type:   types.StringValue("pin"),
+				Length: types.Int64Value(6),
+			},
+			want: &model.GeneratorRecipe{
+				Kind:          model.RecipeKindPin,
+				Length:        6,
+				CharacterSets: []model.CharacterSet{},
+				WordCount:     3,
+			},
+			wantErr: false,
+		},
+		"invalid type errors": {
+			recipe: &PasswordRecipeModel{
+				Type: types.StringValue("passphrase"),
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for description, test := range tests {
+		t.Run(description, func(t *testing.T) {
+			got, err := parseGeneratorRecipeFromModel(test.recipe)
+			if (err != nil) != test.wantErr {
+				t.Errorf("Error: got err=%v, wantErr=%v", err, test.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, test.want) {
+				t.Errorf("parseGeneratorRecipeFromModel() = %+v, want %+v", got, test.want)
+			}
+		})
+	}
+}
+
 func TestToModelLoginFields(t *testing.T) {
 	tests := map[string]struct {
 		state    OnePasswordItemResourceModel
