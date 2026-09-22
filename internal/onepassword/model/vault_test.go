@@ -132,3 +132,49 @@ func TestFromSDKVault(t *testing.T) {
 		})
 	}
 }
+
+func TestFromSDKVaultDetails(t *testing.T) {
+	input := &sdk.Vault{
+		ID:          "vault1",
+		Title:       "Test Vault",
+		Description: "Test Description",
+		Access: []sdk.VaultAccess{
+			{AccessorType: sdk.VaultAccessorTypeUser, AccessorUuid: "user1", Permissions: sdk.ReadItems},
+			{AccessorType: sdk.VaultAccessorTypeGroup, AccessorUuid: "group1", Permissions: sdk.ReadItems | sdk.CreateItems},
+		},
+	}
+
+	vault := &Vault{}
+	vault.FromSDKVaultDetails(input)
+
+	expected := &Vault{
+		ID:          "vault1",
+		Name:        "Test Vault",
+		Description: "Test Description",
+		GroupAccess: []VaultGroupAccess{{
+			GroupID:     "group1",
+			Permissions: sdk.ReadItems | sdk.CreateItems,
+		}},
+	}
+	if !reflect.DeepEqual(vault, expected) {
+		t.Errorf("Expected %+v, got %+v", expected, vault)
+	}
+}
+
+func TestVaultSDKParams(t *testing.T) {
+	vault := &Vault{Name: "Test Vault", Description: "Test Description"}
+
+	createParams := vault.ToSDKCreateParams(false)
+	if createParams.Title != vault.Name || createParams.Description == nil || *createParams.Description != vault.Description {
+		t.Fatalf("Unexpected create params: %+v", createParams)
+	}
+	if createParams.AllowAdminsAccess == nil || *createParams.AllowAdminsAccess {
+		t.Fatalf("Expected allow admins access to be false: %+v", createParams)
+	}
+
+	updateParams := vault.ToSDKUpdateParams()
+	if updateParams.Title == nil || *updateParams.Title != vault.Name ||
+		updateParams.Description == nil || *updateParams.Description != vault.Description {
+		t.Fatalf("Unexpected update params: %+v", updateParams)
+	}
+}
