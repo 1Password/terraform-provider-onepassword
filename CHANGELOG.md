@@ -2,10 +2,10 @@
 # Latest
 
 ## Features
-  * A user-friendly description of a new feature. {issue-number}
+  * Provider exposes an item's 1Password `created_at` and `updated_at` timestamps on the `onepassword_item` resource, data source and ephemeral resource. `updated_at` is the item's own modification time in 1Password, so it also reflects changes made outside Terraform.
 
 ## Fixes
- * A user-friendly description of a fix. {issue-number}
+ * Provider reports the item Connect returns once a create or update has propagated, instead of the write response that describes the item as it was before the write.
 
 ## Security
  * A user-friendly description of a security fix. {issue-number}

@@ -8,10 +8,18 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword/model"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/hashicorp/terraform-plugin-testing/echoprovider"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"github.com/hashicorp/terraform-plugin-testing/tfversion"
 )
 
 func TestAccEphemeralItem_ReadByUUID(t *testing.T) {
@@ -252,6 +260,52 @@ func TestAccEphemeralItem_ReadItemWithTagsAndCategory(t *testing.T) {
 			{
 				Config: testAccProviderConfig(testServer.URL) + testAccEphemeralItemConfig(expectedItem.VaultID, expectedItem.ID),
 				Check:  resource.ComposeAggregateTestCheckFunc(),
+			},
+		},
+	})
+}
+
+func TestAccEphemeralItem_ReportsTimestamps(t *testing.T) {
+	expectedItem := generateLoginItem()
+	expectedVault := model.Vault{
+		ID:          expectedItem.VaultID,
+		Name:        "Name of the vault",
+		Description: "This vault will be retrieved",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.Test(t, resource.TestCase{
+		TerraformVersionChecks: []tfversion.TerraformVersionCheck{
+			tfversion.SkipBelow(tfversion.Version1_10_0),
+		},
+		// The echo provider copies the ephemeral result into the state of a
+		// managed resource so it can be asserted on.
+		ProtoV6ProviderFactories: map[string]func() (tfprotov6.ProviderServer, error){
+			"onepassword": providerserver.NewProtocol6WithError(New("test")()),
+			"echo":        echoprovider.NewProviderServer(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + fmt.Sprintf(`
+ephemeral "onepassword_item" "test" {
+  vault = %q
+  uuid  = %q
+}
+
+provider "echo" {
+  data = ephemeral.onepassword_item.test
+}
+
+resource "echo" "test" {}
+`, expectedItem.VaultID, expectedItem.ID),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("created_at"),
+						knownvalue.StringExact(testItemCreatedAt.Format(time.RFC3339))),
+					statecheck.ExpectKnownValue("echo.test", tfjsonpath.New("data").AtMapKey("updated_at"),
+						knownvalue.StringExact(testItemUpdatedAt.Format(time.RFC3339))),
+				},
 			},
 		},
 	})

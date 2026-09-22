@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 
@@ -33,6 +34,8 @@ func TestAccItemDataSourceSections(t *testing.T) {
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "title", expectedItem.Title),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "uuid", expectedItem.ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "category", strings.ToLower(string(expectedItem.Category))),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "created_at", testItemCreatedAt.Format(time.RFC3339)),
+					resource.TestCheckResourceAttr("data.onepassword_item.test", "updated_at", testItemUpdatedAt.Format(time.RFC3339)),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.id", expectedItem.Sections[0].ID),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.label", expectedItem.Sections[0].Label),
 					resource.TestCheckResourceAttr("data.onepassword_item.test", "section.0.field.0.label", expectedItem.Fields[0].Label),
