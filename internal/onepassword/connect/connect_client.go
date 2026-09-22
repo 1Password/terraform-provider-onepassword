@@ -113,6 +113,18 @@ func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid strin
 	return modelItem, nil
 }
 
+func (c *Client) GetItems(ctx context.Context, vaultUUID string, itemTitlesOrIDs []string) ([]*model.Item, error) {
+	items := make([]*model.Item, 0, len(itemTitlesOrIDs))
+	for _, titleOrID := range itemTitlesOrIDs {
+		item, err := c.GetItem(ctx, titleOrID, vaultUUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get item %q: %w", titleOrID, err)
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
 	// Convert model Item to Connect Item
 	connectItem, err := item.FromModelItemToConnect()

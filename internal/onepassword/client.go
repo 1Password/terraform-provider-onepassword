@@ -18,6 +18,12 @@ type Client interface {
 	CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error)
 	UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error)
 	DeleteItem(ctx context.Context, item *model.Item, vaultUuid string) error
+	// GetItems reads several items from a vault at once. Each element of itemTitlesOrIDs may be
+	// an item title or an item ID. It returns exactly len(itemTitlesOrIDs) items, one per input
+	// and in input order, so items[i] always corresponds to itemTitlesOrIDs[i]. The same item is
+	// returned more than once if it is requested under more than one identifier. Any item that
+	// cannot be read fails the whole call; a partial slice is never returned.
+	GetItems(ctx context.Context, vaultUUID string, itemTitlesOrIDs []string) ([]*model.Item, error)
 	GetFileContent(ctx context.Context, file *model.ItemFile, itemUUid, vaultUuid string) ([]byte, error)
 	// GetEnvironmentVariables reads variables from a 1Password Environment. Only supported when using the 1Password SDK (service account or desktop app); not supported with 1Password Connect.
 	GetEnvironmentVariables(ctx context.Context, environmentID string) ([]model.EnvironmentVariable, error)
