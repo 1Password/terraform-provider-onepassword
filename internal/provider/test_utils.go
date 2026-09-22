@@ -155,6 +155,18 @@ func generateLoginItemWithFiles() *model.Item {
 	return item
 }
 
+func generateItemWithRootCustomFields() *model.Item {
+	item := generateBaseItem()
+	item.Category = model.Login
+	item.Fields = append(generateLoginFields(), model.ItemField{
+		ID:    "custom_field_id",
+		Label: "My Custom Field",
+		Type:  model.FieldTypeString,
+		Value: "custom_value",
+	})
+	return &item
+}
+
 func generateDatabaseFields() []model.ItemField {
 	fields := []model.ItemField{
 		{
