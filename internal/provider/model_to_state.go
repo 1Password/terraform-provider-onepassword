@@ -181,7 +181,7 @@ func toStateTopLevelFields(modelFields []model.ItemField, state *OnePasswordItem
 		case model.FieldPurposeUsername:
 			state.Username = setStringValuePreservingEmpty(f.Value, state.Username)
 		case model.FieldPurposePassword:
-			state.Password = setStringValue(f.Value)
+			state.Password = setStringValuePreservingEmpty(f.Value, state.Password)
 		case model.FieldPurposeNotes:
 			state.NoteValue = setStringValuePreservingEmpty(f.Value, state.NoteValue)
 		default:
@@ -190,7 +190,7 @@ func toStateTopLevelFields(modelFields []model.ItemField, state *OnePasswordItem
 				case "username":
 					state.Username = setStringValuePreservingEmpty(f.Value, state.Username)
 				case "password":
-					state.Password = setStringValue(f.Value)
+					state.Password = setStringValuePreservingEmpty(f.Value, state.Password)
 				case "hostname", "server":
 					state.Hostname = setStringValuePreservingEmpty(f.Value, state.Hostname)
 				case "database":

@@ -14,6 +14,7 @@ func TestToModelLoginFields(t *testing.T) {
 	tests := map[string]struct {
 		state    OnePasswordItemResourceModel
 		password string
+		generate bool
 		recipe   *model.GeneratorRecipe
 		want     []model.ItemField
 	}{
@@ -50,12 +51,13 @@ func TestToModelLoginFields(t *testing.T) {
 				},
 			},
 		},
-		"with empty password should generate": {
+		"with generate set": {
 			state: OnePasswordItemResourceModel{
 				Username:  types.StringValue("testuser"),
 				NoteValue: types.StringValue("test notes"),
 			},
 			password: "",
+			generate: true,
 			recipe: &model.GeneratorRecipe{
 				Length:        32,
 				CharacterSets: []model.CharacterSet{model.CharacterSetDigits},
@@ -126,7 +128,7 @@ func TestToModelLoginFields(t *testing.T) {
 
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
-			got := toModelLoginFields(test.state, test.password, test.recipe)
+			got := toModelLoginFields(test.state, test.password, test.generate, test.recipe)
 			if len(got) != len(test.want) {
 				t.Errorf("Field count mismatch: got %d, want %d", len(got), len(test.want))
 				return
@@ -197,7 +199,7 @@ func TestToModelPasswordFields(t *testing.T) {
 
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
-			got := toModelPasswordFields(test.state, test.password, test.recipe)
+			got := toModelPasswordFields(test.state, test.password, false, test.recipe)
 			if len(got) != test.wantLen {
 				t.Errorf("Field count: got %d, want %d", len(got), test.wantLen)
 				return
@@ -229,7 +231,7 @@ func TestToModelDatabaseFields(t *testing.T) {
 	password := "dbpass"
 	recipe := &model.GeneratorRecipe{Length: 32}
 
-	got := toModelDatabaseFields(state, password, recipe)
+	got := toModelDatabaseFields(state, password, false, recipe)
 
 	if len(got) != 7 {
 		t.Fatalf("Field count: got %d, want 7", len(got))

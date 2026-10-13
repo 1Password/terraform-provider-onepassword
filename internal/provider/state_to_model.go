@@ -11,7 +11,7 @@ import (
 	"github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword/model"
 )
 
-func toModelLoginFields(state OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
+func toModelLoginFields(state OnePasswordItemResourceModel, password string, generate bool, recipe *model.GeneratorRecipe) []model.ItemField {
 	return []model.ItemField{
 		{
 			ID:      "username",
@@ -26,7 +26,7 @@ func toModelLoginFields(state OnePasswordItemResourceModel, password string, rec
 			Purpose:  model.FieldPurposePassword,
 			Type:     model.FieldTypeConcealed,
 			Value:    password,
-			Generate: password == "",
+			Generate: generate,
 			Recipe:   recipe,
 		},
 		{
@@ -39,7 +39,7 @@ func toModelLoginFields(state OnePasswordItemResourceModel, password string, rec
 	}
 }
 
-func toModelPasswordFields(state OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
+func toModelPasswordFields(state OnePasswordItemResourceModel, password string, generate bool, recipe *model.GeneratorRecipe) []model.ItemField {
 	return []model.ItemField{
 		{
 			ID:       "password",
@@ -47,7 +47,7 @@ func toModelPasswordFields(state OnePasswordItemResourceModel, password string, 
 			Purpose:  model.FieldPurposePassword,
 			Type:     model.FieldTypeConcealed,
 			Value:    password,
-			Generate: password == "",
+			Generate: generate,
 			Recipe:   recipe,
 		},
 		{
@@ -60,7 +60,7 @@ func toModelPasswordFields(state OnePasswordItemResourceModel, password string, 
 	}
 }
 
-func toModelDatabaseFields(state OnePasswordItemResourceModel, password string, recipe *model.GeneratorRecipe) []model.ItemField {
+func toModelDatabaseFields(state OnePasswordItemResourceModel, password string, generate bool, recipe *model.GeneratorRecipe) []model.ItemField {
 	return []model.ItemField{
 		{
 			ID:    "username",
@@ -73,7 +73,7 @@ func toModelDatabaseFields(state OnePasswordItemResourceModel, password string, 
 			Label:    "password",
 			Type:     model.FieldTypeConcealed,
 			Value:    password,
-			Generate: password == "",
+			Generate: generate,
 			Recipe:   recipe,
 		},
 		{

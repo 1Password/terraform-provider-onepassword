@@ -43,6 +43,30 @@ func TestAccItemResourceDatabase(t *testing.T) {
 	})
 }
 
+func TestAccItemResource_EmptyPassword(t *testing.T) {
+	expectedItem := generateDatabaseItem()
+	expectedItem.Fields[1].Value = ""
+	expectedVault := model.Vault{
+		ID:   expectedItem.VaultID,
+		Name: "VaultName",
+	}
+
+	testServer := setupTestServer(expectedItem, expectedVault, t)
+	defer testServer.Close()
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProviderConfig(testServer.URL) + testAccEmptyPasswordResourceConfig(expectedItem),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("onepassword_item.test-database", "password", ""),
+				),
+			},
+		},
+	})
+}
+
 func TestAccItemResourcePassword(t *testing.T) {
 	expectedItem := generatePasswordItem()
 	expectedVault := model.Vault{
@@ -305,6 +329,25 @@ resource "onepassword_item" "test-database" {
   category = "%s"
   username = "%s"
   password_recipe {}
+  hostname = "%s"
+  database = "%s"
+  port = "%s"
+  type = "%s"
+}`, expectedItem.VaultID, expectedItem.Title, strings.ToLower(string(expectedItem.Category)), expectedItem.Fields[0].Value, expectedItem.Fields[2].Value, expectedItem.Fields[3].Value, expectedItem.Fields[4].Value, expectedItem.Fields[5].Value)
+}
+
+func testAccEmptyPasswordResourceConfig(expectedItem *model.Item) string {
+	return fmt.Sprintf(`
+
+data "onepassword_vault" "acceptance-tests" {
+	uuid = "%s"
+}
+resource "onepassword_item" "test-database" {
+  vault = data.onepassword_vault.acceptance-tests.uuid
+  title = "%s"
+  category = "%s"
+  username = "%s"
+  password = ""
   hostname = "%s"
   database = "%s"
   port = "%s"
