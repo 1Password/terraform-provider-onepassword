@@ -135,6 +135,10 @@ func TestToModelFieldType(t *testing.T) {
 			input:    sdk.ItemFieldTypeText,
 			expected: FieldTypeString,
 		},
+		"should convert SSHKey field type to SSH_KEY": {
+			input:    sdk.ItemFieldTypeSSHKey,
+			expected: FieldTypeSSHKey,
+		},
 		"should convert URL field type": {
 			input:    sdk.ItemFieldTypeURL,
 			expected: FieldTypeURL,
@@ -188,6 +192,10 @@ func TestToSDKFieldType(t *testing.T) {
 			input:    FieldTypeString,
 			expected: sdk.ItemFieldTypeText,
 		},
+		"should convert SSH_KEY field type to SSHKey": {
+			input:    FieldTypeSSHKey,
+			expected: sdk.ItemFieldTypeSSHKey,
+		},
 		"should convert URL field type": {
 			input:    FieldTypeURL,
 			expected: sdk.ItemFieldTypeURL,
@@ -217,6 +225,10 @@ func TestCategoryConversionRoundTrip(t *testing.T) {
 		Document,
 		SSHKey,
 		Database,
+		APICredential,
+		Server,
+		Router,
+		SoftwareLicense,
 	}
 
 	for _, category := range categories {
@@ -238,6 +250,7 @@ func TestFieldTypeConversionRoundTrip(t *testing.T) {
 		FieldTypeMenu,
 		FieldTypeMonthYear,
 		FieldTypeOTP,
+		FieldTypeSSHKey,
 		FieldTypeString,
 		FieldTypeURL,
 	}

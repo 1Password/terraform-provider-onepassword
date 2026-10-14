@@ -95,12 +95,16 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items", expectedItem.VaultID) {
 				itemToReturn := convertBodyToItem(r, t)
 
-				if itemToReturn.Category != model.SecureNote {
-					itemField := model.ItemField{
-						Label: "password",
-						Value: "somepassword",
-					}
-					itemToReturn.Fields = append(itemToReturn.Fields, itemField)
+				// Simulate server-side password generation: fill password fields
+				// that were posted without a value. Items without a password
+				// field (secure notes, SSH keys, ...) get none appended, so
+				// missing state handling is exercised the same way the real
+				// API behaves.
+				existingPassword := slices.IndexFunc(itemToReturn.Fields, func(f model.ItemField) bool {
+					return f.ID == "password" || f.Label == "password" || f.Purpose == model.FieldPurposePassword
+				})
+				if existingPassword != -1 && itemToReturn.Fields[existingPassword].Value == "" {
+					itemToReturn.Fields[existingPassword].Value = "somepassword"
 				}
 
 				// Set the ID and VaultID

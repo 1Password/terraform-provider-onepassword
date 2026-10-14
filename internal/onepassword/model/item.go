@@ -20,13 +20,16 @@ const (
 	CharacterSetDigits  CharacterSet = "DIGITS"
 	CharacterSetSymbols CharacterSet = "SYMBOLS"
 
-	Login         ItemCategory = "LOGIN"
-	Password      ItemCategory = "PASSWORD"
-	SecureNote    ItemCategory = "SECURE_NOTE"
-	Document      ItemCategory = "DOCUMENT"
-	SSHKey        ItemCategory = "SSH_KEY"
-	Database      ItemCategory = "DATABASE"
-	APICredential ItemCategory = "API_CREDENTIAL"
+	Login           ItemCategory = "LOGIN"
+	Password        ItemCategory = "PASSWORD"
+	SecureNote      ItemCategory = "SECURE_NOTE"
+	Document        ItemCategory = "DOCUMENT"
+	SSHKey          ItemCategory = "SSH_KEY"
+	Database        ItemCategory = "DATABASE"
+	APICredential   ItemCategory = "API_CREDENTIAL"
+	Server          ItemCategory = "SERVER"
+	Router          ItemCategory = "WIRELESS_ROUTER"
+	SoftwareLicense ItemCategory = "SOFTWARE_LICENSE"
 
 	FieldPurposeUsername ItemFieldPurpose = "USERNAME"
 	FieldPurposePassword ItemFieldPurpose = "PASSWORD"
@@ -38,6 +41,7 @@ const (
 	FieldTypeMenu      ItemFieldType = "MENU"
 	FieldTypeMonthYear ItemFieldType = "MONTH_YEAR"
 	FieldTypeOTP       ItemFieldType = "OTP"
+	FieldTypeSSHKey    ItemFieldType = "SSH_KEY"
 	FieldTypeString    ItemFieldType = "STRING"
 	FieldTypeURL       ItemFieldType = "URL"
 )
@@ -73,9 +77,23 @@ type ItemField struct {
 }
 
 type GeneratorRecipe struct {
-	Length        int
-	CharacterSets []CharacterSet
+	Kind              GeneratorRecipeKind
+	Length            int
+	CharacterSets     []CharacterSet
+	ExcludeCharacters string
+	WordCount         int
+	Separator         string
+	Capitalize        bool
+	WordList          string
 }
+
+type GeneratorRecipeKind string
+
+const (
+	RecipeKindRandom    GeneratorRecipeKind = "RANDOM"
+	RecipeKindMemorable GeneratorRecipeKind = "MEMORABLE"
+	RecipeKindPin       GeneratorRecipeKind = "PIN"
+)
 
 type ItemURL struct {
 	URL     string
@@ -360,32 +378,96 @@ func toSDKWebsites(urls []ItemURL) []sdk.Website {
 	return websites
 }
 
-func generatePassword(recipe *GeneratorRecipe) (string, error) {
-	includeDigits := false
-	includeSymbols := false
+// separatorToSDKMap translates provider-level separator values to the SDK's SeparatorType.
+var separatorToSDKMap = map[string]sdk.SeparatorType{
+	"digits":             sdk.SeparatorTypeDigits,
+	"digits_and_symbols": sdk.SeparatorTypeDigitsAndSymbols,
+	"spaces":             sdk.SeparatorTypeSpaces,
+	"hyphens":            sdk.SeparatorTypeHyphens,
+	"underscores":        sdk.SeparatorTypeUnderscores,
+	"periods":            sdk.SeparatorTypePeriods,
+	"commas":             sdk.SeparatorTypeCommas,
+}
 
-	for _, characterSet := range recipe.CharacterSets {
-		switch characterSet {
-		case CharacterSetDigits:
-			includeDigits = true
-		case CharacterSetSymbols:
-			includeSymbols = true
-		}
+// wordListToSDKMap translates provider-level word list values to the SDK's WordListType.
+var wordListToSDKMap = map[string]sdk.WordListType{
+	"full_words":    sdk.WordListTypeFullWords,
+	"syllables":     sdk.WordListTypeSyllables,
+	"three_letters": sdk.WordListTypeThreeLetters,
+}
+
+// maxGenerateAttempts bounds the rejection-sampling loop used to honor
+// ExcludeCharacters for random recipes. Typical exclusion sets converge in a
+// handful of attempts; the bound only triggers for sets that conflict with
+// the recipe (e.g. excluding all digits while digits are required).
+const maxGenerateAttempts = 100
+
+func generatePassword(recipe *GeneratorRecipe) (string, error) {
+	kind := recipe.Kind
+	if kind == "" {
+		kind = RecipeKindRandom
 	}
 
-	passwordResponse, err := sdk.Secrets.GeneratePassword(
-		context.Background(),
-		sdk.NewPasswordRecipeTypeVariantRandom(&sdk.PasswordRecipeRandomInner{
+	var sdkRecipe sdk.PasswordRecipe
+	switch kind {
+	case RecipeKindMemorable:
+		separator := sdk.SeparatorTypeHyphens
+		if s, ok := separatorToSDKMap[recipe.Separator]; ok {
+			separator = s
+		}
+		wordList := sdk.WordListTypeFullWords
+		if w, ok := wordListToSDKMap[recipe.WordList]; ok {
+			wordList = w
+		}
+		sdkRecipe = sdk.NewPasswordRecipeTypeVariantMemorable(&sdk.PasswordRecipeMemorableInner{
+			SeparatorType: separator,
+			Capitalize:    recipe.Capitalize,
+			WordListType:  wordList,
+			WordCount:     uint32(recipe.WordCount),
+		})
+	case RecipeKindPin:
+		sdkRecipe = sdk.NewPasswordRecipeTypeVariantPin(&sdk.PasswordRecipePinInner{
+			Length: uint32(recipe.Length),
+		})
+	default:
+		includeDigits := false
+		includeSymbols := false
+
+		for _, characterSet := range recipe.CharacterSets {
+			switch characterSet {
+			case CharacterSetDigits:
+				includeDigits = true
+			case CharacterSetSymbols:
+				includeSymbols = true
+			}
+		}
+
+		sdkRecipe = sdk.NewPasswordRecipeTypeVariantRandom(&sdk.PasswordRecipeRandomInner{
 			IncludeDigits:  includeDigits,
 			IncludeSymbols: includeSymbols,
 			Length:         uint32(recipe.Length),
-		}),
-	)
-	if err != nil {
-		return "", err
+		})
 	}
 
-	return passwordResponse.Password, nil
+	// The generator has no exclusion support, so excluded characters are
+	// honored by regenerating until the output is free of them. Conditioning
+	// the generator's output on the constraint is equivalent to sampling
+	// from the constrained character set.
+	for attempt := 1; ; attempt++ {
+		passwordResponse, err := sdk.Secrets.GeneratePassword(context.Background(), sdkRecipe)
+		if err != nil {
+			return "", err
+		}
+
+		password := passwordResponse.Password
+		if recipe.ExcludeCharacters == "" || !strings.ContainsAny(password, recipe.ExcludeCharacters) {
+			return password, nil
+		}
+
+		if attempt >= maxGenerateAttempts {
+			return "", fmt.Errorf("could not generate a password excluding %q after %d attempts; the excluded characters may conflict with the recipe's digits or symbols settings", recipe.ExcludeCharacters, maxGenerateAttempts)
+		}
+	}
 }
 
 func buildSectionMap(item *sdk.Item) map[string]ItemSection {
@@ -549,17 +631,34 @@ func toConnectFields(fields []ItemField) ([]*connect.ItemField, error) {
 
 		// Include recipe if present
 		if f.Recipe != nil {
-			// Connect allows confiugration of letters for password recipes
-			// We need to include letters in the character sets in order to ensure they are not excluded
-			characterSets := []string{"LETTERS"}
-
-			for _, cs := range f.Recipe.CharacterSets {
-				characterSets = append(characterSets, string(cs))
+			recipeKind := f.Recipe.Kind
+			if recipeKind == "" {
+				recipeKind = RecipeKindRandom
 			}
 
-			field.Recipe = &connect.GeneratorRecipe{
-				Length:        f.Recipe.Length,
-				CharacterSets: characterSets,
+			// Connect can only generate random passwords server-side.
+			// Memorable and PIN recipes are generated locally and sent as plain values.
+			if recipeKind != RecipeKindRandom {
+				generated, err := generatePassword(f.Recipe)
+				if err != nil {
+					return connectFields, fmt.Errorf("toConnectFields: failed to generate %s password: %w", strings.ToLower(string(recipeKind)), err)
+				}
+				field.Value = generated
+				field.Generate = false
+			} else {
+				// Connect allows configuration of letters for password recipes
+				// We need to include letters in the character sets in order to ensure they are not excluded
+				characterSets := []string{"LETTERS"}
+
+				for _, cs := range f.Recipe.CharacterSets {
+					characterSets = append(characterSets, string(cs))
+				}
+
+				field.Recipe = &connect.GeneratorRecipe{
+					Length:            f.Recipe.Length,
+					CharacterSets:     characterSets,
+					ExcludeCharacters: f.Recipe.ExcludeCharacters,
+				}
 			}
 		}
 
@@ -599,6 +698,7 @@ var modelToSdkFiledTypeMap = map[ItemFieldType]sdk.ItemFieldType{
 	FieldTypeMenu:      sdk.ItemFieldTypeMenu,
 	FieldTypeMonthYear: sdk.ItemFieldTypeMonthYear,
 	FieldTypeOTP:       sdk.ItemFieldTypeTOTP,
+	FieldTypeSSHKey:    sdk.ItemFieldTypeSSHKey,
 	FieldTypeString:    sdk.ItemFieldTypeText,
 	FieldTypeURL:       sdk.ItemFieldTypeURL,
 }
@@ -614,6 +714,7 @@ var sdkToModelFieldTypeMap = map[sdk.ItemFieldType]ItemFieldType{
 	sdk.ItemFieldTypeMenu:      FieldTypeMenu,
 	sdk.ItemFieldTypeMonthYear: FieldTypeMonthYear,
 	sdk.ItemFieldTypeTOTP:      FieldTypeOTP,
+	sdk.ItemFieldTypeSSHKey:    FieldTypeSSHKey,
 	sdk.ItemFieldTypeText:      FieldTypeString,
 	sdk.ItemFieldTypeURL:       FieldTypeURL,
 }
@@ -623,12 +724,16 @@ func toModelFieldType(filedType sdk.ItemFieldType) ItemFieldType {
 }
 
 var modelToSDKCategoryMap = map[ItemCategory]sdk.ItemCategory{
-	Login:      sdk.ItemCategoryLogin,
-	Password:   sdk.ItemCategoryPassword,
-	SecureNote: sdk.ItemCategorySecureNote,
-	Document:   sdk.ItemCategoryDocument,
-	SSHKey:     sdk.ItemCategorySSHKey,
-	Database:   sdk.ItemCategoryDatabase,
+	Login:           sdk.ItemCategoryLogin,
+	Password:        sdk.ItemCategoryPassword,
+	SecureNote:      sdk.ItemCategorySecureNote,
+	Document:        sdk.ItemCategoryDocument,
+	SSHKey:          sdk.ItemCategorySSHKey,
+	Database:        sdk.ItemCategoryDatabase,
+	APICredential:   sdk.ItemCategoryAPICredentials,
+	Server:          sdk.ItemCategoryServer,
+	Router:          sdk.ItemCategoryRouter,
+	SoftwareLicense: sdk.ItemCategorySoftwareLicense,
 }
 
 func fromModelCategoryToSDK(itemCategory ItemCategory) sdk.ItemCategory {
@@ -636,13 +741,16 @@ func fromModelCategoryToSDK(itemCategory ItemCategory) sdk.ItemCategory {
 }
 
 var sdkToModelCategoryMap = map[sdk.ItemCategory]ItemCategory{
-	sdk.ItemCategoryLogin:          Login,
-	sdk.ItemCategoryPassword:       Password,
-	sdk.ItemCategorySecureNote:     SecureNote,
-	sdk.ItemCategoryDocument:       Document,
-	sdk.ItemCategorySSHKey:         SSHKey,
-	sdk.ItemCategoryDatabase:       Database,
-	sdk.ItemCategoryAPICredentials: APICredential,
+	sdk.ItemCategoryLogin:           Login,
+	sdk.ItemCategoryPassword:        Password,
+	sdk.ItemCategorySecureNote:      SecureNote,
+	sdk.ItemCategoryDocument:        Document,
+	sdk.ItemCategorySSHKey:          SSHKey,
+	sdk.ItemCategoryDatabase:        Database,
+	sdk.ItemCategoryAPICredentials:  APICredential,
+	sdk.ItemCategoryServer:          Server,
+	sdk.ItemCategoryRouter:          Router,
+	sdk.ItemCategorySoftwareLicense: SoftwareLicense,
 }
 
 func fromSDKCategoryToModel(itemCategory sdk.ItemCategory) ItemCategory {

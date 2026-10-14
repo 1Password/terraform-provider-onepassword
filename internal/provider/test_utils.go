@@ -227,6 +227,43 @@ func generateApiCredentialFields() []model.ItemField {
 	return fields
 }
 
+// generateApiCredentialResourceItem is a fixture shaped like what the
+// resource creates for the api_credential category: typed fields with the
+// template's field IDs, including a valid DATE timestamp.
+func generateApiCredentialResourceItem() *model.Item {
+	item := generateBaseItem()
+	item.Category = model.APICredential
+	item.Fields = []model.ItemField{
+		{
+			ID:      "username",
+			Label:   "username",
+			Purpose: model.FieldPurposeUsername,
+			Type:    model.FieldTypeString,
+			Value:   "test_user",
+		},
+		{
+			ID:    "credential",
+			Label: "credential",
+			Type:  model.FieldTypeConcealed,
+			Value: "test_credential",
+		},
+		{
+			ID:    "validFrom",
+			Label: "valid from",
+			Type:  model.FieldTypeDate,
+			Value: "2026-01-01",
+		},
+		{
+			ID:    "filename",
+			Label: "filename",
+			Type:  model.FieldTypeString,
+			Value: "test_filename",
+		},
+	}
+
+	return &item
+}
+
 func generatePasswordFields() []model.ItemField {
 	fields := []model.ItemField{
 		{
@@ -285,4 +322,147 @@ func generateSSHKeyFields() []model.ItemField {
 		},
 	}
 	return fields
+}
+
+func generateServerItem() *model.Item {
+	item := generateBaseItem()
+	item.Category = model.Server
+	item.Sections = []model.ItemSection{{ID: "admin_console", Label: "Admin Console"}}
+	item.Fields = []model.ItemField{
+		{
+			ID:      "username",
+			Label:   "username",
+			Purpose: model.FieldPurposeUsername,
+			Type:    model.FieldTypeString,
+			Value:   "test_user",
+		},
+		{
+			ID:      "password",
+			Label:   "password",
+			Purpose: model.FieldPurposePassword,
+			Type:    model.FieldTypeConcealed,
+			Value:   "test_password",
+		},
+		{
+			ID:           "admin_console_url",
+			Label:        "admin console URL",
+			Type:         model.FieldTypeString,
+			Value:        "https://console.example.com",
+			SectionID:    "admin_console",
+			SectionLabel: "Admin Console",
+		},
+		{
+			ID:           "admin_console_username",
+			Label:        "admin console username",
+			Type:         model.FieldTypeString,
+			Value:        "admin_user",
+			SectionID:    "admin_console",
+			SectionLabel: "Admin Console",
+		},
+		{
+			ID:           "admin_console_password",
+			Label:        "console password",
+			Type:         model.FieldTypeConcealed,
+			Value:        "admin_password",
+			SectionID:    "admin_console",
+			SectionLabel: "Admin Console",
+		},
+	}
+
+	return &item
+}
+
+func generateRouterItem() *model.Item {
+	item := generateBaseItem()
+	item.Category = model.Router
+	item.Fields = []model.ItemField{
+		{
+			ID:    "username",
+			Label: "username",
+			Type:  model.FieldTypeString,
+			Value: "test_user",
+		},
+		{
+			ID:      "password",
+			Label:   "base station password",
+			Purpose: model.FieldPurposePassword,
+			Type:    model.FieldTypeConcealed,
+			Value:   "test_password",
+		},
+		{
+			ID:    "server",
+			Label: "server / IP address",
+			Type:  model.FieldTypeString,
+			Value: "192.168.1.1",
+		},
+		{
+			ID:    "network_name",
+			Label: "network name",
+			Type:  model.FieldTypeString,
+			Value: "test-network",
+		},
+		{
+			ID:    "wireless_security",
+			Label: "wireless security",
+			Type:  model.FieldTypeMenu,
+			Value: "WPA2",
+		},
+		{
+			ID:    "wireless_password",
+			Label: "wireless network password",
+			Type:  model.FieldTypeConcealed,
+			Value: "wireless_password",
+		},
+	}
+
+	return &item
+}
+
+func generateSoftwareLicenseItem() *model.Item {
+	item := generateBaseItem()
+	item.Category = model.SoftwareLicense
+	item.Sections = []model.ItemSection{
+		{ID: "customer", Label: "Customer"},
+		{ID: "publisher", Label: "Publisher"},
+	}
+	item.Fields = []model.ItemField{
+		{
+			ID:    "reg_code",
+			Label: "license key",
+			Type:  model.FieldTypeString,
+			Value: "ABCD-1234-EFGH-5678",
+		},
+		{
+			ID:    "product_version",
+			Label: "version",
+			Type:  model.FieldTypeString,
+			Value: "1.2.3",
+		},
+		{
+			ID:           "reg_name",
+			Label:        "licensed to",
+			Type:         model.FieldTypeString,
+			Value:        "Test User",
+			SectionID:    "customer",
+			SectionLabel: "Customer",
+		},
+		{
+			ID:           "reg_email",
+			Label:        "registered email",
+			Type:         model.FieldTypeEmail,
+			Value:        "test@example.com",
+			SectionID:    "customer",
+			SectionLabel: "Customer",
+		},
+		{
+			ID:           "download_link",
+			Label:        "download page",
+			Type:         model.FieldTypeURL,
+			Value:        "https://example.com/download",
+			SectionID:    "publisher",
+			SectionLabel: "Publisher",
+		},
+	}
+
+	return &item
 }

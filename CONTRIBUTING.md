@@ -14,11 +14,17 @@ This will create the `terraform-provider-onepassword` binary.
 
 ## Testing the Provider
 
-To run the Go tests and check test coverage run the following command:
+To run the unit and integration tests, use the following command:
 
 ```sh
-go test -v ./... -cover
+make test
 ```
+
+This sets `TF_ACC=1`, which the Terraform plugin tests require to run, and excludes the E2E tests in `test/e2e/`, which need a live 1Password account.
+
+> **Note**: `go test ./...` is not equivalent. Without `TF_ACC=1`, most integration tests are silently skipped, and the E2E tests fail without credentials.
+
+For guidance on which test type your change needs, and how to run E2E tests against a real 1Password account, see the [Testing Guide](docs/testing/testing.md).
 
 ## Installing the provider locally
 

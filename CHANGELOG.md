@@ -2,7 +2,11 @@
 # Latest
 
 ## Features
-  * A user-friendly description of a new feature. {issue-number}
+  * The `onepassword_item` resource now supports the `ssh_key` category: it generates Ed25519 (default) or RSA key pairs and exposes `private_key`, `public_key`, `fingerprint`, and `key_type`.
+  * The `onepassword_item` resource now supports the `api_credential`, `server`, `wireless_router`, and `software_license` categories with category-specific attributes.
+  * `password_recipe` now supports `memorable` and `pin` password types via a new `type` argument (defaults to `random`), and `random` recipes gain `exclude_characters`.
+  * Items with previously unknown field types now read back typed instead of empty.
+  * Update `onepassword-sdk-go` to the stable v0.4.1.
 
 ## Fixes
  * A user-friendly description of a fix. {issue-number}
