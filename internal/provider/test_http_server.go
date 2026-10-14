@@ -95,14 +95,6 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items", expectedItem.VaultID) {
 				itemToReturn := convertBodyToItem(r, t)
 
-				if itemToReturn.Category != model.SecureNote {
-					itemField := model.ItemField{
-						Label: "password",
-						Value: "somepassword",
-					}
-					itemToReturn.Fields = append(itemToReturn.Fields, itemField)
-				}
-
 				// Set the ID and VaultID
 				itemToReturn.ID = expectedItem.ID
 				itemToReturn.VaultID = expectedItem.VaultID
@@ -142,6 +134,13 @@ func convertBodyToItem(r *http.Request, t *testing.T) model.Item {
 	err = json.Unmarshal(rawBody, &connectItemToReturn)
 	if err != nil {
 		t.Errorf("error unmarshaling item for testing: %s", err)
+	}
+
+	// Like real Connect, only fill in a value for fields posted with generate=true.
+	for _, f := range connectItemToReturn.Fields {
+		if f.Generate && f.Value == "" {
+			f.Value = "somepassword"
+		}
 	}
 
 	modelItemToReturn := model.Item{}

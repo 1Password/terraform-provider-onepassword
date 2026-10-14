@@ -741,6 +741,8 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	}
 
 	password := state.Password.ValueString()
+	// Generate only when no password is planned; an explicit "" must be kept as is.
+	generate := state.Password.IsNull() || state.Password.IsUnknown()
 	recipe, err := parseGeneratorRecipeList(state.Recipe)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
@@ -752,13 +754,13 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	switch state.Category.ValueString() {
 	case "login":
 		modelItem.Category = model.Login
-		modelItem.Fields = toModelLoginFields(state, password, recipe)
+		modelItem.Fields = toModelLoginFields(state, password, generate, recipe)
 	case "password":
 		modelItem.Category = model.Password
-		modelItem.Fields = toModelPasswordFields(state, password, recipe)
+		modelItem.Fields = toModelPasswordFields(state, password, generate, recipe)
 	case "database":
 		modelItem.Category = model.Database
-		modelItem.Fields = toModelDatabaseFields(state, password, recipe)
+		modelItem.Fields = toModelDatabaseFields(state, password, generate, recipe)
 	case "secure_note":
 		modelItem.Category = model.SecureNote
 		modelItem.Fields = toModelSecureNoteFields(state)
