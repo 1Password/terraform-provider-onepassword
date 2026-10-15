@@ -53,6 +53,111 @@ func (c *Client) GetVaultsByTitle(ctx context.Context, title string) ([]model.Va
 	return result, nil
 }
 
+func (c *Client) GetVaultDetails(ctx context.Context, uuid string) (*model.Vault, error) {
+	includeAccessors := true
+	vault, err := c.sdkClient.Vaults().Get(ctx, uuid, sdk.VaultGetParams{Accessors: &includeAccessors})
+	if err != nil {
+		return nil, c.withServiceAccountVaultHint(
+			fmt.Errorf("failed to get vault details using sdk: %w", err),
+			"this service account can only access vaults assigned to it or created by it, and cannot manage a vault created using desktop authentication or another principal",
+		)
+	}
+
+	result := &model.Vault{}
+	result.FromSDKVaultDetails(&vault)
+	return result, nil
+}
+
+func (c *Client) CreateVault(ctx context.Context, vault *model.Vault, allowAdminsAccess bool) (*model.Vault, error) {
+	created, err := c.sdkClient.Vaults().Create(ctx, vault.ToSDKCreateParams(allowAdminsAccess))
+	if err != nil {
+		return nil, c.withServiceAccountVaultHint(
+			fmt.Errorf("failed to create vault using sdk: %w", err),
+			"the service account must have permission to create vaults",
+		)
+	}
+
+	result := &model.Vault{}
+	result.FromSDKVaultDetails(&created)
+	return result, nil
+}
+
+func (c *Client) UpdateVault(ctx context.Context, vault *model.Vault) (*model.Vault, error) {
+	updated, err := c.sdkClient.Vaults().Update(ctx, vault.ID, vault.ToSDKUpdateParams())
+	if err != nil {
+		return nil, c.withServiceAccountVaultHint(
+			fmt.Errorf("failed to update vault using sdk: %w", err),
+			"service accounts cannot update vault metadata",
+		)
+	}
+
+	result := &model.Vault{}
+	result.FromSDKVaultDetails(&updated)
+	return result, nil
+}
+
+func (c *Client) DeleteVault(ctx context.Context, uuid string) error {
+	if err := c.sdkClient.Vaults().Delete(ctx, uuid); err != nil {
+		return c.withServiceAccountVaultHint(
+			fmt.Errorf("failed to delete vault using sdk: %w", err),
+			"service accounts can only delete vaults they created",
+		)
+	}
+	return nil
+}
+
+func (c *Client) GrantVaultGroupPermissions(ctx context.Context, uuid string, access []model.VaultGroupAccess) error {
+	groupAccess := make([]sdk.GroupAccess, len(access))
+	for i, permission := range access {
+		groupAccess[i] = sdk.GroupAccess{
+			GroupID:     permission.GroupID,
+			Permissions: permission.Permissions,
+		}
+	}
+	if err := c.sdkClient.Vaults().GrantGroupPermissions(ctx, uuid, groupAccess); err != nil {
+		return c.withServiceAccountVaultHint(
+			fmt.Errorf("failed to grant vault group permissions using sdk: %w", err),
+			"service accounts can only manage permissions for vaults they created",
+		)
+	}
+	return nil
+}
+
+func (c *Client) UpdateVaultGroupPermissions(ctx context.Context, uuid string, access []model.VaultGroupAccess) error {
+	groupAccess := make([]sdk.GroupVaultAccess, len(access))
+	for i, permission := range access {
+		groupAccess[i] = sdk.GroupVaultAccess{
+			VaultID:     uuid,
+			GroupID:     permission.GroupID,
+			Permissions: permission.Permissions,
+		}
+	}
+	if err := c.sdkClient.Vaults().UpdateGroupPermissions(ctx, groupAccess); err != nil {
+		return c.withServiceAccountVaultHint(
+			fmt.Errorf("failed to update vault group permissions using sdk: %w", err),
+			"service accounts can only manage permissions for vaults they created",
+		)
+	}
+	return nil
+}
+
+func (c *Client) RevokeVaultGroupPermission(ctx context.Context, uuid, groupID string) error {
+	if err := c.sdkClient.Vaults().RevokeGroupPermissions(ctx, uuid, groupID); err != nil {
+		return c.withServiceAccountVaultHint(
+			fmt.Errorf("failed to revoke vault group permissions using sdk: %w", err),
+			"service accounts can only manage permissions for vaults they created",
+		)
+	}
+	return nil
+}
+
+func (c *Client) withServiceAccountVaultHint(err error, limitation string) error {
+	if c.config.ServiceAccountToken == "" {
+		return err
+	}
+	return fmt.Errorf("%w. Service account limitation: %s", err, limitation)
+}
+
 // GetItem looks up an item by UUID or by title.
 // If itemUuid is a valid UUID format, it attempts to fetch the item by UUID.
 // If itemUuid is not a valid UUID format, it treats the parameter as a title
