@@ -33,6 +33,7 @@ const (
 	privateKeyOpenSSHDescription         = "SSH Private key in OpenSSH format."
 	credentialDescription                = "(Only applies to the API credential category) API credential for this item."
 	validFromDescription                 = "(Only applies to the API credential category) The timestamp from which the API credential is valid."
+	expiresDescription                   = "(Only applies to the API credential category) The timestamp at which the API credential expires."
 	filenameDescription                  = "(Only applies to the API credential category) The filename associated with the API credential."
 
 	dbHostnameDescription = "(Only applies to the database category) The address where the database can be found"

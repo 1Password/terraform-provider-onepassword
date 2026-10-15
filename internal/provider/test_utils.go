@@ -219,6 +219,11 @@ func generateApiCredentialFields() []model.ItemField {
 			Value: "test_valid_from",
 		},
 		{
+			ID:    "expires",
+			Label: "expires",
+			Value: "test_expires",
+		},
+		{
 			ID:    "hostname",
 			Label: "hostname",
 			Value: "test_hostname",

@@ -44,6 +44,7 @@ ephemeral "onepassword_item" "example_by_uuid" {
 - `category` (String) The category of the item. One of ["login" "password" "database" "secure_note" "document" "ssh_key" "api_credential"]
 - `credential` (String, Sensitive) (Only applies to the API credential category) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
+- `expires` (String) (Only applies to the API credential category) The timestamp at which the API credential expires.
 - `file` (Attributes List) A list of files attached to the document item. (see [below for nested schema](#nestedatt--file))
 - `filename` (String) (Only applies to the API credential category) The filename associated with the API credential.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
