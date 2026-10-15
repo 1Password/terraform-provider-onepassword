@@ -206,7 +206,7 @@ func generateApiCredentialFields() []model.ItemField {
 		{
 			ID:    "type",
 			Label: "type",
-			Value: "test_type",
+			Value: "bearer",
 		},
 		{
 			ID:    "filename",

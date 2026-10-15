@@ -110,6 +110,47 @@ func toModelDatabaseFields(state OnePasswordItemResourceModel, password string, 
 	}
 }
 
+func toModelApiCredentialFields(state OnePasswordItemResourceModel) []model.ItemField {
+	return []model.ItemField{
+		{
+			ID:    "username",
+			Label: "username",
+			Type:  model.FieldTypeString,
+			Value: state.Username.ValueString(),
+		},
+		{
+			ID:    "credential",
+			Label: "credential",
+			Type:  model.FieldTypeConcealed,
+			Value: state.Credential.ValueString(),
+		},
+		{
+			ID:    "credential_type",
+			Label: "type",
+			Type:  model.FieldTypeString,
+			Value: state.Type.ValueString(),
+		},
+		{
+			ID:    "filename",
+			Label: "filename",
+			Type:  model.FieldTypeString,
+			Value: state.Filename.ValueString(),
+		},
+		{
+			ID:    "validFrom",
+			Label: "valid_from",
+			Type:  model.FieldTypeString,
+			Value: state.ValidFrom.ValueString(),
+		},
+		{
+			ID:    "hostname",
+			Label: "hostname",
+			Type:  model.FieldTypeString,
+			Value: state.Hostname.ValueString(),
+		},
+	}
+}
+
 func toModelSecureNoteFields(state OnePasswordItemResourceModel) []model.ItemField {
 	return []model.ItemField{
 		{

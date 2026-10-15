@@ -623,12 +623,13 @@ func toModelFieldType(filedType sdk.ItemFieldType) ItemFieldType {
 }
 
 var modelToSDKCategoryMap = map[ItemCategory]sdk.ItemCategory{
-	Login:      sdk.ItemCategoryLogin,
-	Password:   sdk.ItemCategoryPassword,
-	SecureNote: sdk.ItemCategorySecureNote,
-	Document:   sdk.ItemCategoryDocument,
-	SSHKey:     sdk.ItemCategorySSHKey,
-	Database:   sdk.ItemCategoryDatabase,
+	Login:         sdk.ItemCategoryLogin,
+	Password:      sdk.ItemCategoryPassword,
+	SecureNote:    sdk.ItemCategorySecureNote,
+	Document:      sdk.ItemCategoryDocument,
+	SSHKey:        sdk.ItemCategorySSHKey,
+	Database:      sdk.ItemCategoryDatabase,
+	APICredential: sdk.ItemCategoryAPICredentials,
 }
 
 func fromModelCategoryToSDK(itemCategory ItemCategory) sdk.ItemCategory {
