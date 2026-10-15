@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
@@ -32,4 +33,13 @@ func setStringValuePreservingEmpty(value string, originalValue basetypes.StringV
 	}
 	// Original behavior is to convert empty to null
 	return setStringValue(value)
+}
+
+// setTimeValue formats a timestamp as an RFC 3339 string in UTC. A zero time is
+// treated as "not reported by the server" and becomes null.
+func setTimeValue(value time.Time) basetypes.StringValue {
+	if value.IsZero() {
+		return types.StringNull()
+	}
+	return types.StringValue(value.UTC().Format(time.RFC3339))
 }

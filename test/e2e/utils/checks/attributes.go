@@ -12,6 +12,8 @@ func BuildItemChecks(resourceName string, attrs map[string]any) []resource.TestC
 	checks := []resource.TestCheckFunc{
 		resource.TestCheckResourceAttrSet(resourceName, "uuid"),
 		resource.TestCheckResourceAttrSet(resourceName, "id"),
+		resource.TestCheckResourceAttrSet(resourceName, "created_at"),
+		resource.TestCheckResourceAttrSet(resourceName, "updated_at"),
 	}
 
 	for attr, expectedValue := range attrs {

@@ -104,7 +104,9 @@ resource "onepassword_item" "example_with_list" {
 
 ### Read-Only
 
+- `created_at` (String) The date and time the item was created in 1Password, as an RFC 3339 timestamp in UTC.
 - `id` (String) The Terraform resource identifier for this item in the format `vaults/<vault_id>/items/<item_id>`.
+- `updated_at` (String) The date and time the item was last changed in 1Password, as an RFC 3339 timestamp in UTC. This is the item's own modification time, so it also moves when the item is changed outside Terraform.
 - `uuid` (String) The UUID of the item. Item identifiers are unique within a specific vault.
 
 <a id="nestedblock--password_recipe"></a>

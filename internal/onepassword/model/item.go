@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	connect "github.com/1Password/connect-sdk-go/onepassword"
 	sdk "github.com/1password/onepassword-sdk-go"
@@ -43,16 +44,18 @@ const (
 )
 
 type Item struct {
-	ID       string
-	Title    string
-	VaultID  string
-	Category ItemCategory
-	Version  int
-	Tags     []string
-	URLs     []ItemURL
-	Sections []ItemSection
-	Fields   []ItemField
-	Files    []ItemFile
+	ID        string
+	Title     string
+	VaultID   string
+	Category  ItemCategory
+	Version   int
+	Tags      []string
+	URLs      []ItemURL
+	Sections  []ItemSection
+	Fields    []ItemField
+	Files     []ItemFile
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type ItemSection struct {
@@ -94,6 +97,8 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) error {
 	i.Category = fromSDKCategoryToModel(item.Category)
 	i.Tags = item.Tags
 	i.URLs = fromSDKURLs(item.Websites)
+	i.CreatedAt = item.CreatedAt
+	i.UpdatedAt = item.UpdatedAt
 
 	// Convert sections/fields/files
 	sectionMap := buildSectionMap(item)
@@ -142,6 +147,8 @@ func (i *Item) FromConnectItemToModel(item *connect.Item) error {
 	i.Version = item.Version
 	i.Tags = item.Tags
 	i.URLs = fromConnectURLs(item.URLs)
+	i.CreatedAt = item.CreatedAt
+	i.UpdatedAt = item.UpdatedAt
 
 	// Convert sections/fields/files
 	sectionMap := make(map[string]ItemSection)
@@ -175,6 +182,9 @@ func (i *Item) FromModelItemToConnect() (*connect.Item, error) {
 		Sections: toConnectSections(i.Sections),
 		Fields:   fields,
 		Files:    toConnectFiles(i.Files),
+
+		CreatedAt: i.CreatedAt,
+		UpdatedAt: i.UpdatedAt,
 	}, nil
 }
 
