@@ -6,6 +6,8 @@
 
 ## Fixes
  * A user-friendly description of a fix. {issue-number}
+ * Linux binaries are now statically linked, so the provider runs on musl-based images such as Alpine (e.g. Spacelift). Desktop app authentication (`account` / `OP_ACCOUNT`) is no longer available on Linux. {#288, #340}
+ * `onepassword-sdk-go` dependency is updated to v0.4.1. {#288}
 
 ## Security
  * A user-friendly description of a security fix. {issue-number}
