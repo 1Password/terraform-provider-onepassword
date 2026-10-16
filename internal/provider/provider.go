@@ -188,6 +188,7 @@ func (p *OnePasswordProvider) EphemeralResources(ctx context.Context) []func() e
 func (p *OnePasswordProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewOnePasswordItemDataSource,
+		NewOnePasswordItemsDataSource,
 		NewOnePasswordVaultDataSource,
 		NewOnePasswordEnvironmentDataSource,
 	}
