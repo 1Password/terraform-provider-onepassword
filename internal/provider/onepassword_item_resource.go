@@ -91,18 +91,22 @@ type OnePasswordItemResourceSectionMapModel struct {
 // OnePasswordItemResourceFieldMapModel is used for map-based fields (field_map attribute)
 // The map key serves as the field label
 type OnePasswordItemResourceFieldMapModel struct {
-	ID     types.String         `tfsdk:"id"`
-	Type   types.String         `tfsdk:"type"`
-	Value  types.String         `tfsdk:"value"`
-	Recipe *PasswordRecipeModel `tfsdk:"password_recipe"`
+	ID             types.String         `tfsdk:"id"`
+	Type           types.String         `tfsdk:"type"`
+	Value          types.String         `tfsdk:"value"`
+	ValueWO        types.String         `tfsdk:"value_wo"`
+	ValueWOVersion types.Int64          `tfsdk:"value_wo_version"`
+	Recipe         *PasswordRecipeModel `tfsdk:"password_recipe"`
 }
 
 type OnePasswordItemResourceFieldModel struct {
-	ID     types.String          `tfsdk:"id"`
-	Label  types.String          `tfsdk:"label"`
-	Type   types.String          `tfsdk:"type"`
-	Value  types.String          `tfsdk:"value"`
-	Recipe []PasswordRecipeModel `tfsdk:"password_recipe"`
+	ID             types.String          `tfsdk:"id"`
+	Label          types.String          `tfsdk:"label"`
+	Type           types.String          `tfsdk:"type"`
+	Value          types.String          `tfsdk:"value"`
+	ValueWO        types.String          `tfsdk:"value_wo"`
+	ValueWOVersion types.Int64           `tfsdk:"value_wo_version"`
+	Recipe         []PasswordRecipeModel `tfsdk:"password_recipe"`
 }
 
 func (r *OnePasswordItemResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -140,6 +144,37 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 					Default:             booldefault.StaticBool(true),
 				},
 			},
+		},
+	}
+
+	// Shared by the field_map attribute and the field block, so the two section forms accept
+	// write-only values the same way.
+	fieldValueWOSchema := schema.StringAttribute{
+		MarkdownDescription: fieldValueWriteOnceDescription,
+		Optional:            true,
+		Sensitive:           true,
+		WriteOnly:           true,
+		Validators: []validator.String{
+			stringvalidator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("value"),
+				path.MatchRelative().AtParent().AtName("password_recipe"),
+			),
+			stringvalidator.AlsoRequires(
+				path.MatchRelative().AtParent().AtName("value_wo_version"),
+			),
+			validateMonthYear(),
+		},
+	}
+	fieldValueWOVersionSchema := schema.Int64Attribute{
+		MarkdownDescription: fieldValueWriteOnceVersionDescription,
+		Optional:            true,
+		Validators: []validator.Int64{
+			int64validator.ConflictsWith(
+				path.MatchRelative().AtParent().AtName("value"),
+			),
+			int64validator.AlsoRequires(
+				path.MatchRelative().AtParent().AtName("value_wo"),
+			),
 		},
 	}
 
@@ -190,6 +225,8 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 								validateMonthYear(),
 							},
 						},
+						"value_wo":         fieldValueWOSchema,
+						"value_wo_version": fieldValueWOVersionSchema,
 						"password_recipe": schema.SingleNestedAttribute{
 							MarkdownDescription: passwordRecipeDescription,
 							Optional:            true,
@@ -443,6 +480,8 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 											validateMonthYear(),
 										},
 									},
+									"value_wo":         fieldValueWOSchema,
+									"value_wo_version": fieldValueWOVersionSchema,
 								},
 								Blocks: map[string]schema.Block{
 									"password_recipe": passwordRecipeBlockSchema,
@@ -539,6 +578,11 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	// Handle write-only fields
 	handleWriteOnlyField(config.PasswordWOVersion, config.PasswordWO, &plan.Password)
 	handleWriteOnlyField(config.NoteValueWOVersion, config.NoteValueWO, &plan.NoteValue)
+	// With no prior state every section field's value_wo is written, so the item is never read.
+	if err := applySectionFieldWriteOnlyValues(&config, nil, &plan, nil); err != nil {
+		resp.Diagnostics.AddError("1Password Item create error", err.Error())
+		return
+	}
 
 	item, diagnostics := stateToModel(ctx, plan)
 	resp.Diagnostics.Append(diagnostics...)
@@ -560,6 +604,7 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	// Once created, clear write-only fields from state
 	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
 	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
+	clearSectionFieldWriteOnlyValues(&plan)
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -600,6 +645,7 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 	// Once read, clear write-only fields from state
 	clearWriteOnlyFieldFromState(state.PasswordWOVersion, &state.Password)
 	clearWriteOnlyFieldFromState(state.NoteValueWOVersion, &state.NoteValue)
+	clearSectionFieldWriteOnlyValues(&state)
 
 	// Save updated state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -630,13 +676,23 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 
 	// Handle all write-only fields
 	vaultUUID, itemUUID := vaultAndItemUUID(plan.ID.ValueString())
-	err := handleWriteOnlyFieldUpdates(&config, &state, &plan, func() (*model.Item, error) {
+	// Read at most once, however many write-only fields need their current value kept.
+	var currentItem *model.Item
+	refreshItem := func() (*model.Item, error) {
+		if currentItem != nil {
+			return currentItem, nil
+		}
 		item, err := r.client.GetItem(ctx, itemUUID, vaultUUID)
 		if err != nil {
 			return nil, fmt.Errorf("could not read item '%s' from vault '%s' to preserve write-only fields: %s", itemUUID, vaultUUID, err)
 		}
+		currentItem = item
 		return item, nil
-	})
+	}
+	err := handleWriteOnlyFieldUpdates(&config, &state, &plan, refreshItem)
+	if err == nil {
+		err = applySectionFieldWriteOnlyValues(&config, &state, &plan, refreshItem)
+	}
 	if err != nil {
 		resp.Diagnostics.AddError("1Password Item read error", err.Error())
 		return
@@ -662,6 +718,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 	// Once updated, always clear write-only fields from state
 	clearWriteOnlyFieldFromState(config.PasswordWOVersion, &plan.Password)
 	clearWriteOnlyFieldFromState(config.NoteValueWOVersion, &plan.NoteValue)
+	clearSectionFieldWriteOnlyValues(&plan)
 
 	// Save updated plan into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)

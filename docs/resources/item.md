@@ -48,6 +48,35 @@ resource "onepassword_item" "example_with_map" {
   }
 }
 
+# Example writing a section field's value without storing it in state.
+# Increment value_wo_version to write a new value; otherwise the value in 1Password is kept.
+ephemeral "random_password" "signing_key" {
+  length = 48
+}
+
+resource "onepassword_item" "example_with_write_only_field" {
+  vault = "your-vault-id"
+
+  title    = "Example Item with a Write-Only Field"
+  category = "secure_note"
+
+  section_map = {
+    "credentials" = {
+      field_map = {
+        "signing_key" = {
+          type             = "CONCEALED"
+          value_wo         = ephemeral.random_password.signing_key.result
+          value_wo_version = 1
+        }
+        "key_id" = {
+          type  = "STRING"
+          value = "key-01"
+        }
+      }
+    }
+  }
+}
+
 # Example using section (list-based sections)
 resource "onepassword_item" "example_with_list" {
   vault = "your-vault-id"
@@ -128,6 +157,8 @@ Required:
 
 Optional:
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `field` (Block List) A list of custom fields in the section (see [below for nested schema](#nestedblock--section--field))
 - `id` (String) A unique identifier for the section.
 
@@ -140,10 +171,14 @@ Required:
 
 Optional:
 
+> **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
+
 - `id` (String) A unique identifier for the field.
 - `password_recipe` (Block List) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedblock--section--field--password_recipe))
 - `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
 - `value` (String, Sensitive) The value of the field.
+- `value_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) A write-only value for the field. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later.
+- `value_wo_version` (Number) An integer that must be incremented to trigger an update to the field's 'value_wo'.
 
 <a id="nestedblock--section--field--password_recipe"></a>
 ### Nested Schema for `section.field.password_recipe`
@@ -174,6 +209,8 @@ Optional:
 - `password_recipe` (Attributes) The recipe used to generate a new value for a password. (see [below for nested schema](#nestedatt--section_map--field_map--password_recipe))
 - `type` (String) The type of value stored in the field. One of ["STRING" "CONCEALED" "EMAIL" "URL" "OTP" "DATE" "MONTH_YEAR" "MENU"]
 - `value` (String, Sensitive) The value of the field.
+- `value_wo` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) A write-only value for the field. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later.
+- `value_wo_version` (Number) An integer that must be incremented to trigger an update to the field's 'value_wo'.
 
 <a id="nestedatt--section_map--field_map--password_recipe"></a>
 ### Nested Schema for `section_map.field_map.password_recipe`

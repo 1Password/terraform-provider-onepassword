@@ -2821,3 +2821,316 @@ func TestAccItemResource_SectionAndSectionMapConflict(t *testing.T) {
 		},
 	})
 }
+
+// TestAccItemResourceSectionMapFieldWriteOnly tests value_wo on a section_map field: it is written
+// on create and when its version increases, and kept when the version stays or goes down.
+func TestAccItemResourceSectionMapFieldWriteOnly(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test SectionMap Field Write-Only", uniqueID)
+	var itemUUID string
+
+	attrs := func(token string, version int, keyID string) map[string]any {
+		return map[string]any{
+			"title":    title,
+			"category": "secure_note",
+			"section_map": sections.BuildSectionMap(map[string]sections.TestSectionMapEntry{
+				"Credential": {
+					FieldMap: map[string]sections.TestSectionMapField{
+						"Token":  {Type: "CONCEALED", ValueWO: token, ValueWOVersion: version},
+						"Key ID": {Type: "STRING", Value: keyID},
+					},
+				},
+			}),
+		}
+	}
+
+	const tokenAttr = "section_map.Credential.field_map.Token"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs("initial-token", 1, "key-01")),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_FIELD_VALUE_WO"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", tokenAttr+".value_wo_version", "1"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", tokenAttr+".value"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", tokenAttr+".value_wo"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Token", "initial-token"),
+				),
+			},
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs("rotated-token", 2, "key-01")),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_FIELD_VERSION_INCREMENT"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", tokenAttr+".value_wo_version", "2"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", tokenAttr+".value"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Token", "rotated-token"),
+				),
+			},
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs("ignored-token", 2, "key-02")),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_OTHER_FIELD_PRESERVE_VALUE"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section_map.Credential.field_map.Key ID.value", "key-02"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Token", "rotated-token"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Key ID", "key-02"),
+				),
+			},
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs("ignored-token", 1, "key-02")),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "DECREMENT_FIELD_VERSION"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", tokenAttr+".value_wo_version", "1"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Token", "rotated-token"),
+				),
+			},
+		},
+	})
+}
+
+// TestAccItemResourceSectionFieldWriteOnly tests value_wo on a field in a section block.
+func TestAccItemResourceSectionFieldWriteOnly(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Section Field Write-Only", uniqueID)
+	var itemUUID string
+
+	attrs := func(token string, version int) map[string]any {
+		return map[string]any{
+			"title":    title,
+			"category": "login",
+			"username": "testuser@example.com",
+			"section": sections.MapSections([]sections.TestSection{
+				{
+					Label: "Credential",
+					Fields: []sections.TestField{
+						{Label: "Token", Type: "CONCEALED", ValueWO: token, ValueWOVersion: version},
+					},
+				},
+			}),
+		}
+	}
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs("initial-token", 1)),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_WITH_FIELD_VALUE_WO"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo_version", "1"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section.0.field.0.value"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Token", "initial-token"),
+				),
+			},
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemResourceConfig(testVaultID, attrs("rotated-token", 2)),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_FIELD_VERSION_INCREMENT"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "section.0.field.0.value_wo_version", "2"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", "section.0.field.0.value"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Token", "rotated-token"),
+				),
+			},
+		},
+	})
+}
+
+// verifySectionFieldValueIn1Password verifies a section field's value in 1Password, found by
+// section and field label.
+func verifySectionFieldValueIn1Password(t *testing.T, vaultID string, itemUUID *string, sectionLabel, fieldLabel, expectedValue string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		ctx := context.Background()
+		client, err := client.CreateTestClient(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create client: %w", err)
+		}
+
+		item, err := client.GetItem(ctx, *itemUUID, vaultID)
+		if err != nil {
+			return fmt.Errorf("failed to get item: %w", err)
+		}
+
+		for _, section := range item.Sections {
+			if section.Label != sectionLabel {
+				continue
+			}
+			for _, f := range item.Fields {
+				if f.SectionID == section.ID && f.Label == fieldLabel {
+					if f.Value != expectedValue {
+						return fmt.Errorf("%s/%s mismatch: expected %q, got %q", sectionLabel, fieldLabel, expectedValue, f.Value)
+					}
+					t.Logf("%s/%s verified in 1Password", sectionLabel, fieldLabel)
+					return nil
+				}
+			}
+		}
+
+		return fmt.Errorf("field %s/%s not found in item", sectionLabel, fieldLabel)
+	}
+}
+
+// TestAccItemResourceSectionFieldWriteOnlyIgnoreChanges covers a field Terraform creates empty for
+// a person to fill in by hand, with the section under ignore_changes. The value they enter must
+// survive later updates without reaching state, and a field that was not write-only before must
+// keep its value when configuration switches it to value_wo.
+func TestAccItemResourceSectionFieldWriteOnlyIgnoreChanges(t *testing.T) {
+	testVaultID := vault.GetTestVaultID(t)
+	uniqueID := uuid.New().String()
+	title := addUniqueIDToTitle("Test Field Write-Only Ignore Changes", uniqueID)
+	var itemUUID string
+
+	config := func(itemTitle, tokenAttrs string) string {
+		return tfconfig.CreateConfigBuilder()(
+			tfconfig.ProviderConfig(),
+			func() string {
+				return fmt.Sprintf(`
+resource "onepassword_item" "test_item" {
+  vault    = %q
+  title    = %q
+  category = "secure_note"
+
+  section_map = {
+    "Credential" = {
+      field_map = {
+        "Token" = {
+          type = "CONCEALED"
+          %s
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [section_map["Credential"]]
+  }
+}`, testVaultID, itemTitle, tokenAttrs)
+			},
+		)
+	}
+
+	const writeOnlyToken = `value_wo = ""
+          value_wo_version = 1`
+	const tokenAttr = "section_map.Credential.field_map.Token"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config(title, writeOnlyToken),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_EMPTY_WRITE_ONLY_FIELD"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &itemUUID),
+					cleanup.RegisterItem(t, &itemUUID, testVaultID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", tokenAttr+".value_wo_version", "1"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", tokenAttr+".value"),
+				),
+			},
+			{
+				PreConfig: func() {
+					setSectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Token", "entered-by-hand")
+				},
+				Config: config(title+" renamed", writeOnlyToken),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "UPDATE_KEEPS_HAND_ENTERED_VALUE"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &itemUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", title+" renamed"),
+					resource.TestCheckNoResourceAttr("onepassword_item.test_item", tokenAttr+".value"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &itemUUID, "Credential", "Token", "entered-by-hand"),
+				),
+			},
+		},
+	})
+
+	// An item created before its field was write-only: under ignore_changes the switch to
+	// value_wo must not overwrite what was entered by hand.
+	migratedTitle := addUniqueIDToTitle("Test Field Write-Only Migration", uniqueID)
+	var migratedUUID string
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config(migratedTitle, `value = ""`),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "CREATE_PLAIN_FIELD"),
+					uuidutil.CaptureItemUUID(t, "onepassword_item.test_item", &migratedUUID),
+					cleanup.RegisterItem(t, &migratedUUID, testVaultID),
+				),
+			},
+			{
+				PreConfig: func() {
+					setSectionFieldValueIn1Password(t, testVaultID, &migratedUUID, "Credential", "Token", "entered-by-hand")
+				},
+				Config: config(migratedTitle+" renamed", writeOnlyToken),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					logStep(t, "SWITCH_TO_WRITE_ONLY_KEEPS_VALUE"),
+					uuidutil.VerifyItemUUIDUnchanged(t, "onepassword_item.test_item", &migratedUUID),
+					resource.TestCheckResourceAttr("onepassword_item.test_item", "title", migratedTitle+" renamed"),
+					verifySectionFieldValueIn1Password(t, testVaultID, &migratedUUID, "Credential", "Token", "entered-by-hand"),
+				),
+			},
+		},
+	})
+}
+
+// setSectionFieldValueIn1Password edits a section field directly in 1Password, as a person
+// filling in an item by hand would.
+func setSectionFieldValueIn1Password(t *testing.T, vaultID string, itemUUID *string, sectionLabel, fieldLabel, value string) {
+	t.Helper()
+	ctx := context.Background()
+	client, err := client.CreateTestClient(ctx)
+	if err != nil {
+		t.Fatalf("failed to create client: %s", err)
+	}
+
+	item, err := client.GetItem(ctx, *itemUUID, vaultID)
+	if err != nil {
+		t.Fatalf("failed to get item: %s", err)
+	}
+
+	for _, section := range item.Sections {
+		if section.Label != sectionLabel {
+			continue
+		}
+		for i := range item.Fields {
+			if item.Fields[i].SectionID == section.ID && item.Fields[i].Label == fieldLabel {
+				item.Fields[i].Value = value
+				if _, err := client.UpdateItem(ctx, item, vaultID); err != nil {
+					t.Fatalf("failed to update item: %s", err)
+				}
+				return
+			}
+		}
+	}
+	t.Fatalf("field %s/%s not found in item", sectionLabel, fieldLabel)
+}
