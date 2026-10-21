@@ -10,7 +10,22 @@
 ## Security
  * A user-friendly description of a security fix. {issue-number}
 
- ---
+---
+
+[//]: # (START/v3.4.0)
+# v3.4.0
+
+## Features
+  * `onepassword_item` resource, data source and ephemeral resource expose `created_at` and `updated_at` timestamps. {#393}
+  * `onepassword_item` ephemeral resource now includes all item fields (category, tags, sections, files, etc.), matching the data source. {#367}
+
+## Fixes
+  * An explicitly empty `password` is now kept instead of being replaced with a generated password. {#403}
+
+## Security
+  * Build with Go 1.26.10 to address the eMudhra CA compromise. {#407}
+
+---
 
 [//]: # (START/v3.3.1)
 # v3.3.1
