@@ -2,7 +2,7 @@ module github.com/1Password/terraform-provider-onepassword/v3
 
 go 1.25.0
 
-toolchain go1.25.5
+toolchain go1.26.10
 
 require (
 	github.com/1Password/connect-sdk-go v1.5.3
