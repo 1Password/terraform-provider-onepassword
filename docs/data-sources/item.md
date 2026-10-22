@@ -39,6 +39,7 @@ data "onepassword_item" "example" {
 - `created_at` (String) The date and time the item was created in 1Password, as an RFC 3339 timestamp in UTC.
 - `credential` (String, Sensitive) (Only applies to the API credential category) API credential for this item.
 - `database` (String) (Only applies to the database category) The name of the database.
+- `expires` (String) (Only applies to the API credential category) The timestamp at which the API credential expires.
 - `file` (Block List) A list of files attached to the document item. (see [below for nested schema](#nestedblock--file))
 - `filename` (String) (Only applies to the API credential category) The filename associated with the API credential.
 - `hostname` (String) (Only applies to the database category) The address where the database can be found
