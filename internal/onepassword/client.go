@@ -23,6 +23,19 @@ type Client interface {
 	GetEnvironmentVariables(ctx context.Context, environmentID string) ([]model.EnvironmentVariable, error)
 }
 
+// VaultManager is implemented only by clients that support vault management.
+// 1Password Connect supports reading vaults, but not creating, updating, deleting,
+// or managing permissions on them.
+type VaultManager interface {
+	GetVaultDetails(ctx context.Context, uuid string) (*model.Vault, error)
+	CreateVault(ctx context.Context, vault *model.Vault, allowAdminsAccess bool) (*model.Vault, error)
+	UpdateVault(ctx context.Context, vault *model.Vault) (*model.Vault, error)
+	DeleteVault(ctx context.Context, uuid string) error
+	GrantVaultGroupPermissions(ctx context.Context, uuid string, access []model.VaultGroupAccess) error
+	UpdateVaultGroupPermissions(ctx context.Context, uuid string, access []model.VaultGroupAccess) error
+	RevokeVaultGroupPermission(ctx context.Context, uuid, groupID string) error
+}
+
 type ClientConfig struct {
 	ConnectHost         string
 	ConnectToken        string
