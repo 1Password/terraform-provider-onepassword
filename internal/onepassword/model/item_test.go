@@ -303,29 +303,40 @@ func TestFromSDKURLs(t *testing.T) {
 
 func TestFromSDKSections(t *testing.T) {
 	tests := map[string]struct {
-		input    map[string]ItemSection
+		input    []sdk.ItemSection
 		expected []ItemSection
 	}{
-		"should convert empty map": {
-			input:    map[string]ItemSection{},
+		"should convert empty slice": {
+			input:    []sdk.ItemSection{},
 			expected: []ItemSection{},
 		},
 		"should convert single section": {
-			input: map[string]ItemSection{
-				"section1": {ID: "section1", Label: "Section 1"},
+			input: []sdk.ItemSection{
+				{ID: "section1", Title: "Section 1"},
 			},
 			expected: []ItemSection{
 				{ID: "section1", Label: "Section 1"},
 			},
 		},
-		"should convert multiple sections": {
-			input: map[string]ItemSection{
-				"section1": {ID: "section1", Label: "Section 1"},
-				"section2": {ID: "section2", Label: "Section 2"},
+		"should convert multiple sections in order": {
+			input: []sdk.ItemSection{
+				{ID: "section2", Title: "Section 2"},
+				{ID: "section1", Title: "Section 1"},
+				{ID: "section3", Title: "Section 3"},
+			},
+			expected: []ItemSection{
+				{ID: "section2", Label: "Section 2"},
+				{ID: "section1", Label: "Section 1"},
+				{ID: "section3", Label: "Section 3"},
+			},
+		},
+		"should skip sections with empty ID": {
+			input: []sdk.ItemSection{
+				{ID: "", Title: ""},
+				{ID: "section1", Title: "Section 1"},
 			},
 			expected: []ItemSection{
 				{ID: "section1", Label: "Section 1"},
-				{ID: "section2", Label: "Section 2"},
 			},
 		},
 	}
@@ -333,21 +344,8 @@ func TestFromSDKSections(t *testing.T) {
 	for description, test := range tests {
 		t.Run(description, func(t *testing.T) {
 			actual := fromSDKSections(test.input)
-			if len(actual) != len(test.expected) {
-				t.Errorf("Expected %d sections, got %d", len(test.expected), len(actual))
-			}
-			// Check that all expected sections are present
-			for _, expected := range test.expected {
-				found := false
-				for _, actualSection := range actual {
-					if actualSection.ID == expected.ID && actualSection.Label == expected.Label {
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Errorf("Expected section %+v not found in result", expected)
-				}
+			if !reflect.DeepEqual(actual, test.expected) {
+				t.Errorf("Expected %+v, got %+v", test.expected, actual)
 			}
 		})
 	}
@@ -1294,6 +1292,45 @@ func TestFromSDKItemToModel(t *testing.T) {
 					},
 				},
 				Files: []ItemFile{},
+			},
+			wantErr: false,
+		},
+		"should preserve section order": {
+			input: &sdk.Item{
+				ID:       "item1",
+				Title:    "Test Item",
+				VaultID:  "vault1",
+				Category: sdk.ItemCategoryLogin,
+				Sections: []sdk.ItemSection{
+					{ID: "", Title: ""},
+					{ID: "s1", Title: "Section 1"},
+					{ID: "s2", Title: "Section 2"},
+					{ID: "s3", Title: "Section 3"},
+					{ID: "s4", Title: "Section 4"},
+					{ID: "s5", Title: "Section 5"},
+					{ID: "s6", Title: "Section 6"},
+					{ID: "s7", Title: "Section 7"},
+					{ID: "s8", Title: "Section 8"},
+				},
+			},
+			expected: &Item{
+				ID:       "item1",
+				Title:    "Test Item",
+				VaultID:  "vault1",
+				Category: Login,
+				URLs:     []ItemURL{},
+				Sections: []ItemSection{
+					{ID: "s1", Label: "Section 1"},
+					{ID: "s2", Label: "Section 2"},
+					{ID: "s3", Label: "Section 3"},
+					{ID: "s4", Label: "Section 4"},
+					{ID: "s5", Label: "Section 5"},
+					{ID: "s6", Label: "Section 6"},
+					{ID: "s7", Label: "Section 7"},
+					{ID: "s8", Label: "Section 8"},
+				},
+				Fields: []ItemField{},
+				Files:  []ItemFile{},
 			},
 			wantErr: false,
 		},
