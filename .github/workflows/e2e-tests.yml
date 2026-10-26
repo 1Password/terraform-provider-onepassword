@@ -50,7 +50,7 @@ jobs:
         uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
 
       - name: Install kubectl
-        uses: step-security/setup-kubectl@b256bc71248a59f1e3a278fc75a65646d6a8a1c4 # v5.1.0
+        uses: step-security/setup-kubectl@fdd30c5ae990e05271b3bde363e8b9cdeb1eb400 # v5.2.0
 
       - name: Install dependencies
         run: go mod tidy
