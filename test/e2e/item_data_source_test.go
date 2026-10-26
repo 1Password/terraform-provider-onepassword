@@ -530,6 +530,95 @@ func TestAccItemDataSourceSectionMap(t *testing.T) {
 	})
 }
 
+func TestAccItemDataSourceRootFileMap(t *testing.T) {
+	t.Parallel()
+
+	docItem := testItems[model.Document]
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemDataSourceConfig(map[string]string{
+						"vault": testVaultID,
+						"uuid":  docItem.UUID,
+					}),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test_item", "title", docItem.Title),
+					resource.TestCheckResourceAttr("data.onepassword_item.test_item", fmt.Sprintf("file_map.%s.content", docItem.Attrs["file.0.name"]), docItem.Attrs["file.0.content"]),
+					resource.TestCheckResourceAttr("data.onepassword_item.test_item", fmt.Sprintf("file_map.%s.content_base64", docItem.Attrs["file.0.name"]), docItem.Attrs["file.0.content_base64"]),
+					resource.TestCheckResourceAttrSet("data.onepassword_item.test_item", fmt.Sprintf("file_map.%s.id", docItem.Attrs["file.0.name"])),
+				),
+			},
+		},
+	})
+}
+
+func TestAccItemDataSourceRootFieldMap(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	testClient, err := client.CreateTestClient(ctx)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	uniqueID := uuid.New().String()
+	itemTitle := fmt.Sprintf("Test Root Field Map-%s", uniqueID)
+
+	createdItem, err := testClient.CreateItem(ctx, &model.Item{
+		Title:    itemTitle,
+		VaultID:  testVaultID,
+		Category: model.Login,
+		Fields: []model.ItemField{
+			{
+				ID:    "custom_token",
+				Label: "API Token",
+				Type:  model.FieldTypeConcealed,
+				Value: "supersecret",
+			},
+			{
+				ID:    "custom_env",
+				Label: "Environment",
+				Type:  model.FieldTypeString,
+				Value: "production",
+			},
+		},
+	}, testVaultID)
+	if err != nil {
+		t.Fatalf("failed to create test item: %v", err)
+	}
+
+	t.Cleanup(func() {
+		_ = testClient.DeleteItem(ctx, createdItem, testVaultID)
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: tfconfig.CreateConfigBuilder()(
+					tfconfig.ProviderConfig(),
+					tfconfig.ItemDataSourceConfig(map[string]string{
+						"vault": testVaultID,
+						"uuid":  createdItem.ID,
+					}),
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("data.onepassword_item.test_item", "title", itemTitle),
+					resource.TestCheckResourceAttr("data.onepassword_item.test_item", "field_map.API Token.value", "supersecret"),
+					resource.TestCheckResourceAttr("data.onepassword_item.test_item", "field_map.API Token.type", "CONCEALED"),
+					resource.TestCheckResourceAttr("data.onepassword_item.test_item", "field_map.Environment.value", "production"),
+					resource.TestCheckResourceAttr("data.onepassword_item.test_item", "field_map.Environment.type", "STRING"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccItemDataSource_VaultName(t *testing.T) {
 	t.Parallel()
 
