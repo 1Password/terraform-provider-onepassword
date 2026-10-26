@@ -11,7 +11,8 @@ permissions:
 jobs:
   # Build and release for Linux (runs first, creates the release)
   release-linux:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-26.04 x64 builds cgo code for x86-64-v3, breaking older CPUs
+    runs-on: ubuntu-24.04
     permissions:
       contents: write # Required to create and update releases
     steps:
