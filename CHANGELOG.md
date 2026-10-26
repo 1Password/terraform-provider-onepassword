@@ -12,6 +12,14 @@
 
 ---
 
+[//]: # (START/v3.4.1)
+# v3.4.1
+
+## Fixes
+  * Linux amd64 binary runs on older x86-64 CPUs again by building releases on Ubuntu 24.04. {#412}
+
+---
+
 [//]: # (START/v3.4.0)
 # v3.4.0
 
