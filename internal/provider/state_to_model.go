@@ -7,6 +7,7 @@ import (
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword/model"
 )
@@ -154,7 +155,8 @@ func toModelSectionField(field OnePasswordItemResourceFieldModel, sectionID, sec
 	}
 
 	if recipe != nil {
-		addRecipe(modelItemField, recipe)
+		modelItemField.Recipe = recipe
+		modelItemField.Generate = shouldGenerate(field.Value)
 	}
 
 	return modelItemField, nil
@@ -261,7 +263,8 @@ func toModelSectionFieldMap(field OnePasswordItemResourceFieldMapModel, fieldLab
 	}
 
 	if recipe != nil {
-		addRecipe(modelItemField, recipe)
+		modelItemField.Recipe = recipe
+		modelItemField.Generate = shouldGenerate(field.Value)
 	}
 
 	return modelItemField, nil
@@ -296,4 +299,9 @@ func toModelSectionsFromMap(state OnePasswordItemResourceModel, modelItem *model
 		}
 	}
 	return nil
+}
+
+// shouldGenerate generates only when no value is planned; an explicit "" is kept.
+func shouldGenerate(value types.String) bool {
+	return value.IsNull() || value.IsUnknown()
 }

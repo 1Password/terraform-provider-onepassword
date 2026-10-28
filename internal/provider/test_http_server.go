@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/1Password/connect-sdk-go/onepassword"
@@ -50,10 +51,17 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 		t.Errorf("error marshaling itemlist for testing: %s", err)
 	}
 
+	// PUT replaces the stored item, so later GETs return the updated item.
+	var mu sync.Mutex
+	itemURL := fmt.Sprintf("/v1/vaults/%s/items/%s", expectedItem.VaultID, expectedItem.ID)
+
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+
 		filePath := regexp.MustCompile("/v1/vaults/[a-z0-9]*/items/[a-z0-9]*/files/[a-z0-9]*/content")
 		if r.Method == http.MethodGet {
-			if r.URL.String() == fmt.Sprintf("/v1/vaults/%s/items/%s", expectedItem.VaultID, expectedItem.ID) {
+			if r.URL.String() == itemURL {
 				// Mock returning an item specified by uuid
 				w.WriteHeader(http.StatusOK)
 				w.Header().Set("Content-Type", "application/json")
@@ -115,6 +123,28 @@ func setupTestServer(expectedItem *model.Item, expectedVault model.Vault, t *tes
 				_, err = w.Write(itemBytes)
 				if err != nil {
 					t.Errorf("error writing body: %s", err)
+				}
+			} else {
+				t.Errorf("Unexpected request: %s Consider adding this endpoint to the test server", r.URL.String())
+			}
+		} else if r.Method == http.MethodPut {
+			if r.URL.String() == itemURL {
+				updated := convertBodyToItem(r, t)
+
+				// The client only reads the ID and version from the response, then polls GET for version+1.
+				w.Header().Set("Content-Type", "application/json")
+				if _, err := w.Write(itemBytes); err != nil {
+					t.Errorf("error writing body: %s", err)
+				}
+
+				updated.Version = connectItem.Version + 1
+				updated.CreatedAt = expectedItem.CreatedAt
+				updated.UpdatedAt = expectedItem.UpdatedAt
+				if connectItem, err = updated.FromModelItemToConnect(); err != nil {
+					t.Errorf("error converting model item to Connect format: %s", err)
+				}
+				if itemBytes, err = json.Marshal(connectItem); err != nil {
+					t.Errorf("error marshaling item for testing: %s", err)
 				}
 			} else {
 				t.Errorf("Unexpected request: %s Consider adding this endpoint to the test server", r.URL.String())

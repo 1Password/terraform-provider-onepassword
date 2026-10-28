@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -665,6 +664,7 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 
 	// Save updated plan into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, importedPrivateKey, nil)...)
 }
 
 func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -690,8 +690,12 @@ func (r *OnePasswordItemResource) Delete(ctx context.Context, req resource.Delet
 	}
 }
 
+// importedPrivateKey marks an item as imported until its first update, so plan modifiers can keep imported values.
+const importedPrivateKey = "imported"
+
 func (r *OnePasswordItemResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
+	resp.Diagnostics.Append(resp.Private.SetKey(ctx, importedPrivateKey, []byte("true"))...)
 }
 
 func vaultAndItemUUID(tfID string) (vaultUUID, itemUUID string) {
@@ -771,8 +775,7 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	}
 
 	password := state.Password.ValueString()
-	// Generate only when no password is planned; an explicit "" must be kept as is.
-	generate := state.Password.IsNull() || state.Password.IsUnknown()
+	generate := shouldGenerate(state.Password)
 	recipe, err := parseGeneratorRecipeList(state.Recipe)
 	if err != nil {
 		return nil, diag.Diagnostics{diag.NewErrorDiagnostic(
@@ -821,29 +824,4 @@ func parseGeneratorRecipeList(recipeObject []PasswordRecipeModel) (*model.Genera
 	}
 
 	return parseGeneratorRecipeFromModel(&recipeObject[0])
-}
-
-func addRecipe(f *model.ItemField, r *model.GeneratorRecipe) {
-	f.Recipe = r
-
-	// Check to see if the current value adheres to the recipe
-
-	var recipeDigits, recipeSymbols bool
-	hasDigits, _ := regexp.MatchString("[0-9]", f.Value)
-	hasSymbols, _ := regexp.MatchString("[^a-zA-Z0-9]", f.Value)
-
-	for _, s := range r.CharacterSets {
-		switch s {
-		case model.CharacterSetDigits:
-			recipeDigits = true
-		case model.CharacterSetSymbols:
-			recipeSymbols = true
-		}
-	}
-
-	if hasDigits != recipeDigits ||
-		hasSymbols != recipeSymbols ||
-		len(f.Value) != r.Length {
-		f.Generate = true
-	}
 }
