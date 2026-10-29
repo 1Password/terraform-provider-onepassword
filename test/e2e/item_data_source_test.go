@@ -103,6 +103,7 @@ var testItems = map[model.ItemCategory]testItem{
 			"hostname":   "testHostname",
 			"type":       "bearer",
 			"valid_from": "2026-01-01",
+			"expires":    "2027-01-01",
 			"filename":   "testFilename",
 		},
 	},
