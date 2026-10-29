@@ -2,7 +2,7 @@
 # Latest
 
 ## Features
-  * A user-friendly description of a new feature. {issue-number}
+  * Provider adds `onepassword_items` datasource for reading multiple items from a vault in a single data block. {#363}
 
 ## Fixes
  * A user-friendly description of a fix. {issue-number}
