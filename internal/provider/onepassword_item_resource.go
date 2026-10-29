@@ -149,7 +149,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseNonNullStateForUnknown(),
+					UseGeneratedIDForUnknown(),
 				},
 			},
 			"field_map": schema.MapNestedAttribute{
@@ -162,7 +162,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 							Optional:            true,
 							Computed:            true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseNonNullStateForUnknown(),
+								UseGeneratedIDForUnknown(),
 							},
 						},
 						"type": schema.StringAttribute{
@@ -393,7 +393,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 							Optional:            true,
 							Computed:            true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseNonNullStateForUnknown(),
+								UseGeneratedIDForUnknown(),
 							},
 						},
 						"label": schema.StringAttribute{
@@ -411,7 +411,7 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 										Optional:            true,
 										Computed:            true,
 										PlanModifiers: []planmodifier.String{
-											stringplanmodifier.UseNonNullStateForUnknown(),
+											UseGeneratedIDForUnknown(),
 										},
 									},
 									"label": schema.StringAttribute{
