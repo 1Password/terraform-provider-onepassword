@@ -764,3 +764,39 @@ func TestToModelSectionFieldMap(t *testing.T) {
 		})
 	}
 }
+
+// A recipe alone must not trigger generation: only a missing planned value does.
+func TestToModelSectionFieldsGenerateWithRecipe(t *testing.T) {
+	recipe := PasswordRecipeModel{Length: types.Int64Value(32), Digits: types.BoolValue(true), Symbols: types.BoolValue(true)}
+
+	tests := map[string]struct {
+		value        types.String
+		wantGenerate bool
+	}{
+		"known value not fitting recipe is kept": {value: types.StringValue("short"), wantGenerate: false},
+		"unknown value is generated":             {value: types.StringUnknown(), wantGenerate: true},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			listField, diags := toModelSectionField(OnePasswordItemResourceFieldModel{
+				ID: types.StringValue("f"), Type: types.StringValue("CONCEALED"), Value: tc.value,
+				Recipe: []PasswordRecipeModel{recipe},
+			}, "s", "S")
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+			mapField, diags := toModelSectionFieldMap(OnePasswordItemResourceFieldMapModel{
+				ID: types.StringValue("f"), Type: types.StringValue("CONCEALED"), Value: tc.value,
+				Recipe: &recipe,
+			}, "f", "s", "S")
+			if diags.HasError() {
+				t.Fatal(diags)
+			}
+
+			if listField.Generate != tc.wantGenerate || mapField.Generate != tc.wantGenerate {
+				t.Errorf("Generate: list=%v map=%v, want %v", listField.Generate, mapField.Generate, tc.wantGenerate)
+			}
+		})
+	}
+}
