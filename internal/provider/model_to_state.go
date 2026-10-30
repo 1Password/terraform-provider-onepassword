@@ -141,6 +141,8 @@ func toStateSectionsAndFieldsMap(item *model.Item, stateSectionMap map[string]On
 			if sectionExists {
 				if existingField, fieldExists := existingSection.FieldMap[modelField.Label]; fieldExists {
 					field.Value = setStringValuePreservingEmpty(modelField.Value, existingField.Value)
+					// Only in configuration and state: 1Password knows nothing of the version.
+					field.ValueWOVersion = existingField.ValueWOVersion
 				} else {
 					field.Value = setStringValuePreservingEmpty(modelField.Value, types.StringNull())
 				}

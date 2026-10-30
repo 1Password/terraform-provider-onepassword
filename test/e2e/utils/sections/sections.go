@@ -5,6 +5,9 @@ type TestField struct {
 	Value          string
 	Type           string
 	PasswordRecipe *map[string]any
+	// ValueWO and ValueWOVersion set the field's write-only value; both are left out when zero.
+	ValueWO        string
+	ValueWOVersion int
 }
 
 type TestSection struct {
@@ -21,6 +24,9 @@ type TestSectionMapField struct {
 	Type           string
 	Value          string
 	PasswordRecipe *map[string]any
+	// ValueWO and ValueWOVersion set the field's write-only value; both are left out when zero.
+	ValueWO        string
+	ValueWOVersion int
 }
 
 // TestSectionMapEntry represents a section entry in section_map
@@ -63,6 +69,14 @@ func mapFields(fields []TestField) []map[string]any {
 			fieldMap["value"] = f.Value
 		}
 
+		if f.ValueWO != "" {
+			fieldMap["value_wo"] = f.ValueWO
+		}
+
+		if f.ValueWOVersion != 0 {
+			fieldMap["value_wo_version"] = f.ValueWOVersion
+		}
+
 		mappedFields = append(mappedFields, fieldMap)
 	}
 	return mappedFields
@@ -82,6 +96,14 @@ func BuildSectionMap(sections map[string]TestSectionMapEntry) map[string]any {
 
 			if field.Value != "" {
 				fieldAttrs["value"] = field.Value
+			}
+
+			if field.ValueWO != "" {
+				fieldAttrs["value_wo"] = field.ValueWO
+			}
+
+			if field.ValueWOVersion != 0 {
+				fieldAttrs["value_wo_version"] = field.ValueWOVersion
 			}
 
 			if field.PasswordRecipe != nil && len(*field.PasswordRecipe) > 0 {

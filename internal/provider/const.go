@@ -63,6 +63,9 @@ const (
 	fieldTypeDescription  = "The type of value stored in the field."
 	fieldValueDescription = "The value of the field."
 
+	fieldValueWriteOnceDescription        = "A write-only value for the field. This value is not stored in the state and is intended for use with ephemeral values. **Note**: Write-only arguments require Terraform 1.11 or later."
+	fieldValueWriteOnceVersionDescription = "An integer that must be incremented to trigger an update to the field's 'value_wo'."
+
 	passwordRecipeDescription  = "The recipe used to generate a new value for a password."
 	passwordLengthDescription  = "The length of the password to be generated."
 	passwordDigitsDescription  = "Use digits [0-9] when generating the password."
