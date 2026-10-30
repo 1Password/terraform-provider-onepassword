@@ -102,7 +102,7 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) error {
 
 	// Convert sections/fields/files
 	sectionMap := buildSectionMap(item)
-	i.Sections = fromSDKSections(sectionMap)
+	i.Sections = fromSDKSections(item.Sections)
 	i.Files = fromSDKFiles(item, sectionMap)
 	i.Fields = fromSDKFields(item, sectionMap)
 
@@ -200,10 +200,17 @@ func fromSDKURLs(websites []sdk.Website) []ItemURL {
 	return urls
 }
 
-func fromSDKSections(sectionMap map[string]ItemSection) []ItemSection {
-	sections := make([]ItemSection, 0, len(sectionMap))
-	for _, section := range sectionMap {
-		sections = append(sections, section)
+// fromSDKSections converts SDK sections to model sections, keeping the order
+// returned by the SDK so that the section list is stable between reads.
+func fromSDKSections(sdkSections []sdk.ItemSection) []ItemSection {
+	sections := make([]ItemSection, 0, len(sdkSections))
+	for _, s := range sdkSections {
+		if s.ID != "" {
+			sections = append(sections, ItemSection{
+				ID:    s.ID,
+				Label: s.Title,
+			})
+		}
 	}
 	return sections
 }
