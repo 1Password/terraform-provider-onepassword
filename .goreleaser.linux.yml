@@ -1,15 +1,10 @@
 version: 2
-# split build for linux/amd64 and linux/arm64 so goreleaser builds for each architecture successfully
 builds:
-  # Build for linux/amd64
-  - id: linux-amd64
-    env:
-      # CGO is required for onepassword-sdk-go dependency
-      - CGO_ENABLED=1
+  - env:
+      # Build statically so the provider runs on musl-based images such as Alpine.
+      # This disables the onepassword-sdk-go desktop app integration on Linux.
+      - CGO_ENABLED=0
       - GOPRIVATE="github.com/1Password"
-      - CC=gcc
-      - AS=as
-      - AR=ar
     mod_timestamp: "{{ .CommitTimestamp }}"
     flags:
       - -trimpath
@@ -19,26 +14,6 @@ builds:
       - linux
     goarch:
       - amd64
-    binary: "{{ .ProjectName }}_v{{ .Version }}"
-  # Build for linux/arm64
-  - id: linux-arm64
-    env:
-      # CGO is required for onepassword-sdk-go dependency
-      - CGO_ENABLED=1
-      - GOPRIVATE="github.com/1Password"
-      - CC=aarch64-linux-gnu-gcc
-      - AS=aarch64-linux-gnu-as
-      - AR=aarch64-linux-gnu-ar
-      - CXX=aarch64-linux-gnu-g++
-      - PKG_CONFIG=aarch64-linux-gnu-pkg-config
-    mod_timestamp: "{{ .CommitTimestamp }}"
-    flags:
-      - -trimpath
-    ldflags:
-      - "-s -w -X main.commit={{.Commit}} -X version.ProviderVersion={{.Version}}"
-    goos:
-      - linux
-    goarch:
       - arm64
     binary: "{{ .ProjectName }}_v{{ .Version }}"
 archives:
