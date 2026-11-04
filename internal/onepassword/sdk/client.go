@@ -175,6 +175,24 @@ func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid str
 		return nil, fmt.Errorf("failed to update item using sdk: %w", err)
 	}
 
+	// A new document file is uploaded separately, after the rest of the item is saved.
+	if item.Document != nil {
+		if content, contentErr := item.Document.Content(); contentErr == nil {
+			docParams := sdk.DocumentCreateParams{
+				Name:    item.Document.Name,
+				Content: content,
+			}
+			err = util.RetryOnConflict(ctx, func() error {
+				var replaceErr error
+				updatedItem, replaceErr = c.sdkClient.Items().Files().ReplaceDocument(ctx, updatedItem, docParams)
+				return replaceErr
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to replace document using sdk: %w", err)
+			}
+		}
+	}
+
 	// Convert back to provider model
 	modelItem := &model.Item{}
 	err = modelItem.FromSDKItemToModel(&updatedItem)
@@ -226,6 +244,11 @@ func (c *Client) GetEnvironmentVariables(ctx context.Context, environmentID stri
 		}
 	}
 	return result, nil
+}
+
+// NewClientFromSDK wraps an already initialized 1Password SDK client.
+func NewClientFromSDK(sdkClient *sdk.Client) *Client {
+	return &Client{sdkClient: sdkClient}
 }
 
 func NewClient(ctx context.Context, config SDKConfig) (*Client, error) {

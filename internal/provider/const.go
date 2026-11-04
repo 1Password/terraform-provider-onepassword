@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword/model"
@@ -56,6 +57,12 @@ const (
 	fileContentDescription       = "The content of the file."
 	fileContentBase64Description = "The content of the file in base64 encoding. (Use this for binary files.)"
 
+	documentDescription              = "(Only applies to the document category) The file stored in the document item. Creating or updating document items requires service account or desktop app authentication, because 1Password Connect can't upload files."
+	documentIDDescription            = "The UUID of the document file. Changes whenever the file is replaced."
+	documentNameDescription          = "The file name of the document, for example `server.pem`."
+	documentContentDescription       = "The content of the document as a UTF-8 string, for example `file(\"server.pem\")`. Exactly one of `content` or `content_base64` must be set."
+	documentContentBase64Description = "The content of the document in base64 encoding, for example `filebase64(\"keystore.p12\")`. Use this for binary files. Exactly one of `content` or `content_base64` must be set."
+
 	fieldListDescription  = "A list of custom fields in the section"
 	fieldMapDescription   = "A map of custom fields in the section, keyed by field label."
 	fieldIDDescription    = "A unique identifier for the field."
@@ -81,9 +88,9 @@ var (
 		strings.ToLower(string(model.Password)),
 		strings.ToLower(string(model.Database)),
 		strings.ToLower(string(model.SecureNote)),
-	}
-	dataSourceCategories = append(categories,
 		strings.ToLower(string(model.Document)),
+	}
+	dataSourceCategories = append(slices.Clone(categories),
 		strings.ToLower(string(model.SSHKey)),
 		strings.ToLower(string(model.APICredential)),
 	)

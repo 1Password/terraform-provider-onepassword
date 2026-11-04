@@ -44,16 +44,20 @@ const (
 )
 
 type Item struct {
-	ID        string
-	Title     string
-	VaultID   string
-	Category  ItemCategory
-	Version   int
-	Tags      []string
-	URLs      []ItemURL
-	Sections  []ItemSection
-	Fields    []ItemField
-	Files     []ItemFile
+	ID       string
+	Title    string
+	VaultID  string
+	Category ItemCategory
+	Version  int
+	Tags     []string
+	URLs     []ItemURL
+	Sections []ItemSection
+	Fields   []ItemField
+	Files    []ItemFile
+	// Document is the file stored in an item of the Document category. It is nil for
+	// all other categories. When its content is set on an item passed to CreateItem or
+	// UpdateItem, the file is uploaded (replacing the existing one on update).
+	Document  *ItemFile
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -105,6 +109,13 @@ func (i *Item) FromSDKItemToModel(item *sdk.Item) error {
 	i.Sections = fromSDKSections(sectionMap)
 	i.Files = fromSDKFiles(item, sectionMap)
 	i.Fields = fromSDKFields(item, sectionMap)
+	if item.Document != nil {
+		i.Document = &ItemFile{
+			ID:   item.Document.ID,
+			Name: item.Document.Name,
+			Size: int(item.Document.Size),
+		}
+	}
 
 	// Notes are stored top level in an item from the SDK
 	if item.Notes != "" {
@@ -131,6 +142,15 @@ func (i *Item) FromModelItemToSDKCreateParams() sdk.ItemCreateParams {
 
 	params.Fields, params.Notes = toSDKFields(i.Fields)
 
+	if i.Document != nil {
+		if content, err := i.Document.Content(); err == nil {
+			params.Document = &sdk.DocumentCreateParams{
+				Name:    i.Document.Name,
+				Content: content,
+			}
+		}
+	}
+
 	return params
 }
 
@@ -154,6 +174,16 @@ func (i *Item) FromConnectItemToModel(item *connect.Item) error {
 	sectionMap := make(map[string]ItemSection)
 	i.Sections = fromConnectSections(item.Sections, sectionMap)
 	i.Files = fromConnectFiles(item.Files, sectionMap)
+	if i.Category == Document {
+		// Connect returns the document file as a regular file that isn't in any section.
+		for _, f := range i.Files {
+			if f.SectionID == "" {
+				document := f
+				i.Document = &document
+				break
+			}
+		}
+	}
 
 	fields, err := fromConnectFields(item.Fields, sectionMap)
 	if err != nil {

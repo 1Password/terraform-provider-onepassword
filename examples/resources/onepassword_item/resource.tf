@@ -55,3 +55,19 @@ resource "onepassword_item" "example_with_list" {
     }
   }
 }
+
+# Example storing a file in a document item.
+# Requires service account or desktop app authentication (not supported with 1Password Connect).
+resource "onepassword_item" "example_document" {
+  vault = "your-vault-id"
+
+  title    = "Example TLS Certificate"
+  category = "document"
+
+  document = {
+    name    = "server.pem"
+    content = file("${path.module}/server.pem")
+    # For binary files, use content_base64 instead:
+    # content_base64 = filebase64("${path.module}/keystore.p12")
+  }
+}
