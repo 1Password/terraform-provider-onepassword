@@ -201,7 +201,7 @@ func TestAccItemResourceDocument(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      testAccProviderConfig(testServer.URL) + testAccDocumentResourceConfig(expectedItem),
-				ExpectError: regexp.MustCompile("Invalid Attribute Value Match"),
+				ExpectError: regexp.MustCompile(`'document' attribute is required when 'category' is "document"`),
 			},
 		},
 	})

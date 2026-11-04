@@ -2500,3 +2500,64 @@ func TestFromModelItemToConnect(t *testing.T) {
 		})
 	}
 }
+
+func TestDocumentFromSDKItem(t *testing.T) {
+	item := &Item{}
+	err := item.FromSDKItemToModel(&sdk.Item{
+		ID:       "item1",
+		Category: sdk.ItemCategoryDocument,
+		Document: &sdk.FileAttributes{ID: "doc1", Name: "server.pem", Size: 12},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.Document == nil || item.Document.ID != "doc1" || item.Document.Name != "server.pem" || item.Document.Size != 12 {
+		t.Fatalf("unexpected document: %+v", item.Document)
+	}
+
+	login := &Item{}
+	if err := login.FromSDKItemToModel(&sdk.Item{ID: "item2", Category: sdk.ItemCategoryLogin}); err != nil {
+		t.Fatal(err)
+	}
+	if login.Document != nil {
+		t.Errorf("expected no document for a login item, got %+v", login.Document)
+	}
+}
+
+func TestDocumentToSDKCreateParams(t *testing.T) {
+	document := &ItemFile{Name: "server.pem"}
+	item := &Item{VaultID: "vault1", Title: "cert", Category: Document, Document: document}
+
+	// Without loaded content nothing is uploaded, which is what updates rely on
+	// when the file didn't change.
+	if params := item.FromModelItemToSDKCreateParams(); params.Document != nil {
+		t.Fatalf("expected no document upload without content, got %+v", params.Document)
+	}
+
+	document.SetContent([]byte("pem"))
+	params := item.FromModelItemToSDKCreateParams()
+	if params.Category != sdk.ItemCategoryDocument {
+		t.Errorf("expected category %q, got %q", sdk.ItemCategoryDocument, params.Category)
+	}
+	if params.Document == nil || params.Document.Name != "server.pem" || string(params.Document.Content) != "pem" {
+		t.Fatalf("unexpected document params: %+v", params.Document)
+	}
+}
+
+func TestDocumentFromConnectItem(t *testing.T) {
+	item := &Item{}
+	err := item.FromConnectItemToModel(&connect.Item{
+		ID:       "item1",
+		Category: connect.Document,
+		Vault:    connect.ItemVault{ID: "vault1"},
+		Files: []*connect.File{
+			{ID: "doc1", Name: "server.pem", Size: 3, ContentPath: "/v1/vaults/vault1/items/item1/files/doc1/content"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.Document == nil || item.Document.ID != "doc1" || item.Document.ContentPath == "" {
+		t.Fatalf("unexpected document: %+v", item.Document)
+	}
+}

@@ -2,6 +2,7 @@ package connect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -113,7 +114,15 @@ func (c *Client) GetItemByTitle(_ context.Context, title string, vaultUuid strin
 	return modelItem, nil
 }
 
+// ErrDocumentNotSupported is returned when creating or updating a Document item, because
+// 1Password Connect can't upload files. Document items can still be read with Connect.
+var ErrDocumentNotSupported = errors.New("creating or updating Document items is not supported with 1Password Connect; use a service account or desktop app authentication instead")
+
 func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
+	if item.Category == model.Document {
+		return nil, ErrDocumentNotSupported
+	}
+
 	// Convert model Item to Connect Item
 	connectItem, err := item.FromModelItemToConnect()
 	if err != nil {
@@ -168,6 +177,10 @@ func (c *Client) CreateItem(ctx context.Context, item *model.Item, vaultUuid str
 }
 
 func (c *Client) UpdateItem(ctx context.Context, item *model.Item, vaultUuid string) (*model.Item, error) {
+	if item.Category == model.Document {
+		return nil, ErrDocumentNotSupported
+	}
+
 	// Convert model Item to Connect Item
 	connectItem, err := item.FromModelItemToConnect()
 	if err != nil {

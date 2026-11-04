@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 
 	"github.com/1Password/terraform-provider-onepassword/v3/internal/onepassword"
@@ -65,6 +67,15 @@ type OnePasswordItemResourceModel struct {
 	SectionList        []OnePasswordItemResourceSectionListModel         `tfsdk:"section"`
 	SectionMap         map[string]OnePasswordItemResourceSectionMapModel `tfsdk:"section_map"`
 	Recipe             []PasswordRecipeModel                             `tfsdk:"password_recipe"`
+	Document           *OnePasswordItemResourceDocumentModel             `tfsdk:"document"`
+}
+
+// OnePasswordItemResourceDocumentModel describes the file stored in a document item.
+type OnePasswordItemResourceDocumentModel struct {
+	ID            types.String `tfsdk:"id"`
+	Name          types.String `tfsdk:"name"`
+	Content       types.String `tfsdk:"content"`
+	ContentBase64 types.String `tfsdk:"content_base64"`
 }
 
 type PasswordRecipeModel struct {
@@ -382,6 +393,38 @@ func (r *OnePasswordItemResource) Schema(ctx context.Context, req resource.Schem
 				Optional:            true,
 				NestedObject:        sectionNestedObjectSchemaForMap,
 			},
+			"document": schema.SingleNestedAttribute{
+				MarkdownDescription: documentDescription,
+				Optional:            true,
+				Attributes: map[string]schema.Attribute{
+					"id": schema.StringAttribute{
+						MarkdownDescription: documentIDDescription,
+						Computed:            true,
+					},
+					"name": schema.StringAttribute{
+						MarkdownDescription: documentNameDescription,
+						Required:            true,
+						Validators: []validator.String{
+							stringvalidator.LengthAtLeast(1),
+						},
+					},
+					"content": schema.StringAttribute{
+						MarkdownDescription: documentContentDescription,
+						Optional:            true,
+						Sensitive:           true,
+						Validators: []validator.String{
+							stringvalidator.ExactlyOneOf(
+								path.MatchRelative().AtParent().AtName("content_base64"),
+							),
+						},
+					},
+					"content_base64": schema.StringAttribute{
+						MarkdownDescription: documentContentBase64Description,
+						Optional:            true,
+						Sensitive:           true,
+					},
+				},
+			},
 		},
 		Blocks: map[string]schema.Block{
 			"section": schema.ListNestedBlock{
@@ -477,6 +520,8 @@ func (r *OnePasswordItemResource) Configure(ctx context.Context, req resource.Co
 }
 
 func (r *OnePasswordItemResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	validateDocumentConfig(ctx, req, resp)
+
 	var sectionList types.List
 	var sectionMap types.Map
 
@@ -505,6 +550,54 @@ func (r *OnePasswordItemResource) ValidateConfig(ctx context.Context, req resour
 	}
 }
 
+// validateDocumentConfig checks that the document attribute is set exactly when the
+// item is a document, and that base64 content can be decoded.
+func validateDocumentConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var category types.String
+	var document types.Object
+
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("category"), &category)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("document"), &document)...)
+	if resp.Diagnostics.HasError() || category.IsUnknown() || document.IsUnknown() {
+		return
+	}
+
+	isDocument := strings.EqualFold(category.ValueString(), strings.ToLower(string(model.Document)))
+	if isDocument && document.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("document"),
+			"Missing document",
+			"The 'document' attribute is required when 'category' is \"document\".",
+		)
+		return
+	}
+	if !isDocument && !document.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("document"),
+			"Unexpected document",
+			"The 'document' attribute can only be set when 'category' is \"document\".",
+		)
+		return
+	}
+	if document.IsNull() {
+		return
+	}
+
+	var contentBase64 types.String
+	contentBase64Path := path.Root("document").AtName("content_base64")
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, contentBase64Path, &contentBase64)...)
+	if resp.Diagnostics.HasError() || contentBase64.IsNull() || contentBase64.IsUnknown() {
+		return
+	}
+	if _, err := base64.StdEncoding.DecodeString(contentBase64.ValueString()); err != nil {
+		resp.Diagnostics.AddAttributeError(
+			contentBase64Path,
+			"Invalid base64 content",
+			fmt.Sprintf("The document content must be standard base64, for example the result of filebase64(). Decoding failed: %s", err),
+		)
+	}
+}
+
 // ModifyPlan marks `updated_at` as unknown whenever a change is planned. 1Password
 // sets the timestamp when it writes the item, so carrying the prior state value
 // forward would make the planned value disagree with the applied one.
@@ -516,6 +609,24 @@ func (r *OnePasswordItemResource) ModifyPlan(ctx context.Context, req resource.M
 
 	if !req.Plan.Raw.Equal(req.State.Raw) {
 		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("updated_at"), types.StringUnknown())...)
+	}
+
+	// The document file keeps its ID unless the file is replaced, so only show the
+	// ID as unknown when the file name or content changes.
+	var planDocumentObject types.Object
+	var stateDocument *OnePasswordItemResourceDocumentModel
+	resp.Diagnostics.Append(resp.Plan.GetAttribute(ctx, path.Root("document"), &planDocumentObject)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("document"), &stateDocument)...)
+	if resp.Diagnostics.HasError() || planDocumentObject.IsNull() || planDocumentObject.IsUnknown() || stateDocument == nil {
+		return
+	}
+	var planDocument OnePasswordItemResourceDocumentModel
+	resp.Diagnostics.Append(planDocumentObject.As(ctx, &planDocument, basetypes.ObjectAsOptions{})...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if planDocument.ID.IsUnknown() && !documentChanged(&planDocument, stateDocument) {
+		resp.Diagnostics.Append(resp.Plan.SetAttribute(ctx, path.Root("document").AtName("id"), stateDocument.ID)...)
 	}
 }
 
@@ -548,6 +659,11 @@ func (r *OnePasswordItemResource) Create(ctx context.Context, req resource.Creat
 	createdItem, err := r.client.CreateItem(ctx, item, item.VaultID)
 	if err != nil {
 		resp.Diagnostics.AddError("1Password Item create error", fmt.Sprintf("Error creating 1Password item, got error %s", err))
+		return
+	}
+
+	if err := carryDocumentContent(createdItem, plan.Document); err != nil {
+		resp.Diagnostics.AddError("1Password Item create error", err.Error())
 		return
 	}
 
@@ -589,6 +705,16 @@ func (r *OnePasswordItemResource) Read(ctx context.Context, req resource.ReadReq
 		}
 		resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not get item '%s' from vault '%s', got error: %s", itemUUID, vaultUUID, err))
 		return
+	}
+
+	// Download the document so changes made outside Terraform show up as drift.
+	if item.Document != nil {
+		content, err := r.client.GetFileContent(ctx, item.Document, item.ID, item.VaultID)
+		if err != nil {
+			resp.Diagnostics.AddError("1Password Item read error", fmt.Sprintf("Could not read document of item '%s' from vault '%s', got error: %s", itemUUID, vaultUUID, err))
+			return
+		}
+		item.Document.SetContent(content)
 	}
 
 	resp.Diagnostics.Append(modelToState(ctx, item, &state)...)
@@ -647,9 +773,19 @@ func (r *OnePasswordItemResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	// Only upload the document again when its name or content changed.
+	if item.Document != nil && !documentChanged(plan.Document, state.Document) {
+		item.Document.SetContent(nil)
+	}
+
 	updatedItem, err := r.client.UpdateItem(ctx, item, plan.Vault.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("1Password Item update error", fmt.Sprintf("Could not update item '%s' from vault '%s', got error: %s", plan.UUID.ValueString(), plan.Vault.ValueString(), err))
+		return
+	}
+
+	if err := carryDocumentContent(updatedItem, plan.Document); err != nil {
+		resp.Diagnostics.AddError("1Password Item update error", err.Error())
 		return
 	}
 
@@ -753,8 +889,10 @@ func modelToState(ctx context.Context, modelItem *model.Item, state *OnePassword
 	}
 	state.Tags = tags
 
-	// Password is not set for secure notes
-	if modelItem.Category == model.SecureNote && state.Password.IsUnknown() {
+	state.Document = toStateDocument(modelItem.Document, state.Document)
+
+	// Password is not set for secure notes and documents
+	if (modelItem.Category == model.SecureNote || modelItem.Category == model.Document) && state.Password.IsUnknown() {
 		state.Password = types.StringNull()
 	}
 
@@ -797,6 +935,14 @@ func stateToModel(ctx context.Context, state OnePasswordItemResourceModel) (*mod
 	case "secure_note":
 		modelItem.Category = model.SecureNote
 		modelItem.Fields = toModelSecureNoteFields(state)
+	case "document":
+		modelItem.Category = model.Document
+		modelItem.Fields = toModelSecureNoteFields(state)
+		document, err := toModelDocument(state.Document)
+		if err != nil {
+			return nil, diag.Diagnostics{diag.NewErrorDiagnostic("Item conversion error", err.Error())}
+		}
+		modelItem.Document = document
 	}
 
 	tags, diagnostics := toModelTags(ctx, state)

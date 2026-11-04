@@ -23,6 +23,10 @@ import (
 var _ provider.Provider = &OnePasswordProvider{}
 var _ provider.ProviderWithFunctions = &OnePasswordProvider{}
 
+// newClient creates the client used by data sources and resources. Tests replace it
+// to run the provider against an in-memory 1Password SDK backend.
+var newClient = onepassword.NewClient
+
 // OnePasswordProvider defines the provider implementation.
 type OnePasswordProvider struct {
 	// version is set to the provider version on release, "dev" when the
@@ -156,7 +160,7 @@ func (p *OnePasswordProvider) Configure(ctx context.Context, req provider.Config
 
 	// Example client configuration for data sources and resources
 	providerUserAgent := fmt.Sprintf("terraform-provider-onepassword/%s", p.version)
-	client, err := onepassword.NewClient(ctx, onepassword.ClientConfig{
+	client, err := newClient(ctx, onepassword.ClientConfig{
 		ConnectHost:         connectHost,
 		ConnectToken:        connectToken,
 		ServiceAccountToken: serviceAccountToken,
